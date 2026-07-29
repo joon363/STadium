@@ -18,15 +18,11 @@ export const Contact: React.FC = () => {
         </button>
         <div>
           <h1 className="font-extrabold text-lg text-gray-900">비상 및 운영 문의</h1>
-          <p className="text-xs text-gray-500 font-medium">행사 당일 담당자 및 공식 소통 채널</p>
         </div>
       </div>
 
       {/* Quick External Links (Open Chat, Instagram, YouTube) */}
       <section className="space-y-2">
-        <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider px-1">
-          공식 소통 & SNS 채널
-        </h2>
 
         <div className="grid grid-cols-1 gap-2">
           {/* Kakao Open Chat Button */}
@@ -41,13 +37,9 @@ export const Contact: React.FC = () => {
                 <MessageCircle className="w-4 h-4 text-amber-950" />
               </div>
               <div>
-                <div>STadium 2026 실시간 카카오톡 오픈채팅방</div>
-                <div className="text-[11px] font-semibold text-amber-900">당일 현장 빠른 질의응답</div>
+                <div>카카오톡 오픈채팅방</div>
               </div>
             </div>
-            <span className="text-xs font-bold bg-amber-950 text-white px-3 py-1 rounded-md">
-              입장
-            </span>
           </a>
 
           {/* Instagram & YouTube */}
@@ -83,27 +75,26 @@ export const Contact: React.FC = () => {
       <section className="space-y-2 pt-1">
         <div className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-wider px-1">
           <ShieldAlert className="w-4 h-4 text-postech" />
-          <span>총괄 담당자 (비상 핫라인)</span>
+          <span>총괄 담당자</span>
         </div>
 
         <div className="space-y-2">
           {CONTACT_CONFIG.generalLeaders.map((leader, i) => (
             <div
               key={i}
-              className="bg-rose-50/60 border border-rose-200 rounded-xl p-3.5 flex items-center justify-between shadow-2xs"
+              className="bg-rose-50/60 border border-rose-200 rounded-xl px-2 flex items-center justify-between shadow-2xs"
             >
               <div>
                 <div className="text-xs font-bold text-rose-700">{leader.role}</div>
                 <div className="font-black text-sm text-gray-900">{leader.name}</div>
-                <div className="text-[11px] font-medium text-gray-500">{leader.dept}</div>
               </div>
 
               <a
                 href={`tel:${leader.phone}`}
-                className="touch-target px-3 py-2 bg-postech hover:bg-postech-dark text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors"
+                className="touch-target px-2 my-2 py-0 bg-postech hover:bg-postech-dark text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors"
               >
-                <Phone className="w-3.5 h-3.5" />
-                <span>전화걸기</span>
+                <Phone className="w-3.5" />
+                <span>{leader.phone}</span>
               </a>
             </div>
           ))}

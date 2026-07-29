@@ -1017,8 +1017,8 @@ export function findShortestPath(
 
 export const CONTACT_CONFIG = {
   generalLeaders: [
-    { role: '포준위 위원장', name: '윤석영 (POSTECH)', phone: '010-1234-5678', dept: '총괄본부' },
-    { role: '실무협의체 의장', name: '홍준우 (POSTECH 대외협력국장)', phone: '010-9876-5432', dept: '대외협력' },
+    { role: '중앙집행위원장', name: '박준혁', phone: '010-4234-6859', dept: '총괄' },
+    { role: '대외협렵국장', name: '서영서', phone: '010-9876-5432', dept: '총괄' },
   ],
   deptLeads: [
     { role: '매뉴얼 / 수송 TF', name: '양광모', phone: '010-2222-3333', dept: '운영기획' },

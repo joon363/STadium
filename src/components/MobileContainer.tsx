@@ -16,7 +16,8 @@ export const MobileContainer: React.FC<MobileContainerProps> = ({ children }) =>
         - Width capped at 480px max on wide screens, 100% on mobile devices.
         - No desktop rect outline or heavy shadows as requested.
       */}
-      <div className="w-full max-w-[480px] min-h-screen bg-white flex flex-col relative">
+      {/*TODO: restore to 480 after QA on S22 Ultra*/}
+      <div className="w-full max-w-[384px] min-h-screen bg-white flex flex-col relative">
         {/* Children Content */}
         <div className={`flex-1 flex flex-col relative w-full overflow-y-auto no-scrollbar ${isMap ? 'pb-0' : 'pb-6'}`}>
           {children}

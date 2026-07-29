@@ -23,7 +23,7 @@ export const SportsGridCard: React.FC<SportsGridCardProps> = ({ match, path }) =
         className="bg-gray-50 border border-gray-200 hover:border-gray-300 rounded-xl p-3 flex items-center justify-center text-center shadow-2xs transition-colors cursor-pointer select-none min-h-[110px]"
       >
         <span className="font-extrabold text-xs text-gray-800 leading-snug">
-          모든 {match.sportName} 경기가 종료되었습니다.
+          모든 {match.sportName} 경기가 <br /> 종료되었습니다.
         </span>
       </div>
     );
@@ -50,10 +50,10 @@ export const SportsGridCard: React.FC<SportsGridCardProps> = ({ match, path }) =
   const bgStyle: React.CSSProperties = isUpcoming
     ? { background: 'linear-gradient(135deg, #f9fafb 0%, #e5e7eb 100%)', borderColor: '#d1d5db' }
     : match.isLive && winningSchool
-    ? { backgroundColor: winningSchool.bgLight, borderColor: winningSchool.color }
-    : winningSchool
-    ? { backgroundColor: winningSchool.bgLight, borderColor: winningSchool.color }
-    : { backgroundColor: '#FFFFFF', borderColor: '#E5E7EB' };
+      ? { backgroundColor: winningSchool.bgLight, borderColor: winningSchool.color }
+      : winningSchool
+        ? { backgroundColor: winningSchool.bgLight, borderColor: winningSchool.color }
+        : { backgroundColor: '#FFFFFF', borderColor: '#E5E7EB' };
 
   const badgeStyle = winningSchool
     ? { backgroundColor: winningSchool.color, color: winningSchool.textColor }
