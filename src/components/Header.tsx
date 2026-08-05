@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X, Home, MapPin, PhoneCall, Trophy, Music, ChevronRight, Filter } from 'lucide-react';
+import { Menu, X, Home, MapPin, PhoneCall, Trophy, Music, ChevronRight, Filter, Store, Truck, Building2 } from 'lucide-react';
 import { useRealtimeSchedule } from '../hooks/useRealtimeSchedule';
 import { useSchool } from '../context/SchoolContext';
 import { SCHOOLS } from '../config/stadiumConfig';
@@ -192,6 +192,34 @@ export const Header: React.FC = () => {
                 </div>
                 <div className="space-y-1">
                   <button
+                    onClick={() => handleNavigate('/booths')}
+                    className={`w-full flex items-center justify-between p-3 rounded-lg font-semibold text-sm transition-colors ${location.pathname === '/booths'
+                      ? 'bg-amber-50 text-amber-600 border border-amber-200'
+                      : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Store className="w-4 h-4 text-amber-500" />
+                      <span>부스 안내</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 opacity-50" />
+                  </button>
+
+                  <button
+                    onClick={() => handleNavigate('/foodtrucks')}
+                    className={`w-full flex items-center justify-between p-3 rounded-lg font-semibold text-sm transition-colors ${location.pathname === '/foodtrucks'
+                      ? 'bg-orange-50 text-orange-600 border border-orange-200'
+                      : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Truck className="w-4 h-4 text-orange-500" />
+                      <span>푸드트럭 안내</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 opacity-50" />
+                  </button>
+
+                  <button
                     onClick={() => handleNavigate('/map')}
                     className={`w-full flex items-center justify-between p-3 rounded-lg font-semibold text-sm transition-colors ${location.pathname === '/map'
                       ? 'bg-rose-50 text-postech border border-rose-200'
@@ -215,6 +243,20 @@ export const Header: React.FC = () => {
                     <div className="flex items-center gap-3">
                       <PhoneCall className="w-4 h-4 text-blue-600" />
                       <span>문의 (담당자 / 오픈채팅)</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 opacity-50" />
+                  </button>
+
+                  <button
+                    onClick={() => handleNavigate('/sponsors')}
+                    className={`w-full flex items-center justify-between p-3 rounded-lg font-semibold text-sm transition-colors ${location.pathname === '/sponsors'
+                      ? 'bg-slate-900 text-amber-400 border border-slate-700'
+                      : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Building2 className="w-4 h-4 text-blue-500" />
+                      <span>후원 기업 안내</span>
                     </div>
                     <ChevronRight className="w-4 h-4 opacity-50" />
                   </button>

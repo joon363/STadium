@@ -5,7 +5,7 @@ import { useRealtimeSchedule } from '../hooks/useRealtimeSchedule';
 import { useSchool } from '../context/SchoolContext';
 import { SportsGridCard } from '../components/SportsGridCard';
 import { LeaderboardSection } from '../components/LeaderboardSection';
-import { MapPin, PhoneCall, Music, Radio, ChevronRight, Trophy, Filter } from 'lucide-react';
+import { MapPin, PhoneCall, Music, Radio, ChevronRight, Trophy, Filter, Store, Truck, Building2 } from 'lucide-react';
 
 export const Home: React.FC = () => {
   const navigate = useNavigate();
@@ -29,10 +29,10 @@ export const Home: React.FC = () => {
   const gymMatch = badmintonMatch.isLive
     ? badmintonMatch
     : basketballMatch.isLive
-    ? basketballMatch
-    : badmintonMatch.startTimeObj.getTime() <= basketballMatch.startTimeObj.getTime()
-    ? badmintonMatch
-    : basketballMatch;
+      ? basketballMatch
+      : badmintonMatch.startTimeObj.getTime() <= basketballMatch.startTimeObj.getTime()
+        ? badmintonMatch
+        : basketballMatch;
 
   const gymPath = `/${gymMatch.sportKey}`;
 
@@ -142,8 +142,44 @@ export const Home: React.FC = () => {
       {/* 3. Overall Leaderboard Section (Active Standings Below Stage Live) */}
       <LeaderboardSection standings={overallStandings} />
 
-      {/* 4. Info Banners (Campus Map & Contact) */}
-      <section className="grid grid-cols-2 gap-2 pt-0.5">
+      {/* 4. Info Banners (Campus Map, Booths, Food Trucks, Contact, Sponsors) */}
+      <section className="grid grid-cols-2 gap-2">
+        {/* Booth Guide Banner */}
+        <button
+          onClick={() => navigate('/booths')}
+          className="bg-white border border-gray-200 hover:border-gray-300 rounded-xl p-3 flex flex-col justify-between items-start shadow-2xs transition-colors group touch-target"
+        >
+          <div className="flex items-center justify-between w-full">
+            <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-100">
+              <Store className="w-3.5 h-3.5" />
+            </div>
+
+            <div className="">
+              <h4 className="font-bold text-xs text-gray-900">부스 안내</h4>
+              <p className="text-[10px] text-gray-500 font-medium">체험 & 동아리 부스</p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-gray-400" />
+          </div>
+        </button>
+
+        {/* Food Truck Banner */}
+        <button
+          onClick={() => navigate('/foodtrucks')}
+          className="bg-white border border-gray-200 hover:border-gray-300 rounded-xl p-3 flex flex-col justify-between items-start shadow-2xs transition-colors group touch-target"
+        >
+          <div className="flex items-center justify-between w-full">
+            <div className="w-7 h-7 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center border border-orange-100">
+              <Truck className="w-3.5 h-3.5" />
+            </div>
+
+            <div className="">
+              <h4 className="font-bold text-xs text-gray-900">푸드트럭</h4>
+              <p className="text-[10px] text-gray-500 font-medium">먹거리 & 위치</p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-gray-400" />
+          </div>
+        </button>
+
         {/* Campus Map Banner */}
         <button
           onClick={() => navigate('/map')}
@@ -154,7 +190,7 @@ export const Home: React.FC = () => {
               <MapPin className="w-3.5 h-3.5" />
             </div>
 
-            <div className="mt-2">
+            <div className="">
               <h4 className="font-bold text-xs text-gray-900">캠퍼스맵</h4>
               <p className="text-[10px] text-gray-500 font-medium">위치 & 길찾기</p>
             </div>
@@ -172,12 +208,28 @@ export const Home: React.FC = () => {
               <PhoneCall className="w-3.5 h-3.5" />
             </div>
 
-            <div className="mt-2">
+            <div className="">
               <h4 className="font-bold text-xs text-gray-900">문의</h4>
               <p className="text-[10px] text-gray-500 font-medium">담당자 연락처</p>
             </div>
             <ChevronRight className="w-4 h-4 text-gray-400" />
           </div>
+        </button>
+
+        {/* Sponsors Banner */}
+        <button
+          onClick={() => navigate('/sponsors')}
+          className="col-span-2 rounded-xl p-3 gap-2 flex items-center justify-between shadow-xs transition-transform active:scale-[0.99] touch-target bg-white border border-gray-200 hover:border-gray-300 "
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30">
+              <Building2 className="w-4 h-4" />
+            </div>
+            <div>
+              <h4 className="font-extrabold text-xs">2026 STadium 후원 기업</h4>
+            </div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-slate-400" />
         </button>
       </section>
     </div>

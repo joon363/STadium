@@ -10,6 +10,33 @@ export const supabase: SupabaseClient | null = isSupabaseConfigured
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null;
 
+/**
+ * Supabase Storage에 이미지 파일 업로드 후 Public URL 반환
+ * @param file 업로드할 File 객체
+ * @param bucket 버킷 이름 (기본값: 'images')
+ */
+export async function uploadImageToSupabase(file: File, bucket: string = 'images'): Promise<{ url?: string; error?: string }> {
+  if (!supabase) return { error: 'Supabase 미설정' };
+  try {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
+    const filePath = `uploads/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from(bucket)
+      .upload(filePath, file, { cacheControl: '3600', upsert: true });
+
+    if (uploadError) {
+      return { error: uploadError.message };
+    }
+
+    const { data } = supabase.storage.from(bucket).getPublicUrl(filePath);
+    return { url: data.publicUrl };
+  } catch (err: any) {
+    return { error: err?.message || String(err) };
+  }
+}
+
 let localAdminPasswordMemory: string = 'stadium2026!';
 
 function rawString(val: any): string {
@@ -413,6 +440,239 @@ export async function resetMapToDefaults(
     const { error: insRoads } = await supabase.from('map_roads').insert(roadRows);
     if (insRoads) return { success: false, error: insRoads.message };
 
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || String(err) };
+  }
+}
+
+// ========== Booth, Sponsor, Food Truck Interfaces & Supabase API ==========
+
+export interface BoothItem {
+  id: string;
+  name: string;
+  operator: string;
+  location: string;
+  category: string;
+  description: string;
+  operatingHours: string;
+  icon: string;
+  imageUrl?: string;
+  isActive: boolean;
+  displayOrder: number;
+}
+
+export interface SponsorItem {
+  id: string;
+  name: string;
+  tier: 'main' | 'platinum' | 'gold' | 'silver' | 'bronze' | string;
+  logoUrl: string;
+  description: string;
+  websiteUrl: string;
+  isActive: boolean;
+  displayOrder: number;
+}
+
+export interface FoodTruckItem {
+  id: string;
+  name: string;
+  menuSummary: string;
+  location: string;
+  operatingHours: string;
+  icon: string;
+  imageUrl?: string;
+  isActive: boolean;
+  displayOrder: number;
+}
+
+// ----- Booths API -----
+export async function getSupabaseBooths(): Promise<BoothItem[]> {
+  if (!supabase) return [];
+  try {
+    const { data, error } = await supabase
+      .from('booths')
+      .select('*')
+      .order('display_order', { ascending: true })
+      .order('created_at', { ascending: true });
+
+    if (error || !data) {
+      console.warn('[Supabase Booths Fetch Error]', error);
+      return [];
+    }
+
+    return data.map((r: any) => ({
+      id: r.id,
+      name: r.name,
+      operator: r.operator || '',
+      location: r.location || '',
+      category: r.category || 'experience',
+      description: r.description || '',
+      operatingHours: r.operating_hours || '',
+      icon: r.icon || '🎪',
+      imageUrl: r.image_url || '',
+      isActive: r.is_active ?? true,
+      displayOrder: Number(r.display_order || 0),
+    }));
+  } catch (err) {
+    console.error('[Supabase Booths Exception]', err);
+    return [];
+  }
+}
+
+export async function upsertSupabaseBooth(item: BoothItem): Promise<{ success: boolean; error?: string }> {
+  if (!supabase) return { success: false, error: 'Supabase 미설정' };
+  try {
+    const { error } = await supabase.from('booths').upsert({
+      id: item.id,
+      name: item.name,
+      operator: item.operator,
+      location: item.location,
+      category: item.category,
+      description: item.description,
+      operating_hours: item.operatingHours,
+      icon: item.icon,
+      image_url: item.imageUrl || '',
+      is_active: item.isActive,
+      display_order: item.displayOrder,
+    });
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || String(err) };
+  }
+}
+
+export async function deleteSupabaseBooth(id: string): Promise<{ success: boolean; error?: string }> {
+  if (!supabase) return { success: false, error: 'Supabase 미설정' };
+  try {
+    const { error } = await supabase.from('booths').delete().eq('id', id);
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || String(err) };
+  }
+}
+
+// ----- Sponsors API -----
+export async function getSupabaseSponsors(): Promise<SponsorItem[]> {
+  if (!supabase) return [];
+  try {
+    const { data, error } = await supabase
+      .from('sponsors')
+      .select('*')
+      .order('display_order', { ascending: true })
+      .order('created_at', { ascending: true });
+
+    if (error || !data) {
+      console.warn('[Supabase Sponsors Fetch Error]', error);
+      return [];
+    }
+
+    return data.map((r: any) => ({
+      id: r.id,
+      name: r.name,
+      tier: r.tier || 'gold',
+      logoUrl: r.logo_url || '',
+      description: r.description || '',
+      websiteUrl: r.website_url || '',
+      isActive: r.is_active ?? true,
+      displayOrder: Number(r.display_order || 0),
+    }));
+  } catch (err) {
+    console.error('[Supabase Sponsors Exception]', err);
+    return [];
+  }
+}
+
+export async function upsertSupabaseSponsor(item: SponsorItem): Promise<{ success: boolean; error?: string }> {
+  if (!supabase) return { success: false, error: 'Supabase 미설정' };
+  try {
+    const { error } = await supabase.from('sponsors').upsert({
+      id: item.id,
+      name: item.name,
+      tier: item.tier,
+      logo_url: item.logoUrl || '',
+      description: item.description || '',
+      website_url: item.websiteUrl || '',
+      is_active: item.isActive,
+      display_order: item.displayOrder,
+    });
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || String(err) };
+  }
+}
+
+export async function deleteSupabaseSponsor(id: string): Promise<{ success: boolean; error?: string }> {
+  if (!supabase) return { success: false, error: 'Supabase 미설정' };
+  try {
+    const { error } = await supabase.from('sponsors').delete().eq('id', id);
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || String(err) };
+  }
+}
+
+// ----- Food Trucks API -----
+export async function getSupabaseFoodTrucks(): Promise<FoodTruckItem[]> {
+  if (!supabase) return [];
+  try {
+    const { data, error } = await supabase
+      .from('food_trucks')
+      .select('*')
+      .order('display_order', { ascending: true })
+      .order('created_at', { ascending: true });
+
+    if (error || !data) {
+      console.warn('[Supabase FoodTrucks Fetch Error]', error);
+      return [];
+    }
+
+    return data.map((r: any) => ({
+      id: r.id,
+      name: r.name,
+      menuSummary: r.menu_summary || '',
+      location: r.location || '',
+      operatingHours: r.operating_hours || '',
+      icon: r.icon || '🚚',
+      imageUrl: r.image_url || '',
+      isActive: r.is_active ?? true,
+      displayOrder: Number(r.display_order || 0),
+    }));
+  } catch (err) {
+    console.error('[Supabase FoodTrucks Exception]', err);
+    return [];
+  }
+}
+
+export async function upsertSupabaseFoodTruck(item: FoodTruckItem): Promise<{ success: boolean; error?: string }> {
+  if (!supabase) return { success: false, error: 'Supabase 미설정' };
+  try {
+    const { error } = await supabase.from('food_trucks').upsert({
+      id: item.id,
+      name: item.name,
+      menu_summary: item.menuSummary,
+      location: item.location,
+      operating_hours: item.operatingHours,
+      icon: item.icon,
+      image_url: item.imageUrl || '',
+      is_active: item.isActive,
+      display_order: item.displayOrder,
+    });
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || String(err) };
+  }
+}
+
+export async function deleteSupabaseFoodTruck(id: string): Promise<{ success: boolean; error?: string }> {
+  if (!supabase) return { success: false, error: 'Supabase 미설정' };
+  try {
+    const { error } = await supabase.from('food_trucks').delete().eq('id', id);
+    if (error) return { success: false, error: error.message };
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err?.message || String(err) };

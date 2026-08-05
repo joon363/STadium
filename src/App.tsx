@@ -8,6 +8,9 @@ import { SportDetail } from './pages/SportDetail';
 import { StageDetail } from './pages/StageDetail';
 import { CampusMap } from './pages/CampusMap';
 import { Contact } from './pages/Contact';
+import { BoothGuide } from './pages/BoothGuide';
+import { FoodTruckGuide } from './pages/FoodTruckGuide';
+import { SponsorGuide } from './pages/SponsorGuide';
 import { Admin } from './pages/Admin';
 
 export const App: React.FC = () => {
@@ -30,6 +33,9 @@ export const App: React.FC = () => {
                     <Route path="/stages" element={<StageDetail />} />
                     <Route path="/map" element={<CampusMap />} />
                     <Route path="/contact" element={<Contact />} />
+                    <Route path="/booths" element={<BoothGuide />} />
+                    <Route path="/foodtrucks" element={<FoodTruckGuide />} />
+                    <Route path="/sponsors" element={<SponsorGuide />} />
                     <Route path="/:sportKey" element={<SportDetail />} />
                   </Routes>
                 </main>
