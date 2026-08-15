@@ -1,131 +1,344 @@
 import React from 'react';
 import { MatchItem, SCHOOLS } from '../config/stadiumConfig';
-import { MapPin, Clock } from 'lucide-react';
+import { MapPin, Clock, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useRealtimeSchedule } from '../hooks/useRealtimeSchedule';
 
 interface SportsGridCardProps {
   match: MatchItem;
   path: string;
+  layout?: 'grid' | 'horizontal';
 }
 
-export const SportsGridCard: React.FC<SportsGridCardProps> = ({ match, path }) => {
+export const SportsGridCard: React.FC<SportsGridCardProps> = ({
+  match,
+  path,
+  layout = 'horizontal',
+}) => {
   const navigate = useNavigate();
+  const { youtubeLiveUrl } = useRealtimeSchedule();
 
-  // Check if match has not started yet (upcoming)
-  const isUpcoming = !match.isLive && (match.countdownText !== undefined || match.statusText.includes('예정') || match.startTimeObj.getTime() > Date.now());
+  const isUpcoming =
+    !match.isLive &&
+    (match.countdownText !== undefined ||
+      match.statusText.includes('예정') ||
+      match.startTimeObj.getTime() > Date.now());
   const isFinished = !match.isLive && !isUpcoming;
 
-  // When match is finished, display ONLY "모든 {종목명} 경기가 종료되었습니다." text in the card!
-  if (isFinished) {
-    return (
-      <div
-        onClick={() => navigate(path)}
-        className="bg-gray-50 border border-gray-200 hover:border-gray-300 rounded-xl p-3 flex items-center justify-center text-center shadow-2xs transition-colors cursor-pointer select-none min-h-[110px]"
-      >
-        <span className="font-extrabold text-xs text-gray-800 leading-snug">
-          모든 {match.sportName} 경기가 <br /> 종료되었습니다.
-        </span>
-      </div>
-    );
-  }
-
-  // Find winning team color config
-  const winningSchool = match.winningTeam ? SCHOOLS[match.winningTeam] : null;
-
-  const team1School = SCHOOLS[match.team1];
-  const team2School = SCHOOLS[match.team2];
+  const team1School = SCHOOLS[match.team1] || {
+    color: '#64748b',
+    bgLight: '#f1f5f9',
+    logoText: match.team1.slice(0, 1),
+    logoUrl: '/postech.png',
+  };
+  const team2School = SCHOOLS[match.team2] || {
+    color: '#64748b',
+    bgLight: '#f1f5f9',
+    logoText: match.team2.slice(0, 1),
+    logoUrl: '/kaist.png',
+  };
 
   const isTeam1Winning = match.score1 > match.score2;
   const isTeam2Winning = match.score2 > match.score1;
 
-  const score1Style: React.CSSProperties = isTeam1Winning && team1School
-    ? { color: team1School.color }
-    : { color: '#111827' };
+  if (layout === 'horizontal') {
+    return (
+      <div
+        onClick={() => navigate(path)}
+        className="bg-white border border-gray-200/90 hover:border-gray-300 rounded-xl px-3 py-2.5 flex flex-col gap-1.5 shadow-2xs hover:shadow-xs transition-colors cursor-pointer active:scale-[0.99] select-none"
+      >
+        {/* Top Header: Sport Name, Round, Status Tag */}
+        <div className="flex items-center justify-between text-xs text-gray-500 border-b border-gray-100 pb-1">
+          <div className="flex items-center gap-1.5 font-bold text-gray-800">
+            <span className="text-sm">{match.icon}</span>
+            <span className="font-bold text-xs text-gray-900">{match.sportName}</span>
+            <span className="text-gray-300">·</span>
+            <span className="text-[11px] font-medium text-gray-500">{match.round}</span>
+          </div>
 
-  const score2Style: React.CSSProperties = isTeam2Winning && team2School
-    ? { color: team2School.color }
-    : { color: '#111827' };
+          <div className="flex items-center gap-1.5">
+            {match.isLive ? (
+              <a
+                href={youtubeLiveUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1 text-[10px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-2 py-0.5 rounded-full active:scale-95 transition-all shadow-2xs cursor-pointer"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
+                <span>LIVE</span>
+                <ChevronRight className="w-3 h-3 text-rose-500" />
+              </a>
+            ) : isFinished ? (
+              <span className="text-[10px] font-bold bg-gray-100 text-gray-600 px-2 py-0.2 rounded-full">
+                종료
+              </span>
+            ) : (
+              <span className="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-0.2 rounded-full">
+                {match.countdownText ? `시작까지 ${match.countdownText}` : '예정'}
+              </span>
+            )}
+          </div>
+        </div>
 
-  // Background and border style: If upcoming, apply gray gradient!
-  const bgStyle: React.CSSProperties = isUpcoming
-    ? { background: 'linear-gradient(135deg, #f9fafb 0%, #e5e7eb 100%)', borderColor: '#d1d5db' }
-    : match.isLive && winningSchool
-      ? { backgroundColor: winningSchool.bgLight, borderColor: winningSchool.color }
-      : winningSchool
-        ? { backgroundColor: winningSchool.bgLight, borderColor: winningSchool.color }
-        : { backgroundColor: '#FFFFFF', borderColor: '#E5E7EB' };
+        {/* Middle Score & Teams Row: Flush without inner rounding */}
+        <div className="relative overflow-hidden -mx-3 py-1 px-3">
+          {/* Left-side Winner Graphic (If Team 1 is winning) */}
+          {isTeam1Winning && (
+            <>
+              <div
+                className="absolute top-0 left-0 w-1 h-full pointer-events-none z-0"
+                style={{ backgroundColor: team1School.color }}
+              />
+              <svg
+                className="absolute top-0 left-0 h-full w-24 pointer-events-none z-0"
+                preserveAspectRatio="none"
+                viewBox="0 0 100 100"
+              >
+                <polygon
+                  points="0,0 48,0 60,100 0,100"
+                  fill={team1School.color}
+                  fillOpacity="0.22"
+                />
+                <polygon
+                  points="48,0 72,0 84,100 60,100"
+                  fill={team1School.color}
+                  fillOpacity="0.10"
+                />
+                <polygon
+                  points="72,0 86,0 98,100 84,100"
+                  fill={team1School.color}
+                  fillOpacity="0.03"
+                />
+              </svg>
+            </>
+          )}
 
-  const badgeStyle = winningSchool
-    ? { backgroundColor: winningSchool.color, color: winningSchool.textColor }
-    : { backgroundColor: '#374151', color: '#ffffff' };
+          {/* Right-side Winner Graphic (If Team 2 is winning) */}
+          {isTeam2Winning && (
+            <>
+              <div
+                className="absolute top-0 right-0 w-1 h-full pointer-events-none z-0"
+                style={{ backgroundColor: team2School.color }}
+              />
+              <svg
+                className="absolute top-0 right-0 h-full w-24 pointer-events-none z-0"
+                preserveAspectRatio="none"
+                viewBox="0 0 100 100"
+              >
+                <polygon
+                  points="52,0 100,0 100,100 40,100"
+                  fill={team2School.color}
+                  fillOpacity="0.22"
+                />
+                <polygon
+                  points="28,0 52,0 40,100 16,100"
+                  fill={team2School.color}
+                  fillOpacity="0.10"
+                />
+                <polygon
+                  points="14,0 28,0 16,100 2,100"
+                  fill={team2School.color}
+                  fillOpacity="0.03"
+                />
+              </svg>
+            </>
+          )}
 
+          <div className="relative z-10 flex items-center justify-between">
+            {/* Team 1 Logo */}
+            <div className="flex items-center justify-start flex-1 min-w-0">
+              <img
+                src={team1School.logoUrl}
+                alt={match.team1}
+                loading="eager"
+                decoding="async"
+                className="h-6 w-auto max-w-[85px] object-contain shrink-0"
+              />
+            </div>
+
+            {/* Center Score & Match Status */}
+            <div className="flex flex-col items-center justify-center px-2 min-w-[76px]">
+              <div className="flex items-center gap-1.5 text-base font-bold tracking-tight leading-none">
+                <span style={isTeam1Winning ? { color: team1School.color } : { color: '#0f172a' }}>
+                  {match.score1}
+                </span>
+                <span className="text-gray-300 font-light">-</span>
+                <span style={isTeam2Winning ? { color: team2School.color } : { color: '#0f172a' }}>
+                  {match.score2}
+                </span>
+              </div>
+              <div className="text-[10px] font-bold text-gray-500 mt-0.5 leading-none">
+                {match.statusText}
+              </div>
+            </div>
+
+            {/* Team 2 Logo */}
+            <div className="flex items-center justify-end flex-1 min-w-0">
+              <img
+                src={team2School.logoUrl}
+                alt={match.team2}
+                loading="eager"
+                decoding="async"
+                className="h-6 w-auto max-w-[85px] object-contain shrink-0"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Footer: Venue and Time */}
+        <div className="flex items-center justify-between text-[10px] font-medium text-gray-500 pt-1 border-t border-gray-50">
+          <div className="flex items-center gap-1 truncate max-w-[85%]">
+            <MapPin className="w-3 h-3 text-gray-400 shrink-0" />
+            <span className="truncate">{match.venue}</span>
+            <span className="text-gray-300">·</span>
+            <Clock className="w-3 h-3 text-gray-400 shrink-0" />
+            <span>{match.timeRangeText}</span>
+          </div>
+          <div className="flex items-center text-gray-400 shrink-0">
+            <ChevronRight className="w-3.5 h-3.5" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Grid layout (2x2 on Home)
   return (
     <div
       onClick={() => navigate(path)}
-      style={bgStyle}
-      className="border rounded-xl p-3 flex flex-col justify-between shadow-2xs hover:border-gray-400 transition-colors cursor-pointer relative overflow-hidden select-none"
+      className="bg-white border border-gray-200/90 hover:border-gray-300 rounded-xl p-2.5 flex flex-col justify-between shadow-2xs hover:shadow-xs transition-colors cursor-pointer active:scale-[0.99] select-none min-h-[110px]"
     >
-      {/* Top Bar: Icon, Name & Status badge */}
+      {/* Top Bar (Clean, no background graphic) */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5 font-bold text-gray-900 text-sm">
-          <span className="text-base">{match.icon}</span>
-          <span className="truncate">{match.sportName}</span>
+        <div className="flex items-center gap-1 font-bold text-gray-900 text-xs">
+          <span>{match.icon}</span>
+          <span className="truncate font-bold">{match.sportName}</span>
         </div>
 
         {match.isLive ? (
-          <span
-            style={badgeStyle}
-            className="text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider animate-pulse"
+          <a
+            href={youtubeLiveUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-0.5 text-[9px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-1.5 py-0.5 rounded-full active:scale-95 transition-all shadow-2xs cursor-pointer"
           >
-            LIVE
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
+            <span>LIVE</span>
+            <ChevronRight className="w-2.5 h-2.5 text-rose-500" />
+          </a>
+        ) : isFinished ? (
+          <span className="text-[9px] font-bold bg-gray-100 text-gray-500 px-1.5 py-0.2 rounded">
+            종료
           </span>
         ) : (
-          <span className="text-[10px] font-extrabold bg-gray-300 border border-gray-400 text-gray-800 px-2 py-0.5 rounded-md">
-            시작전
+          <span className="text-[9px] font-bold bg-blue-50 text-blue-600 px-1.5 py-0.2 rounded">
+            예정
           </span>
         )}
       </div>
 
-      {/* Match Content */}
-      <div className="my-1.5">
-        {/* Teams & Score */}
-        <div className="flex items-center justify-between text-center font-bold">
-          {/* Team 1 */}
-          <div className="flex flex-col items-center flex-1">
-            <span className="text-xs text-gray-900 font-extrabold">{match.team1}</span>
+      {/* Middle Teams & Score Row: Flush without inner rounding */}
+      <div className="relative overflow-hidden -mx-2.5 my-1 py-1 px-2.5">
+        {/* Left-side Winner Graphic (If Team 1 is winning) */}
+        {isTeam1Winning && (
+          <>
+            <div
+              className="absolute top-0 left-0 w-1 h-full pointer-events-none z-0"
+              style={{ backgroundColor: team1School.color }}
+            />
+            <svg
+              className="absolute top-0 left-0 h-full w-20 pointer-events-none z-0"
+              preserveAspectRatio="none"
+              viewBox="0 0 100 100"
+            >
+              <polygon points="0,0 48,0 60,100 0,100" fill={team1School.color} fillOpacity="0.22" />
+              <polygon
+                points="48,0 72,0 84,100 60,100"
+                fill={team1School.color}
+                fillOpacity="0.10"
+              />
+              <polygon
+                points="72,0 86,0 98,100 84,100"
+                fill={team1School.color}
+                fillOpacity="0.03"
+              />
+            </svg>
+          </>
+        )}
+
+        {/* Right-side Winner Graphic (If Team 2 is winning) */}
+        {isTeam2Winning && (
+          <>
+            <div
+              className="absolute top-0 right-0 w-1 h-full pointer-events-none z-0"
+              style={{ backgroundColor: team2School.color }}
+            />
+            <svg
+              className="absolute top-0 right-0 h-full w-20 pointer-events-none z-0"
+              preserveAspectRatio="none"
+              viewBox="0 0 100 100"
+            >
+              <polygon
+                points="52,0 100,0 100,100 40,100"
+                fill={team2School.color}
+                fillOpacity="0.22"
+              />
+              <polygon
+                points="28,0 52,0 40,100 16,100"
+                fill={team2School.color}
+                fillOpacity="0.10"
+              />
+              <polygon
+                points="14,0 28,0 16,100 2,100"
+                fill={team2School.color}
+                fillOpacity="0.03"
+              />
+            </svg>
+          </>
+        )}
+
+        <div className="relative z-10 flex items-center justify-between text-center">
+          {/* Team 1 Logo */}
+          <div className="flex items-center justify-center flex-1 min-w-0 h-8">
+            <img
+              src={team1School.logoUrl}
+              alt={match.team1}
+              loading="eager"
+              decoding="async"
+              className="h-7 w-auto max-w-[65px] object-contain shrink-0"
+            />
           </div>
 
-          {/* Score display */}
-          <div className="px-2.5 py-0.5 rounded-md bg-white border border-gray-300 text-base font-black shadow-2xs flex items-center gap-1">
-            <span style={score1Style}>{match.score1}</span>
-            <span className="text-gray-400 font-bold">:</span>
-            <span style={score2Style}>{match.score2}</span>
+          {/* Score */}
+          <div className="px-1 text-sm font-bold flex items-center gap-1">
+            <span style={isTeam1Winning ? { color: team1School.color } : { color: '#111827' }}>
+              {match.score1}
+            </span>
+            <span className="text-gray-300 font-normal">:</span>
+            <span style={isTeam2Winning ? { color: team2School.color } : { color: '#111827' }}>
+              {match.score2}
+            </span>
           </div>
 
-          {/* Team 2 */}
-          <div className="flex flex-col items-center flex-1">
-            <span className="text-xs text-gray-900 font-extrabold">{match.team2}</span>
+          {/* Team 2 Logo */}
+          <div className="flex items-center justify-center flex-1 min-w-0 h-8">
+            <img
+              src={team2School.logoUrl}
+              alt={match.team2}
+              loading="eager"
+              decoding="async"
+              className="h-7 w-auto max-w-[65px] object-contain shrink-0"
+            />
           </div>
         </div>
-
-        {/* Subtitle notice if any */}
-        {match.subtitle && (
-          <div className="mt-1.5 text-[10px] font-medium text-gray-700 bg-white/90 border border-gray-200 rounded-md px-1.5 py-0.5 text-center truncate">
-            {match.subtitle}
-          </div>
-        )}
       </div>
 
-      {/* Bottom Info: Status & Venue */}
-      <div className="flex items-center justify-between text-[11px] font-medium text-gray-600 border-gray-300/80 pt-1.5 mt-auto">
-        <div className="flex items-center gap-1 text-gray-800 font-bold truncate max-w-[55%]">
-          <Clock className="w-3 h-3 text-postech shrink-0" />
-          <span className="truncate">{match.statusText}</span>
-        </div>
-        <div className="flex items-center gap-0.5 text-gray-700 font-semibold truncate max-w-[45%]">
-          <MapPin className="w-3 h-3 text-postech shrink-0" />
-          <span className="truncate">{match.venue}</span>
-        </div>
+      {/* Footer (Clean, no background graphic) */}
+      <div className="flex items-center justify-between text-[9px] text-gray-500 border-t border-gray-100 pt-1">
+        <span className="truncate font-bold text-gray-700">{match.statusText}</span>
+        <span className="truncate text-gray-400">{match.venue}</span>
       </div>
     </div>
   );

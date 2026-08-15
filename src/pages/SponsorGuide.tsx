@@ -1,10 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Building2, ExternalLink, Award, Info } from 'lucide-react';
+import { ExternalLink, Award, Info, Loader2 } from 'lucide-react';
 import { getSupabaseSponsors, SponsorItem } from '../lib/supabase';
 
 export const SponsorGuide: React.FC = () => {
-  const navigate = useNavigate();
   const [sponsors, setSponsors] = useState<SponsorItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
@@ -30,83 +28,94 @@ export const SponsorGuide: React.FC = () => {
   };
 
   const tierLabels: Record<string, { label: string; color: string; badge: string }> = {
-    main: { label: '메인 후원사', color: 'border-amber-500/50 bg-amber-500/10 text-amber-300', badge: '👑 Main Sponsor' },
-    platinum: { label: '플래티넘 후원사', color: 'border-cyan-500/50 bg-cyan-500/10 text-cyan-300', badge: '💎 Platinum' },
-    gold: { label: '골드 후원사', color: 'border-yellow-500/50 bg-yellow-500/10 text-yellow-300', badge: '🥇 Gold' },
-    silver: { label: '실버 후원사', color: 'border-slate-400/50 bg-slate-400/10 text-slate-300', badge: '🥈 Silver' },
-    bronze: { label: '브론즈 후원사', color: 'border-orange-500/50 bg-orange-500/10 text-orange-300', badge: '🥉 Bronze' },
-    other: { label: '협찬 및 파트너', color: 'border-slate-700 bg-slate-800/50 text-slate-300', badge: '🤝 Partner' },
+    main: {
+      label: '메인 후원사',
+      color: 'border-amber-300 bg-amber-50 text-amber-900 font-extrabold',
+      badge: '👑 Main Sponsor',
+    },
+    platinum: {
+      label: '플래티넘 후원사',
+      color: 'border-cyan-300 bg-cyan-50 text-cyan-900 font-bold',
+      badge: '💎 Platinum',
+    },
+    gold: {
+      label: '골드 후원사',
+      color: 'border-yellow-300 bg-yellow-50 text-yellow-900 font-bold',
+      badge: '🥇 Gold',
+    },
+    silver: {
+      label: '실버 후원사',
+      color: 'border-slate-300 bg-slate-100 text-slate-800 font-bold',
+      badge: '🥈 Silver',
+    },
+    bronze: {
+      label: '브론즈 후원사',
+      color: 'border-orange-300 bg-orange-50 text-orange-900 font-bold',
+      badge: '🥉 Bronze',
+    },
+    other: {
+      label: '협찬 및 파트너',
+      color: 'border-gray-300 bg-gray-100 text-gray-800 font-bold',
+      badge: '🤝 Partner',
+    },
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white p-4 space-y-5 pb-12 select-none">
-      {/* Header Bar */}
-      <div className="flex items-center gap-3 border-b border-slate-800 pb-3">
-        <button
-          onClick={() => navigate('/')}
-          className="touch-target p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white active:bg-slate-800 transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div>
-          <h1 className="font-extrabold text-base flex items-center gap-2 text-white">
-            <Building2 className="w-5 h-5 text-blue-500" />
-            <span>후원 기업 안내</span>
-          </h1>
-          <p className="text-xs text-slate-400">2026 STadium을 후원해주신 고마운 파트너 기업 목록</p>
-        </div>
-      </div>
-
-      {/* Content Area */}
+    <div className="p-3 space-y-4 select-none text-gray-900 pb-8">
+      {/* Content Area (No top banner header / No global header) */}
       {loading ? (
-        <div className="py-12 text-center text-slate-400 text-xs animate-pulse">
-          Supabase 데이터 불러오는 중...
+        <div className="py-16 flex flex-col items-center justify-center gap-2.5 text-gray-400 text-xs font-bold bg-white border border-gray-200 rounded-2xl shadow-2xs">
+          <Loader2 className="w-6 h-6 text-postech animate-spin" />
+          <span>후원 기업 목록을 불러오는 중...</span>
         </div>
       ) : activeSponsors.length === 0 ? (
-        <div className="py-16 text-center space-y-2 bg-slate-900/50 border border-slate-800 rounded-xl p-6">
-          <Info className="w-8 h-8 text-slate-500 mx-auto" />
-          <p className="text-sm font-bold text-slate-300">등록된 후원 기업 정보가 없습니다.</p>
-          <p className="text-xs text-slate-500">관리자 페이지에서 후원 기업 정보를 등록해주세요.</p>
+        <div className="py-12 text-center space-y-2 bg-white border border-gray-200 rounded-2xl p-6 shadow-2xs">
+          <Info className="w-8 h-8 text-gray-400 mx-auto" />
+          <p className="text-sm font-bold text-gray-700">등록된 후원 기업 정보가 없습니다.</p>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {Object.entries(tierMap).map(([tierKey, list]) => {
             if (list.length === 0) return null;
             const meta = tierLabels[tierKey] || tierLabels.other;
 
             return (
-              <div key={tierKey} className="space-y-3">
-                <div className="flex items-center gap-2 border-b border-slate-800 pb-1.5">
-                  <Award className="w-4 h-4 text-amber-400" />
-                  <h2 className="font-extrabold text-sm text-slate-200">{meta.label}</h2>
-                  <span className="text-[10px] font-bold text-slate-500 ml-auto">
-                    {list.length}개 기업
-                  </span>
+              <div key={tierKey} className="space-y-2">
+                <div className="flex items-center justify-between px-1 border-b border-gray-200 pb-1">
+                  <div className="flex items-center gap-1.5">
+                    <Award className="w-4 h-4 text-amber-500" />
+                    <h2 className="font-extrabold text-xs text-gray-800 tracking-wide">
+                      {meta.label}
+                    </h2>
+                  </div>
+                  <span className="text-[10px] font-bold text-gray-400">{list.length}개 기업</span>
                 </div>
 
-                <div className="grid grid-cols-1 gap-3">
+                <div className="grid grid-cols-1 gap-2">
                   {list.map((sponsor) => (
                     <div
                       key={sponsor.id}
-                      className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3 shadow-md hover:border-slate-700 transition-colors"
+                      className="bg-white border border-gray-200/90 rounded-2xl p-3 space-y-2 shadow-2xs hover:border-gray-300 transition-colors"
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
                           {sponsor.logoUrl ? (
                             <img
                               src={sponsor.logoUrl}
                               alt={sponsor.name}
-                              className="w-10 h-10 object-contain rounded-lg bg-white p-1"
+                              className="w-10 h-10 object-contain rounded-xl bg-gray-50 border border-gray-200 p-1 shrink-0 shadow-2xs"
                             />
                           ) : (
-                            <div className="w-10 h-10 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-lg font-black text-slate-400">
+                            <div className="w-10 h-10 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center text-base font-extrabold text-gray-700 shrink-0">
                               {sponsor.name.charAt(0)}
                             </div>
                           )}
-                          <div>
-                            <h3 className="font-extrabold text-base text-white">{sponsor.name}</h3>
+                          <div className="min-w-0">
+                            <h3 className="font-extrabold text-xs text-gray-900 truncate leading-snug">
+                              {sponsor.name}
+                            </h3>
                             <span
-                              className={`text-[10px] font-bold px-2 py-0.5 rounded-md border inline-block mt-0.5 ${meta.color}`}
+                              className={`text-[9px] px-2 py-0.2 rounded-md border inline-block mt-0.5 ${meta.color}`}
                             >
                               {meta.badge}
                             </span>
@@ -118,16 +127,17 @@ export const SponsorGuide: React.FC = () => {
                             href={sponsor.websiteUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors"
+                            className="px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-800 transition-colors shrink-0 flex items-center gap-1 text-[10px] font-bold border border-gray-200"
                             title="공식 홈페이지 방문"
                           >
-                            <ExternalLink className="w-4 h-4" />
+                            <span>방문</span>
+                            <ExternalLink className="w-3 h-3 text-gray-600" />
                           </a>
                         )}
                       </div>
 
                       {sponsor.description && (
-                        <p className="text-xs text-slate-300 leading-relaxed font-medium bg-slate-950 p-2.5 rounded-lg border border-slate-800/80">
+                        <p className="text-xs text-gray-700 leading-relaxed font-medium bg-gray-50 p-2.5 rounded-xl border border-gray-200/80">
                           {sponsor.description}
                         </p>
                       )}

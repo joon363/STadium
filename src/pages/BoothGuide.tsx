@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Store, MapPin, Clock, Info } from 'lucide-react';
+import { ArrowLeft, Store, MapPin, Clock, Info, Loader2 } from 'lucide-react';
 import { getSupabaseBooths, BoothItem } from '../lib/supabase';
 
 export const BoothGuide: React.FC = () => {
@@ -24,9 +24,10 @@ export const BoothGuide: React.FC = () => {
     { id: 'promotion', label: '홍보' },
   ];
 
-  const filteredBooths = activeCategory === 'ALL'
-    ? booths.filter((b) => b.isActive)
-    : booths.filter((b) => b.isActive && b.category === activeCategory);
+  const filteredBooths =
+    activeCategory === 'ALL'
+      ? booths.filter((b) => b.isActive)
+      : booths.filter((b) => b.isActive && b.category === activeCategory);
 
   return (
     <div className="min-h-screen bg-slate-950 text-white p-4 space-y-4 pb-12 select-none">
@@ -66,14 +67,14 @@ export const BoothGuide: React.FC = () => {
 
       {/* Content Area */}
       {loading ? (
-        <div className="py-12 text-center text-slate-400 text-xs animate-pulse">
-          Supabase 데이터 불러오는 중...
+        <div className="py-16 flex flex-col items-center justify-center gap-2.5 text-slate-400 text-xs font-bold bg-slate-900 border border-slate-800 rounded-2xl">
+          <Loader2 className="w-6 h-6 text-amber-500 animate-spin" />
+          <span>부스 정보를 불러오는 중...</span>
         </div>
       ) : filteredBooths.length === 0 ? (
         <div className="py-16 text-center space-y-2 bg-slate-900/50 border border-slate-800 rounded-xl p-6">
           <Info className="w-8 h-8 text-slate-500 mx-auto" />
           <p className="text-sm font-bold text-slate-300">등록된 부스 정보가 없습니다.</p>
-          <p className="text-xs text-slate-500">관리자 페이지에서 부스 정보를 등록해주세요.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-3">
@@ -84,13 +85,10 @@ export const BoothGuide: React.FC = () => {
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2.5">
-                  <span className="text-2xl p-2 bg-slate-800 rounded-lg border border-slate-700">
-                    {booth.icon || '🎪'}
-                  </span>
                   <div>
                     <h3 className="font-extrabold text-sm text-white">{booth.name}</h3>
                     {booth.operator && (
-                      <p className="text-xs text-amber-400 font-semibold">{booth.operator}</p>
+                      <p className="text-xs text-amber-400 font-bold">{booth.operator}</p>
                     )}
                   </div>
                 </div>

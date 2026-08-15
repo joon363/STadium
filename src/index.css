@@ -1,17 +1,22 @@
-@import "pretendard/dist/web/static/pretendard.css";
+@import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  html, body {
+  html,
+  body,
+  #root {
     height: 100%;
+    width: 100%;
     margin: 0;
     padding: 0;
-    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+    font-family: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+    overscroll-behavior-y: none;
   }
 }
 

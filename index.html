@@ -1,11 +1,25 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
     <title>2026 STadium - 당일 방문객 안내</title>
-    <meta name="description" content="2026 STadium 이공계 특성화대학 연합 교류전 당일 방문객을 위한 실시간 경기, 공연 및 캠퍼스맵 안내" />
-    <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+    <meta
+      name="description"
+      content="2026 STadium 이공계 특성화대학 연합 교류전 당일 방문객을 위한 실시간 경기, 공연 및 캠퍼스맵 안내"
+    />
+
+    <!-- Critical Asset Preloading for Instant Paint & Zero Latency -->
+    <link rel="preload" as="image" href="/map.png" type="image/png" fetchpriority="high" />
+    <link rel="preload" as="image" href="/postech.png" type="image/png" />
+    <link rel="preload" as="image" href="/kaist.png" type="image/png" />
+    <link rel="preload" as="image" href="/gist.png" type="image/png" />
+    <link rel="preload" as="image" href="/dgist.png" type="image/png" />
+    <link rel="preload" as="image" href="/unist.png" type="image/png" />
+    <link rel="preload" as="image" href="/kentech.png" type="image/png" />
   </head>
   <body class="bg-gray-100 text-gray-900 antialiased selection:bg-rose-500 selection:text-white">
     <div id="root"></div>
