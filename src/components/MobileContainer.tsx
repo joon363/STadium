@@ -4,12 +4,11 @@ import { BottomNav } from './BottomNav';
 
 interface MobileContainerProps {
   children: React.ReactNode;
-  onOpenMenu?: () => void;
 }
 
 const HIDE_NAV_ROUTES = ['/soccer', '/baseball', '/lol', '/badminton', '/basketball'];
 
-export const MobileContainer: React.FC<MobileContainerProps> = ({ children, onOpenMenu }) => {
+export const MobileContainer: React.FC<MobileContainerProps> = ({ children }) => {
   const location = useLocation();
   const isMap = location.pathname === '/map';
   const shouldHideNav = HIDE_NAV_ROUTES.includes(location.pathname);
@@ -33,7 +32,7 @@ export const MobileContainer: React.FC<MobileContainerProps> = ({ children, onOp
         </div>
 
         {/* Global Fixed Bottom Navigation */}
-        {!shouldHideNav && <BottomNav onOpenMenu={onOpenMenu} />}
+        {!shouldHideNav && <BottomNav />}
       </div>
     </div>
   );

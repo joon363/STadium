@@ -732,7 +732,8 @@ export function calculateOverallStandings(
 export interface StageItem {
   school: string;
   clubName: string;
-  genre: string;
+  category: string; // 구분 (e.g., '밴드', '댄스', '힙합', '응원단', '기타')
+  genre?: string;   // 장르 (optional e.g., '모던락', 'K-POP' 등)
   songTitle: string;
   startHour: number;
   startMinute: number;
@@ -740,11 +741,14 @@ export interface StageItem {
   endMinute: number;
 }
 
+export const STAGE_CATEGORIES = ['밴드', '댄스', '힙합', '응원단', '기타'] as const;
+
 export const STAGE_TIMETABLE: StageItem[] = [
   {
     school: 'GIST',
     clubName: 'PULSE (댄스동아리)',
-    genre: 'K-POP & 힙합 댄스',
+    category: '댄스',
+    genre: 'K-POP',
     songTitle: 'Supernova - aespa (Cover)',
     startHour: 14,
     startMinute: 0,
@@ -754,7 +758,8 @@ export const STAGE_TIMETABLE: StageItem[] = [
   {
     school: 'UNIST',
     clubName: 'MELODY (밴드)',
-    genre: '모던 록',
+    category: '밴드',
+    genre: '모던락',
     songTitle: '한 페이지가 될 수 있게 - DAY6',
     startHour: 15,
     startMinute: 0,
@@ -764,7 +769,8 @@ export const STAGE_TIMETABLE: StageItem[] = [
   {
     school: 'DGIST',
     clubName: 'BEAT (힙합)',
-    genre: '스트릿 힙합',
+    category: '힙합',
+    genre: '스트릿',
     songTitle: '자작곡 & 사이퍼 쇼케이스',
     startHour: 16,
     startMinute: 0,
@@ -774,7 +780,8 @@ export const STAGE_TIMETABLE: StageItem[] = [
   {
     school: 'POSTECH',
     clubName: '스틸러 (Steeler)',
-    genre: '락 밴드',
+    category: '밴드',
+    genre: '락',
     songTitle: '사건의 지평선 - 윤하 (Cover)',
     startHour: 17,
     startMinute: 15,
@@ -784,6 +791,7 @@ export const STAGE_TIMETABLE: StageItem[] = [
   {
     school: 'KAIST',
     clubName: 'CHORUS (보컬동아리)',
+    category: '응원단',
     genre: '아카펠라 & 발라드',
     songTitle: 'STadium 축하합창 메들리',
     startHour: 18,
@@ -794,6 +802,7 @@ export const STAGE_TIMETABLE: StageItem[] = [
   {
     school: 'POSTECH',
     clubName: 'STadium 초청가수 특별공연',
+    category: '기타',
     genre: '메인 축하공연',
     songTitle: '2026 STadium 피날레 콘서트',
     startHour: 20,
@@ -806,7 +815,8 @@ export const STAGE_TIMETABLE: StageItem[] = [
 export interface EvaluatedStagePerformance {
   school: string;
   clubName: string;
-  genre: string;
+  category: string;
+  genre?: string;
   songTitle: string;
   statusText: string;
   nextClubName: string;
@@ -869,7 +879,8 @@ export function getRealtimeStageConfig(
   return {
     school: currentItem.school,
     clubName: currentItem.clubName,
-    genre: currentItem.genre,
+    category: currentItem.category || currentItem.genre || '기타',
+    genre: currentItem.genre || '',
     songTitle: currentItem.songTitle,
     statusText: isLive ? `${elapsedMin}분 경과` : `${formatTime(start)} 시작 예정`,
     nextClubName: nextItem.clubName,

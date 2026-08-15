@@ -10,10 +10,72 @@ export const supabase: SupabaseClient | null = isSupabaseConfigured
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null;
 
+// ========== App-Wide In-Memory & LocalStorage Caching System ==========
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+
+const cacheMemoryStore: Record<string, CacheEntry<any>> = {};
+const DEFAULT_CACHE_TTL_MS = 5 * 60 * 1000; // 5 Minutes TTL (Fast Instant Cache)
+
+/**
+ * 앱 전역 데이터 캐시 파기 함수 (특정 키 또는 전체)
+ */
+export function invalidateAppCache(key?: string) {
+  if (key) {
+    delete cacheMemoryStore[key];
+    try {
+      localStorage.removeItem(`stadium_cache_${key}`);
+    } catch {}
+  } else {
+    Object.keys(cacheMemoryStore).forEach((k) => delete cacheMemoryStore[k]);
+    try {
+      Object.keys(localStorage).forEach((k) => {
+        if (k.startsWith('stadium_cache_')) {
+          localStorage.removeItem(k);
+        }
+      });
+    } catch {}
+  }
+}
+
+function getFromCache<T>(key: string, ttlMs: number = DEFAULT_CACHE_TTL_MS): T | null {
+  const now = Date.now();
+
+  // 1. 메모리 캐시 확인
+  if (cacheMemoryStore[key]) {
+    const entry = cacheMemoryStore[key];
+    if (now - entry.timestamp < ttlMs) {
+      return entry.data as T;
+    }
+  }
+
+  // 2. LocalStorage 스토리지 캐시 확인 (새로고침/탭 재진입 시에도 0ms 렌더링)
+  try {
+    const raw = localStorage.getItem(`stadium_cache_${key}`);
+    if (raw) {
+      const entry: CacheEntry<T> = JSON.parse(raw);
+      if (now - entry.timestamp < ttlMs) {
+        cacheMemoryStore[key] = entry;
+        return entry.data;
+      }
+    }
+  } catch {}
+
+  return null;
+}
+
+function saveToCache<T>(key: string, data: T) {
+  const entry: CacheEntry<T> = { data, timestamp: Date.now() };
+  cacheMemoryStore[key] = entry;
+  try {
+    localStorage.setItem(`stadium_cache_${key}`, JSON.stringify(entry));
+  } catch {}
+}
+
 /**
  * Supabase Storage에 이미지 파일 업로드 후 Public URL 반환
- * @param file 업로드할 File 객체
- * @param bucket 버킷 이름 (기본값: 'images')
  */
 export async function uploadImageToSupabase(file: File, bucket: string = 'images'): Promise<{ url?: string; error?: string }> {
   if (!supabase) return { error: 'Supabase 미설정' };
@@ -43,8 +105,13 @@ function rawString(val: any): string {
   return typeof val === 'string' ? val : String(val || '');
 }
 
-// Fetch all matches from Supabase
-export async function getSupabaseMatches(): Promise<RawScheduledMatch[] | null> {
+// Fetch all matches from Supabase (Cached)
+export async function getSupabaseMatches(forceRefresh: boolean = false): Promise<RawScheduledMatch[] | null> {
+  if (!forceRefresh) {
+    const cached = getFromCache<RawScheduledMatch[]>('matches');
+    if (cached) return cached;
+  }
+
   if (!supabase) return null;
 
   try {
@@ -54,7 +121,7 @@ export async function getSupabaseMatches(): Promise<RawScheduledMatch[] | null> 
       return null;
     }
 
-    return data.map((row) => ({
+    const formatted: RawScheduledMatch[] = data.map((row) => ({
       id: row.id,
       sportKey: row.sport_key,
       sportName: row.sport_name,
@@ -72,6 +139,9 @@ export async function getSupabaseMatches(): Promise<RawScheduledMatch[] | null> 
       winningTeamFinal: row.winning_team_final,
       subtitle: row.subtitle || undefined,
     }));
+
+    saveToCache('matches', formatted);
+    return formatted;
   } catch (err) {
     console.error('Supabase matches fetch error:', err);
     return null;
@@ -108,6 +178,7 @@ export async function updateSupabaseMatch(match: RawScheduledMatch): Promise<boo
       console.error('Failed to update match in Supabase:', error);
       return false;
     }
+    invalidateAppCache('matches');
     return true;
   } catch (err) {
     console.error('Supabase match update error:', err);
@@ -115,8 +186,13 @@ export async function updateSupabaseMatch(match: RawScheduledMatch): Promise<boo
   }
 }
 
-// Fetch Stage Performances from Supabase
-export async function getSupabaseStagePerformances(): Promise<StageItem[] | null> {
+// Fetch Stage Performances from Supabase (Cached)
+export async function getSupabaseStagePerformances(forceRefresh: boolean = false): Promise<StageItem[] | null> {
+  if (!forceRefresh) {
+    const cached = getFromCache<StageItem[]>('stage_performances');
+    if (cached) return cached;
+  }
+
   if (!supabase) return null;
 
   try {
@@ -130,16 +206,20 @@ export async function getSupabaseStagePerformances(): Promise<StageItem[] | null
       return null;
     }
 
-    return data.map((row) => ({
+    const formatted: StageItem[] = data.map((row) => ({
       school: row.school,
       clubName: row.club_name,
-      genre: row.genre,
+      category: row.category || row.genre || '기타',
+      genre: row.genre || '',
       songTitle: row.song_title,
       startHour: Number(row.start_hour),
       startMinute: Number(row.start_minute),
       endHour: Number(row.end_hour),
       endMinute: Number(row.end_minute),
     }));
+
+    saveToCache('stage_performances', formatted);
+    return formatted;
   } catch (err) {
     console.error('Supabase stage fetch error:', err);
     return null;
@@ -157,7 +237,8 @@ export async function updateSupabaseStagePerformance(index: number, item: StageI
         id: index + 1,
         school: item.school,
         club_name: item.clubName,
-        genre: item.genre,
+        category: item.category || '기타',
+        genre: item.genre || '',
         song_title: item.songTitle,
         start_hour: item.startHour,
         start_minute: item.startMinute,
@@ -169,6 +250,7 @@ export async function updateSupabaseStagePerformance(index: number, item: StageI
       console.error('Failed to update stage performance in Supabase:', error);
       return false;
     }
+    invalidateAppCache('stage_performances');
     return true;
   } catch (err) {
     console.error('Supabase stage update error:', err);
@@ -225,10 +307,15 @@ export async function updateAdminPasswordInSupabase(newPassword: string): Promis
   return updateSupabaseAdminPassword(newPassword);
 }
 
-// ========== Map Venues & Roads (dedicated tables) ==========
+// ========== Map Venues & Roads (Cached) ==========
 
 // Fetch all venues from map_venues table
-export async function getSupabaseMapVenues(): Promise<VenueNode[]> {
+export async function getSupabaseMapVenues(forceRefresh: boolean = false): Promise<VenueNode[]> {
+  if (!forceRefresh) {
+    const cached = getFromCache<VenueNode[]>('map_venues');
+    if (cached) return cached;
+  }
+
   if (!supabase) return [];
 
   try {
@@ -242,7 +329,7 @@ export async function getSupabaseMapVenues(): Promise<VenueNode[]> {
       return [];
     }
 
-    return data.map((row: any) => ({
+    const formatted: VenueNode[] = data.map((row: any) => ({
       id: row.id,
       name: row.name,
       category: row.category,
@@ -255,6 +342,9 @@ export async function getSupabaseMapVenues(): Promise<VenueNode[]> {
       isEatingZone: row.is_eating_zone || false,
       isRestArea: row.is_rest_area || false,
     }));
+
+    saveToCache('map_venues', formatted);
+    return formatted;
   } catch (err) {
     console.error('[Supabase Map Venues] Exception:', err);
     return [];
@@ -262,7 +352,12 @@ export async function getSupabaseMapVenues(): Promise<VenueNode[]> {
 }
 
 // Fetch all roads from map_roads table
-export async function getSupabaseMapRoads(): Promise<MapEdge[]> {
+export async function getSupabaseMapRoads(forceRefresh: boolean = false): Promise<MapEdge[]> {
+  if (!forceRefresh) {
+    const cached = getFromCache<MapEdge[]>('map_roads');
+    if (cached) return cached;
+  }
+
   if (!supabase) return [];
 
   try {
@@ -276,13 +371,16 @@ export async function getSupabaseMapRoads(): Promise<MapEdge[]> {
       return [];
     }
 
-    return data.map((row: any) => ({
+    const formatted: MapEdge[] = data.map((row: any) => ({
       id: row.id,
       fromNodeId: row.from_node_id,
       toNodeId: row.to_node_id,
       weightMinutes: Number(row.weight_minutes),
       waypoints: row.waypoints || [],
     }));
+
+    saveToCache('map_roads', formatted);
+    return formatted;
   } catch (err) {
     console.error('[Supabase Map Roads] Exception:', err);
     return [];
@@ -290,10 +388,10 @@ export async function getSupabaseMapRoads(): Promise<MapEdge[]> {
 }
 
 // Combined fetch for convenience
-export async function getSupabaseMapData(): Promise<{ nodes: VenueNode[]; edges: MapEdge[] } | null> {
+export async function getSupabaseMapData(forceRefresh: boolean = false): Promise<{ nodes: VenueNode[]; edges: MapEdge[] } | null> {
   const [nodes, edges] = await Promise.all([
-    getSupabaseMapVenues(),
-    getSupabaseMapRoads(),
+    getSupabaseMapVenues(forceRefresh),
+    getSupabaseMapRoads(forceRefresh),
   ]);
 
   if (nodes.length === 0 && edges.length === 0) return null;
@@ -325,6 +423,7 @@ export async function upsertMapVenue(node: VenueNode): Promise<{ success: boolea
       console.error('[Supabase Venue Upsert]', error);
       return { success: false, error: error.message };
     }
+    invalidateAppCache('map_venues');
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err?.message || String(err) };
@@ -345,6 +444,7 @@ export async function deleteMapVenue(id: string): Promise<{ success: boolean; er
       console.error('[Supabase Venue Delete]', error);
       return { success: false, error: error.message };
     }
+    invalidateAppCache('map_venues');
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err?.message || String(err) };
@@ -370,6 +470,7 @@ export async function upsertMapRoad(edge: MapEdge): Promise<{ success: boolean; 
       console.error('[Supabase Road Upsert]', error);
       return { success: false, error: error.message };
     }
+    invalidateAppCache('map_roads');
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err?.message || String(err) };
@@ -390,6 +491,7 @@ export async function deleteMapRoad(id: string): Promise<{ success: boolean; err
       console.error('[Supabase Road Delete]', error);
       return { success: false, error: error.message };
     }
+    invalidateAppCache('map_roads');
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err?.message || String(err) };
@@ -440,6 +542,8 @@ export async function resetMapToDefaults(
     const { error: insRoads } = await supabase.from('map_roads').insert(roadRows);
     if (insRoads) return { success: false, error: insRoads.message };
 
+    invalidateAppCache('map_venues');
+    invalidateAppCache('map_roads');
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err?.message || String(err) };
@@ -485,8 +589,13 @@ export interface FoodTruckItem {
   displayOrder: number;
 }
 
-// ----- Booths API -----
-export async function getSupabaseBooths(): Promise<BoothItem[]> {
+// ----- Booths API (Cached) -----
+export async function getSupabaseBooths(forceRefresh: boolean = false): Promise<BoothItem[]> {
+  if (!forceRefresh) {
+    const cached = getFromCache<BoothItem[]>('booths');
+    if (cached) return cached;
+  }
+
   if (!supabase) return [];
   try {
     const { data, error } = await supabase
@@ -500,7 +609,7 @@ export async function getSupabaseBooths(): Promise<BoothItem[]> {
       return [];
     }
 
-    return data.map((r: any) => ({
+    const formatted: BoothItem[] = data.map((r: any) => ({
       id: r.id,
       name: r.name,
       operator: r.operator || '',
@@ -513,6 +622,9 @@ export async function getSupabaseBooths(): Promise<BoothItem[]> {
       isActive: r.is_active ?? true,
       displayOrder: Number(r.display_order || 0),
     }));
+
+    saveToCache('booths', formatted);
+    return formatted;
   } catch (err) {
     console.error('[Supabase Booths Exception]', err);
     return [];
@@ -536,6 +648,7 @@ export async function upsertSupabaseBooth(item: BoothItem): Promise<{ success: b
       display_order: item.displayOrder,
     });
     if (error) return { success: false, error: error.message };
+    invalidateAppCache('booths');
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err?.message || String(err) };
@@ -547,14 +660,20 @@ export async function deleteSupabaseBooth(id: string): Promise<{ success: boolea
   try {
     const { error } = await supabase.from('booths').delete().eq('id', id);
     if (error) return { success: false, error: error.message };
+    invalidateAppCache('booths');
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err?.message || String(err) };
   }
 }
 
-// ----- Sponsors API -----
-export async function getSupabaseSponsors(): Promise<SponsorItem[]> {
+// ----- Sponsors API (Cached) -----
+export async function getSupabaseSponsors(forceRefresh: boolean = false): Promise<SponsorItem[]> {
+  if (!forceRefresh) {
+    const cached = getFromCache<SponsorItem[]>('sponsors');
+    if (cached) return cached;
+  }
+
   if (!supabase) return [];
   try {
     const { data, error } = await supabase
@@ -568,7 +687,7 @@ export async function getSupabaseSponsors(): Promise<SponsorItem[]> {
       return [];
     }
 
-    return data.map((r: any) => ({
+    const formatted: SponsorItem[] = data.map((r: any) => ({
       id: r.id,
       name: r.name,
       tier: r.tier || 'gold',
@@ -578,6 +697,9 @@ export async function getSupabaseSponsors(): Promise<SponsorItem[]> {
       isActive: r.is_active ?? true,
       displayOrder: Number(r.display_order || 0),
     }));
+
+    saveToCache('sponsors', formatted);
+    return formatted;
   } catch (err) {
     console.error('[Supabase Sponsors Exception]', err);
     return [];
@@ -598,6 +720,7 @@ export async function upsertSupabaseSponsor(item: SponsorItem): Promise<{ succes
       display_order: item.displayOrder,
     });
     if (error) return { success: false, error: error.message };
+    invalidateAppCache('sponsors');
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err?.message || String(err) };
@@ -609,14 +732,20 @@ export async function deleteSupabaseSponsor(id: string): Promise<{ success: bool
   try {
     const { error } = await supabase.from('sponsors').delete().eq('id', id);
     if (error) return { success: false, error: error.message };
+    invalidateAppCache('sponsors');
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err?.message || String(err) };
   }
 }
 
-// ----- Food Trucks API -----
-export async function getSupabaseFoodTrucks(): Promise<FoodTruckItem[]> {
+// ----- Food Trucks API (Cached) -----
+export async function getSupabaseFoodTrucks(forceRefresh: boolean = false): Promise<FoodTruckItem[]> {
+  if (!forceRefresh) {
+    const cached = getFromCache<FoodTruckItem[]>('food_trucks');
+    if (cached) return cached;
+  }
+
   if (!supabase) return [];
   try {
     const { data, error } = await supabase
@@ -630,7 +759,7 @@ export async function getSupabaseFoodTrucks(): Promise<FoodTruckItem[]> {
       return [];
     }
 
-    return data.map((r: any) => ({
+    const formatted: FoodTruckItem[] = data.map((r: any) => ({
       id: r.id,
       name: r.name,
       menuSummary: r.menu_summary || '',
@@ -641,6 +770,9 @@ export async function getSupabaseFoodTrucks(): Promise<FoodTruckItem[]> {
       isActive: r.is_active ?? true,
       displayOrder: Number(r.display_order || 0),
     }));
+
+    saveToCache('food_trucks', formatted);
+    return formatted;
   } catch (err) {
     console.error('[Supabase FoodTrucks Exception]', err);
     return [];
@@ -662,6 +794,7 @@ export async function upsertSupabaseFoodTruck(item: FoodTruckItem): Promise<{ su
       display_order: item.displayOrder,
     });
     if (error) return { success: false, error: error.message };
+    invalidateAppCache('food_trucks');
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err?.message || String(err) };
@@ -673,6 +806,160 @@ export async function deleteSupabaseFoodTruck(id: string): Promise<{ success: bo
   try {
     const { error } = await supabase.from('food_trucks').delete().eq('id', id);
     if (error) return { success: false, error: error.message };
+    invalidateAppCache('food_trucks');
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || String(err) };
+  }
+}
+
+// ========== Notices & FAQs Interfaces & Supabase API (Cached) ==========
+
+export interface NoticeItem {
+  id?: number;
+  title: string;
+  content: string;
+  isPinned: boolean;
+  createdAt?: string;
+}
+
+export interface FAQItem {
+  id?: number;
+  category: string;
+  question: string;
+  answer: string;
+  displayOrder: number;
+}
+
+// ----- Notices API (Cached) -----
+export async function getSupabaseNotices(forceRefresh: boolean = false): Promise<NoticeItem[]> {
+  if (!forceRefresh) {
+    const cached = getFromCache<NoticeItem[]>('notices');
+    if (cached) return cached;
+  }
+
+  if (!supabase) return [];
+  try {
+    const { data, error } = await supabase
+      .from('notices')
+      .select('*')
+      .order('is_pinned', { ascending: false })
+      .order('id', { ascending: false });
+
+    if (error || !data) {
+      console.warn('[Supabase Notices Fetch Error]', error);
+      return [];
+    }
+
+    const formatted: NoticeItem[] = data.map((r: any) => ({
+      id: r.id,
+      title: r.title,
+      content: r.content,
+      isPinned: r.is_pinned ?? false,
+      createdAt: r.created_at,
+    }));
+
+    saveToCache('notices', formatted);
+    return formatted;
+  } catch (err) {
+    console.error('[Supabase Notices Exception]', err);
+    return [];
+  }
+}
+
+export async function upsertSupabaseNotice(item: NoticeItem): Promise<{ success: boolean; error?: string }> {
+  if (!supabase) return { success: false, error: 'Supabase 미설정' };
+  try {
+    const row: any = {
+      title: item.title,
+      content: item.content,
+      is_pinned: item.isPinned,
+    };
+    if (item.id) row.id = item.id;
+
+    const { error } = await supabase.from('notices').upsert(row);
+    if (error) return { success: false, error: error.message };
+    invalidateAppCache('notices');
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || String(err) };
+  }
+}
+
+export async function deleteSupabaseNotice(id: number): Promise<{ success: boolean; error?: string }> {
+  if (!supabase) return { success: false, error: 'Supabase 미설정' };
+  try {
+    const { error } = await supabase.from('notices').delete().eq('id', id);
+    if (error) return { success: false, error: error.message };
+    invalidateAppCache('notices');
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || String(err) };
+  }
+}
+
+// ----- FAQs API (Cached) -----
+export async function getSupabaseFAQs(forceRefresh: boolean = false): Promise<FAQItem[]> {
+  if (!forceRefresh) {
+    const cached = getFromCache<FAQItem[]>('faqs');
+    if (cached) return cached;
+  }
+
+  if (!supabase) return [];
+  try {
+    const { data, error } = await supabase
+      .from('faqs')
+      .select('*')
+      .order('display_order', { ascending: true })
+      .order('id', { ascending: true });
+
+    if (error || !data) {
+      console.warn('[Supabase FAQs Fetch Error]', error);
+      return [];
+    }
+
+    const formatted: FAQItem[] = data.map((r: any) => ({
+      id: r.id,
+      category: r.category || '일반',
+      question: r.question,
+      answer: r.answer,
+      displayOrder: Number(r.display_order || 0),
+    }));
+
+    saveToCache('faqs', formatted);
+    return formatted;
+  } catch (err) {
+    console.error('[Supabase FAQs Exception]', err);
+    return [];
+  }
+}
+
+export async function upsertSupabaseFAQ(item: FAQItem): Promise<{ success: boolean; error?: string }> {
+  if (!supabase) return { success: false, error: 'Supabase 미설정' };
+  try {
+    const row: any = {
+      category: item.category,
+      question: item.question,
+      answer: item.answer,
+      display_order: item.displayOrder,
+    };
+    if (item.id) row.id = item.id;
+
+    const { error } = await supabase.from('faqs').upsert(row);
+    if (error) return { success: false, error: error.message };
+    invalidateAppCache('faqs');
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || String(err) };
+  }
+}
+
+export async function deleteSupabaseFAQ(id: number): Promise<{ success: boolean; error?: string }> {
+  if (!supabase) return { success: false, error: 'Supabase 미설정' };
+  try {
+    const { error } = await supabase.from('faqs').delete().eq('id', id);
+    if (error) return { success: false, error: error.message };
+    invalidateAppCache('faqs');
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err?.message || String(err) };

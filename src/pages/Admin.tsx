@@ -38,6 +38,14 @@ import {
   BoothItem,
   SponsorItem,
   FoodTruckItem,
+  NoticeItem,
+  FAQItem,
+  getSupabaseNotices,
+  upsertSupabaseNotice,
+  deleteSupabaseNotice,
+  getSupabaseFAQs,
+  upsertSupabaseFAQ,
+  deleteSupabaseFAQ,
   uploadImageToSupabase,
 } from '../lib/supabase';
 import { CampusMapView } from '../components/CampusMapView';
@@ -65,6 +73,8 @@ import {
   Truck,
   Building2,
   Upload,
+  Bell,
+  HelpCircle,
 } from 'lucide-react';
 
 export const Admin: React.FC = () => {
@@ -77,18 +87,33 @@ export const Admin: React.FC = () => {
   const [isVerifying, setIsVerifying] = useState<boolean>(false);
 
   // Active Admin Tab
-  const [activeTab, setActiveTab] = useState<'matches' | 'stage' | 'map' | 'booths' | 'foodtrucks' | 'sponsors' | 'settings'>('matches');
+  const [activeTab, setActiveTab] = useState<'matches' | 'stage' | 'map' | 'booths' | 'foodtrucks' | 'sponsors' | 'notices' | 'faqs' | 'settings'>('matches');
 
   // Data States
   const [matches, setMatches] = useState<RawScheduledMatch[]>(DEFAULT_RAW_SCHEDULE_FLAT);
   const [stageItems, setStageItems] = useState<StageItem[]>(STAGE_TIMETABLE);
 
-  // Booth, Food Truck, Sponsor States
+  // Booth, Food Truck, Sponsor, Notice, FAQ States
   const [booths, setBooths] = useState<BoothItem[]>([]);
   const [foodTrucks, setFoodTrucks] = useState<FoodTruckItem[]>([]);
   const [sponsors, setSponsors] = useState<SponsorItem[]>([]);
+  const [notices, setNotices] = useState<NoticeItem[]>([]);
+  const [faqs, setFaqs] = useState<FAQItem[]>([]);
 
   // Form States
+  const [editingNotice, setEditingNotice] = useState<Partial<NoticeItem>>({
+    title: '',
+    content: '',
+    isPinned: false,
+  });
+
+  const [editingFaq, setEditingFaq] = useState<Partial<FAQItem>>({
+    category: '일반',
+    question: '',
+    answer: '',
+    displayOrder: 0,
+  });
+
   const [editingBooth, setEditingBooth] = useState<Partial<BoothItem>>({
     id: '',
     name: '',
@@ -167,6 +192,8 @@ export const Admin: React.FC = () => {
       const fetchedBooths = await getSupabaseBooths();
       const fetchedFoodTrucks = await getSupabaseFoodTrucks();
       const fetchedSponsors = await getSupabaseSponsors();
+      const fetchedNotices = await getSupabaseNotices();
+      const fetchedFaqs = await getSupabaseFAQs();
 
       if (fetchedMatches && fetchedMatches.length > 0) {
         setMatches(fetchedMatches);
@@ -185,6 +212,8 @@ export const Admin: React.FC = () => {
       setBooths(fetchedBooths);
       setFoodTrucks(fetchedFoodTrucks);
       setSponsors(fetchedSponsors);
+      setNotices(fetchedNotices);
+      setFaqs(fetchedFaqs);
     } catch (err) {
       console.error('Admin load error:', err);
     } finally {
@@ -402,6 +431,97 @@ export const Admin: React.FC = () => {
       setSponsors((prev) => prev.filter((s) => s.id !== id));
       if (editingSponsor.id === id) {
         setEditingSponsor({ id: '', name: '', tier: 'gold', logoUrl: '', description: '', websiteUrl: '', isActive: true, displayOrder: 0 });
+      }
+    } else {
+      setSaveStatus(`삭제 실패: ${res.error}`);
+    }
+    setTimeout(() => setSaveStatus(null), 3000);
+  };
+
+  // --- Notice CRUD Handlers ---
+  const handleSaveNotice = async () => {
+    if (!editingNotice.title || !editingNotice.content) {
+      alert('공지사항 제목과 내용을 입력해 주세요.');
+      return;
+    }
+    const itemToSave: NoticeItem = {
+      id: editingNotice.id,
+      title: editingNotice.title,
+      content: editingNotice.content,
+      isPinned: editingNotice.isPinned ?? false,
+    };
+
+    setIsSaving(true);
+    const res = await upsertSupabaseNotice(itemToSave);
+    setIsSaving(false);
+
+    if (res.success) {
+      setSaveStatus(`공지사항 [${itemToSave.title}] 정보가 저장되었습니다.`);
+      const updated = await getSupabaseNotices();
+      setNotices(updated);
+      setEditingNotice({ title: '', content: '', isPinned: false });
+    } else {
+      setSaveStatus(`공지사항 저장 실패: ${res.error}`);
+    }
+    setTimeout(() => setSaveStatus(null), 3000);
+  };
+
+  const handleDeleteNotice = async (id: number) => {
+    if (!confirm('정말 이 공지사항을 삭제하시겠습니까?')) return;
+    setIsSaving(true);
+    const res = await deleteSupabaseNotice(id);
+    setIsSaving(false);
+    if (res.success) {
+      setSaveStatus('공지사항이 삭제되었습니다.');
+      setNotices((prev) => prev.filter((n) => n.id !== id));
+      if (editingNotice.id === id) {
+        setEditingNotice({ title: '', content: '', isPinned: false });
+      }
+    } else {
+      setSaveStatus(`삭제 실패: ${res.error}`);
+    }
+    setTimeout(() => setSaveStatus(null), 3000);
+  };
+
+  // --- FAQ CRUD Handlers ---
+  const handleSaveFaq = async () => {
+    if (!editingFaq.question || !editingFaq.answer) {
+      alert('FAQ 질문과 답변을 입력해 주세요.');
+      return;
+    }
+    const itemToSave: FAQItem = {
+      id: editingFaq.id,
+      category: editingFaq.category || '일반',
+      question: editingFaq.question,
+      answer: editingFaq.answer,
+      displayOrder: Number(editingFaq.displayOrder || 0),
+    };
+
+    setIsSaving(true);
+    const res = await upsertSupabaseFAQ(itemToSave);
+    setIsSaving(false);
+
+    if (res.success) {
+      setSaveStatus(`FAQ [${itemToSave.question}] 정보가 저장되었습니다.`);
+      const updated = await getSupabaseFAQs();
+      setFaqs(updated);
+      setEditingFaq({ category: '일반', question: '', answer: '', displayOrder: 0 });
+    } else {
+      setSaveStatus(`FAQ 저장 실패: ${res.error}`);
+    }
+    setTimeout(() => setSaveStatus(null), 3000);
+  };
+
+  const handleDeleteFaq = async (id: number) => {
+    if (!confirm('정말 이 FAQ를 삭제하시겠습니까?')) return;
+    setIsSaving(true);
+    const res = await deleteSupabaseFAQ(id);
+    setIsSaving(false);
+    if (res.success) {
+      setSaveStatus('FAQ가 삭제되었습니다.');
+      setFaqs((prev) => prev.filter((f) => f.id !== id));
+      if (editingFaq.id === id) {
+        setEditingFaq({ category: '일반', question: '', answer: '', displayOrder: 0 });
       }
     } else {
       setSaveStatus(`삭제 실패: ${res.error}`);
@@ -771,6 +891,28 @@ export const Admin: React.FC = () => {
           </button>
 
           <button
+            onClick={() => setActiveTab('notices')}
+            className={`px-4 py-2.5 rounded-t-lg font-bold text-xs flex items-center gap-2 transition-colors border-b-2 ${activeTab === 'notices'
+              ? 'bg-white text-postech border-postech shadow-2xs'
+              : 'text-gray-600 hover:bg-gray-100 border-transparent'
+              }`}
+          >
+            <Bell className="w-4 h-4 text-rose-600" />
+            <span>📢 공지사항 관리</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('faqs')}
+            className={`px-4 py-2.5 rounded-t-lg font-bold text-xs flex items-center gap-2 transition-colors border-b-2 ${activeTab === 'faqs'
+              ? 'bg-white text-postech border-postech shadow-2xs'
+              : 'text-gray-600 hover:bg-gray-100 border-transparent'
+              }`}
+          >
+            <HelpCircle className="w-4 h-4 text-purple-600" />
+            <span>❓ FAQ 관리</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('settings')}
             className={`px-4 py-2.5 rounded-t-lg font-bold text-xs flex items-center gap-2 transition-colors border-b-2 ${activeTab === 'settings'
               ? 'bg-white text-postech border-postech shadow-2xs'
@@ -947,7 +1089,8 @@ export const Admin: React.FC = () => {
                   <tr>
                     <th className="p-3">학교</th>
                     <th className="p-3">동아리명</th>
-                    <th className="p-3">장르</th>
+                    <th className="p-3">구분 (필수)</th>
+                    <th className="p-3">장르 (선택)</th>
                     <th className="p-3">곡명 / 세트리스트</th>
                     <th className="p-3">공연 시각 (시작~종료)</th>
                     <th className="p-3 text-right">작업</th>
@@ -975,15 +1118,30 @@ export const Admin: React.FC = () => {
                           type="text"
                           value={item.clubName}
                           onChange={(e) => handleStageChange(idx, 'clubName', e.target.value)}
-                          className="bg-white border border-gray-300 rounded px-2 py-1 text-xs w-40 font-bold"
+                          className="bg-white border border-gray-300 rounded px-2 py-1 text-xs w-36 font-bold"
                         />
+                      </td>
+
+                      <td className="p-3">
+                        <select
+                          value={item.category || '기타'}
+                          onChange={(e) => handleStageChange(idx, 'category', e.target.value)}
+                          className="bg-white border border-gray-300 rounded px-2 py-1 text-xs font-bold text-purple-700"
+                        >
+                          <option value="밴드">밴드</option>
+                          <option value="댄스">댄스</option>
+                          <option value="힙합">힙합</option>
+                          <option value="응원단">응원단</option>
+                          <option value="기타">기타</option>
+                        </select>
                       </td>
 
                       <td className="p-3">
                         <input
                           type="text"
-                          value={item.genre}
+                          value={item.genre || ''}
                           onChange={(e) => handleStageChange(idx, 'genre', e.target.value)}
+                          placeholder="예: 모던락, K-POP"
                           className="bg-white border border-gray-300 rounded px-2 py-1 text-xs w-28"
                         />
                       </td>
@@ -1994,6 +2152,264 @@ export const Admin: React.FC = () => {
                             <td className="p-2.5 text-right">
                               <button
                                 onClick={() => setEditingSponsor(s)}
+                                className="px-2 py-1 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded font-bold text-[11px]"
+                              >
+                                편집
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab: Notices Management */}
+        {activeTab === 'notices' && (
+          <div className="p-6 bg-white border border-gray-200 rounded-b-xl shadow-2xs space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="font-extrabold text-base text-gray-900 flex items-center gap-2">
+                <Bell className="w-5 h-5 text-rose-600" />
+                <span>📢 공지사항 등록 및 관리</span>
+              </h2>
+              <button
+                onClick={() => setEditingNotice({ title: '', content: '', isPinned: false })}
+                className="px-3 py-1.5 bg-slate-900 text-white rounded text-xs font-bold flex items-center gap-1 hover:bg-slate-800"
+              >
+                <Plus className="w-4 h-4" />
+                <span>새 공지 작성</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-12 gap-6">
+              {/* Form Side */}
+              <div className="col-span-5 bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
+                <h3 className="font-extrabold text-xs text-slate-800 border-b border-slate-200 pb-2">
+                  {editingNotice.id ? '공지사항 수정' : '새 공지사항 작성'}
+                </h3>
+
+                <div className="space-y-3 text-xs">
+                  <div>
+                    <label className="font-bold text-gray-700 block mb-1">공지 제목 *</label>
+                    <input
+                      type="text"
+                      value={editingNotice.title || ''}
+                      onChange={(e) => setEditingNotice({ ...editingNotice, title: e.target.value })}
+                      placeholder="공지 제목 입력"
+                      className="w-full border border-gray-300 p-2 rounded text-xs font-bold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-gray-700 block mb-1">공지 내용 *</label>
+                    <textarea
+                      rows={6}
+                      value={editingNotice.content || ''}
+                      onChange={(e) => setEditingNotice({ ...editingNotice, content: e.target.value })}
+                      placeholder="상세 공지 내용을 입력하세요 (줄바꿈 지원)"
+                      className="w-full border border-gray-300 p-2 rounded text-xs leading-relaxed font-medium"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2">
+                    <label className="flex items-center gap-2 cursor-pointer font-bold text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={editingNotice.isPinned ?? false}
+                        onChange={(e) => setEditingNotice({ ...editingNotice, isPinned: e.target.checked })}
+                      />
+                      <span>상단 필독(📌) 고정</span>
+                    </label>
+
+                    <div className="flex items-center gap-2">
+                      {editingNotice.id && (
+                        <button
+                          onClick={() => handleDeleteNotice(editingNotice.id!)}
+                          className="px-3 py-1.5 bg-rose-100 text-rose-700 hover:bg-rose-200 rounded font-bold"
+                        >
+                          삭제
+                        </button>
+                      )}
+                      <button
+                        onClick={handleSaveNotice}
+                        disabled={isSaving}
+                        className="px-4 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded font-bold shadow-2xs"
+                      >
+                        저장하기
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Table Side */}
+              <div className="col-span-7 space-y-2">
+                <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-100 text-slate-700 font-extrabold border-b border-slate-200">
+                      <tr>
+                        <th className="p-2.5">고정</th>
+                        <th className="p-2.5">제목</th>
+                        <th className="p-2.5 text-right">관리</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-medium">
+                      {notices.length === 0 ? (
+                        <tr>
+                          <td colSpan={3} className="p-8 text-center text-slate-400">
+                            등록된 공지사항이 없습니다.
+                          </td>
+                        </tr>
+                      ) : (
+                        notices.map((n) => (
+                          <tr key={n.id} className="hover:bg-slate-50">
+                            <td className="p-2.5">
+                              {n.isPinned ? (
+                                <span className="text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded font-bold text-[10px]">
+                                  📌 필독
+                                </span>
+                              ) : (
+                                <span className="text-slate-400 text-[10px]">-</span>
+                              )}
+                            </td>
+                            <td className="p-2.5 font-bold text-slate-900">{n.title}</td>
+                            <td className="p-2.5 text-right">
+                              <button
+                                onClick={() => setEditingNotice(n)}
+                                className="px-2 py-1 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded font-bold text-[11px]"
+                              >
+                                편집
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab: FAQs Management */}
+        {activeTab === 'faqs' && (
+          <div className="p-6 bg-white border border-gray-200 rounded-b-xl shadow-2xs space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="font-extrabold text-base text-gray-900 flex items-center gap-2">
+                <HelpCircle className="w-5 h-5 text-purple-600" />
+                <span>❓ FAQ 자주 묻는 질문 관리</span>
+              </h2>
+              <button
+                onClick={() => setEditingFaq({ category: '일반', question: '', answer: '', displayOrder: 0 })}
+                className="px-3 py-1.5 bg-slate-900 text-white rounded text-xs font-bold flex items-center gap-1 hover:bg-slate-800"
+              >
+                <Plus className="w-4 h-4" />
+                <span>새 FAQ 추가</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-12 gap-6">
+              {/* Form Side */}
+              <div className="col-span-5 bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
+                <h3 className="font-extrabold text-xs text-slate-800 border-b border-slate-200 pb-2">
+                  {editingFaq.id ? 'FAQ 수정' : '새 FAQ 추가'}
+                </h3>
+
+                <div className="space-y-3 text-xs">
+                  <div>
+                    <label className="font-bold text-gray-700 block mb-1">카테고리</label>
+                    <input
+                      type="text"
+                      value={editingFaq.category || ''}
+                      onChange={(e) => setEditingFaq({ ...editingFaq, category: e.target.value })}
+                      placeholder="예: 경기 안내, 관람 안내, 편의시설"
+                      className="w-full border border-gray-300 p-2 rounded text-xs font-bold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-gray-700 block mb-1">질문 (Question) *</label>
+                    <input
+                      type="text"
+                      value={editingFaq.question || ''}
+                      onChange={(e) => setEditingFaq({ ...editingFaq, question: e.target.value })}
+                      placeholder="자주 묻는 질문 입력"
+                      className="w-full border border-gray-300 p-2 rounded text-xs font-bold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-gray-700 block mb-1">답변 (Answer) *</label>
+                    <textarea
+                      rows={5}
+                      value={editingFaq.answer || ''}
+                      onChange={(e) => setEditingFaq({ ...editingFaq, answer: e.target.value })}
+                      placeholder="답변 내용을 입력해 주세요"
+                      className="w-full border border-gray-300 p-2 rounded text-xs leading-relaxed font-medium"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-gray-700 block mb-1">정렬 순서 (낮을수록 먼저 노출)</label>
+                    <input
+                      type="number"
+                      value={editingFaq.displayOrder || 0}
+                      onChange={(e) => setEditingFaq({ ...editingFaq, displayOrder: parseInt(e.target.value) || 0 })}
+                      className="w-full border border-gray-300 p-2 rounded text-xs font-bold"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-2">
+                    {editingFaq.id && (
+                      <button
+                        onClick={() => handleDeleteFaq(editingFaq.id!)}
+                        className="px-3 py-1.5 bg-rose-100 text-rose-700 hover:bg-rose-200 rounded font-bold"
+                      >
+                        삭제
+                      </button>
+                    )}
+                    <button
+                      onClick={handleSaveFaq}
+                      disabled={isSaving}
+                      className="px-4 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded font-bold shadow-2xs"
+                    >
+                      저장하기
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Table Side */}
+              <div className="col-span-7 space-y-2">
+                <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-100 text-slate-700 font-extrabold border-b border-slate-200">
+                      <tr>
+                        <th className="p-2.5">카테고리</th>
+                        <th className="p-2.5">질문</th>
+                        <th className="p-2.5 text-right">관리</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-medium">
+                      {faqs.length === 0 ? (
+                        <tr>
+                          <td colSpan={3} className="p-8 text-center text-slate-400">
+                            등록된 FAQ가 없습니다.
+                          </td>
+                        </tr>
+                      ) : (
+                        faqs.map((f) => (
+                          <tr key={f.id} className="hover:bg-slate-50">
+                            <td className="p-2.5 font-bold text-purple-700">{f.category}</td>
+                            <td className="p-2.5 font-bold text-slate-900">{f.question}</td>
+                            <td className="p-2.5 text-right">
+                              <button
+                                onClick={() => setEditingFaq(f)}
                                 className="px-2 py-1 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded font-bold text-[11px]"
                               >
                                 편집

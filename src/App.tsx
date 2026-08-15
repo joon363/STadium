@@ -13,7 +13,7 @@ import { FoodTruckGuide } from './pages/FoodTruckGuide';
 import { SponsorGuide } from './pages/SponsorGuide';
 import { Admin } from './pages/Admin';
 
-const HIDE_HEADER_ROUTES = ['/soccer', '/baseball', '/lol', '/badminton', '/basketball'];
+const HIDE_HEADER_ROUTES = ['/soccer', '/baseball', '/lol', '/badminton', '/basketball', '/map', '/sponsors'];
 
 const LayoutWrapper: React.FC = () => {
   const location = useLocation();

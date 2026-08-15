@@ -167,13 +167,18 @@ export const Home: React.FC = () => {
             </div>
 
             <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1">
                 <span className="font-extrabold text-xs text-gray-900 truncate">
                   {stageConfig.clubName}
                 </span>
-                <span className="text-[9px] font-semibold bg-gray-100 text-gray-600 px-1.5 py-0.2 rounded border border-gray-200 shrink-0">
-                  {stageConfig.genre}
+                <span className="text-[9px] font-bold bg-purple-50 text-purple-700 border border-purple-200 px-1.5 py-0.2 rounded shrink-0">
+                  {stageConfig.category}
                 </span>
+                {stageConfig.genre && (
+                  <span className="text-[9px] font-bold bg-gray-100 text-gray-600 px-1.5 py-0.2 rounded border border-gray-200 shrink-0">
+                    {stageConfig.genre}
+                  </span>
+                )}
               </div>
 
               <p className="text-[11px] text-gray-600 font-medium truncate mt-0.5 flex items-center gap-1">
@@ -190,99 +195,6 @@ export const Home: React.FC = () => {
       {/* 3. Overall Leaderboard Section */}
       <LeaderboardSection standings={overallStandings} />
 
-      {/* 4. Quick Action Navigation Grid (Booths, Food Trucks, Campus Map, Contact, Sponsors) */}
-      <section className="space-y-1.5 pt-0.5">
-        <div className="px-1 font-bold text-xs text-gray-500 uppercase tracking-wider">
-          행사 안내 & 부대시설
-        </div>
-
-        <div className="grid grid-cols-2 gap-1.5">
-          {/* Campus Map */}
-          <button
-            onClick={() => navigate('/map')}
-            className="bg-white border border-gray-200/90 hover:border-gray-300 rounded-xl p-2.5 flex items-center justify-between shadow-2xs transition-colors active:scale-[0.99] touch-target text-left"
-          >
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-7 h-7 rounded-lg bg-rose-50 text-postech flex items-center justify-center shrink-0 border border-rose-100">
-                <MapPin className="w-3.5 h-3.5" />
-              </div>
-              <div className="min-w-0">
-                <h4 className="font-extrabold text-xs text-gray-900 truncate">캠퍼스맵</h4>
-                <p className="text-[10px] text-gray-500 truncate">위치 & 길찾기</p>
-              </div>
-            </div>
-            <ChevronRight className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-          </button>
-
-          {/* Booth Guide */}
-          <button
-            onClick={() => navigate('/booths')}
-            className="bg-white border border-gray-200/90 hover:border-gray-300 rounded-xl p-2.5 flex items-center justify-between shadow-2xs transition-colors active:scale-[0.99] touch-target text-left"
-          >
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 border border-amber-100">
-                <Store className="w-3.5 h-3.5" />
-              </div>
-              <div className="min-w-0">
-                <h4 className="font-extrabold text-xs text-gray-900 truncate">부스 안내</h4>
-                <p className="text-[10px] text-gray-500 truncate">체험 & 동아리</p>
-              </div>
-            </div>
-            <ChevronRight className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-          </button>
-
-          {/* Food Truck */}
-          <button
-            onClick={() => navigate('/foodtrucks')}
-            className="bg-white border border-gray-200/90 hover:border-gray-300 rounded-xl p-2.5 flex items-center justify-between shadow-2xs transition-colors active:scale-[0.99] touch-target text-left"
-          >
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-7 h-7 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center shrink-0 border border-orange-100">
-                <Truck className="w-3.5 h-3.5" />
-              </div>
-              <div className="min-w-0">
-                <h4 className="font-extrabold text-xs text-gray-900 truncate">푸드트럭</h4>
-                <p className="text-[10px] text-gray-500 truncate">먹거리 & 위치</p>
-              </div>
-            </div>
-            <ChevronRight className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-          </button>
-
-          {/* Contact */}
-          <button
-            onClick={() => navigate('/contact')}
-            className="bg-white border border-gray-200/90 hover:border-gray-300 rounded-xl p-2.5 flex items-center justify-between shadow-2xs transition-colors active:scale-[0.99] touch-target text-left"
-          >
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100">
-                <PhoneCall className="w-3.5 h-3.5" />
-              </div>
-              <div className="min-w-0">
-                <h4 className="font-extrabold text-xs text-gray-900 truncate">문의</h4>
-                <p className="text-[10px] text-gray-500 truncate">담당자 & 카톡</p>
-              </div>
-            </div>
-            <ChevronRight className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-          </button>
-
-          {/* Sponsors */}
-          <button
-            onClick={() => navigate('/sponsors')}
-            className="col-span-2 bg-slate-900 text-white rounded-xl p-2.5 flex items-center justify-between shadow-xs hover:bg-slate-800 transition-colors active:scale-[0.99] touch-target text-left border border-slate-800"
-          >
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30">
-                <Building2 className="w-3.5 h-3.5" />
-              </div>
-              <div>
-                <h4 className="font-extrabold text-xs text-white">2026 STadium 공식 후원사</h4>
-                <p className="text-[10px] text-slate-400">포스텍 총학생회 및 후원 기업</p>
-              </div>
-            </div>
-            <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
-          </button>
-        </div>
-      </section>
     </div>
   );
 };

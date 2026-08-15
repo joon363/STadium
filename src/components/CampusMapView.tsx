@@ -1,6 +1,6 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { VenueNode, MapEdge, NavigationResult } from '../config/stadiumConfig';
-import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { Search } from 'lucide-react';
 
 export interface CampusMapViewProps {
   nodes: VenueNode[];
@@ -19,13 +19,17 @@ export interface CampusMapViewProps {
   showVenueInfo?: boolean;
   userCoords?: { x: number; y: number } | null;
   isNavigating?: boolean;
+  startVenue?: string;
+  destVenue?: string;
   navResult?: NavigationResult | null;
 }
+
+const MIN_SCALE = 0.9;
+const MAX_SCALE = 4.5;
 
 export const CampusMapView: React.FC<CampusMapViewProps> = ({
   nodes,
   edges,
-  mode = 'user',
   selectedNodeId = null,
   selectedEdgeId = null,
   onNodeClick,
@@ -35,11 +39,13 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
   showVenueInfo = true,
   userCoords = null,
   isNavigating = false,
+  startVenue = '',
+  destVenue = '',
   navResult = null,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Zoom & Pan Internal State (Defaults to vertically full scale)
+  // Zoom & Pan Internal State
   const [scale, setScale] = useState<number>(1.8);
   const [position, setPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState<boolean>(false);
@@ -47,6 +53,8 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
   const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const dragDistanceRef = useRef<number>(0);
   const touchStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const pinchStartDistRef = useRef<number | null>(null);
+  const pinchStartScaleRef = useRef<number>(1.8);
 
   // Compute scale so map fills the screen vertically on mount and resize
   useEffect(() => {
@@ -54,7 +62,7 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
       if (containerRef.current) {
         const { clientWidth, clientHeight } = containerRef.current;
         if (clientWidth > 0 && clientHeight > 0) {
-          const fitScale = Math.max(1.2, clientHeight / clientWidth);
+          const fitScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, clientHeight / clientWidth));
           setScale(fitScale);
         }
       }
@@ -71,20 +79,6 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
     nodes.forEach((n) => map.set(n.id, n));
     return map;
   }, [nodes]);
-
-  // Zoom Controls
-  const handleZoomIn = () => setScale((prev) => Math.min(prev + 0.3, 4.5));
-  const handleZoomOut = () => setScale((prev) => Math.max(prev - 0.3, 0.9));
-  const handleResetZoom = () => {
-    if (containerRef.current) {
-      const { clientWidth, clientHeight } = containerRef.current;
-      const fitScale = Math.max(1.2, clientHeight / clientWidth);
-      setScale(fitScale);
-    } else {
-      setScale(1.8);
-    }
-    setPosition({ x: 0, y: 0 });
-  };
 
   // Mouse Pan Handlers
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -109,7 +103,7 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
     setIsDragging(false);
   };
 
-  // Touch Handlers
+  // Touch Handlers with Strict Pinch-to-Zoom Clamping
   const handleTouchStart = (e: React.TouchEvent) => {
     if (e.touches.length === 1) {
       setIsDragging(true);
@@ -118,19 +112,40 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
         y: e.touches[0].clientY - position.y,
       };
       dragDistanceRef.current = 0;
+    } else if (e.touches.length === 2) {
+      setIsDragging(false);
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      pinchStartDistRef.current = dist;
+      pinchStartScaleRef.current = scale;
     }
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging || e.touches.length !== 1) return;
-    dragDistanceRef.current += 5;
-    setPosition({
-      x: e.touches[0].clientX - touchStartRef.current.x,
-      y: e.touches[0].clientY - touchStartRef.current.y,
-    });
+    if (e.touches.length === 1 && isDragging) {
+      dragDistanceRef.current += 5;
+      setPosition({
+        x: e.touches[0].clientX - touchStartRef.current.x,
+        y: e.touches[0].clientY - touchStartRef.current.y,
+      });
+    } else if (e.touches.length === 2 && pinchStartDistRef.current !== null) {
+      const currentDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const scaleFactor = currentDist / pinchStartDistRef.current;
+      const targetScale = pinchStartScaleRef.current * scaleFactor;
+      // Clamped strictly between MIN_SCALE and MAX_SCALE
+      setScale(Math.min(MAX_SCALE, Math.max(MIN_SCALE, targetScale)));
+    }
   };
 
-  const handleTouchEnd = () => setIsDragging(false);
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+    pinchStartDistRef.current = null;
+  };
 
   // SVG Click Handler
   const handleSvgClick = (e: React.MouseEvent<SVGSVGElement>) => {
@@ -199,165 +214,122 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
             const midWp =
               edge.waypoints && edge.waypoints.length > 0
                 ? edge.waypoints[Math.floor(edge.waypoints.length / 2)]
-                : { x: (fromNode.x + toNode.x) / 2, y: (fromNode.y + toNode.y) / 2 };
-
-            // Determine stroke color & width
-            const strokeColor = isSelected
-              ? '#f43f5e'
-              : isOnPath
-              ? '#f43f5e'
-              : isNonPathInNavMode
-              ? '#334155'
-              : mode === 'admin'
-              ? '#64748b'
-              : '#475569';
-
-            const strokeWidth = isSelected || isOnPath ? 2.5 / scale : isNonPathInNavMode ? 0.8 / scale : 1.2 / scale;
-            const strokeDash = isSelected || isOnPath ? `${2 / scale},${2 / scale}` : `${1 / scale},${1 / scale}`;
-            const groupOpacity = isNonPathInNavMode ? 0.35 : 1;
+                : {
+                    x: (fromNode.x + toNode.x) / 2,
+                    y: (fromNode.y + toNode.y) / 2,
+                  };
 
             return (
-              <g
-                key={edge.id}
-                opacity={groupOpacity}
-                className={mode === 'admin' ? 'cursor-pointer' : ''}
-              >
+              <g key={edge.id}>
+                {/* Background Shadow Stroke (Slimmer width) */}
                 <polyline
                   points={pointsStr}
                   fill="none"
-                  stroke={strokeColor}
-                  strokeWidth={strokeWidth}
-                  strokeDasharray={strokeDash}
+                  stroke={isOnPath ? '#ffffff' : '#000000'}
+                  strokeWidth={isOnPath ? 1.8 : isSelected ? 1.4 : 0.8}
+                  strokeOpacity={isNonPathInNavMode ? 0.2 : 0.5}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 />
 
-                {/* Intermediate Waypoints */}
-                {(edge.waypoints || []).map((wp, wpIdx) => (
-                  <circle
-                    key={wpIdx}
-                    cx={wp.x}
-                    cy={wp.y}
-                    r={(isOnPath ? 2 : 1.5) / scale}
-                    fill={isSelected || isOnPath ? '#f43f5e' : '#94a3b8'}
-                  />
-                ))}
+                {/* Main Visible Road Path (Slimmer width) */}
+                <polyline
+                  points={pointsStr}
+                  fill="none"
+                  stroke={
+                    isOnPath
+                      ? '#e11d48'
+                      : isSelected
+                      ? '#3b82f6'
+                      : isNonPathInNavMode
+                      ? '#475569'
+                      : '#94a3b8'
+                  }
+                  strokeWidth={isOnPath ? 1.2 : isSelected ? 1.0 : 0.6}
+                  strokeOpacity={isNonPathInNavMode ? 0.3 : 0.9}
+                  strokeDasharray={isNonPathInNavMode ? '1 1' : 'none'}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
 
-                {/* Weight Badge */}
-                <g transform={`translate(${midWp.x}, ${midWp.y}) scale(${1 / scale}) translate(${-midWp.x}, ${-midWp.y})`}>
-                  <rect
-                    x={midWp.x - 3.5}
-                    y={midWp.y - 2.5}
-                    width="7"
-                    height="4.5"
-                    rx="1"
-                    fill="#1e293b"
-                    stroke={isSelected || isOnPath ? '#f43f5e' : '#475569'}
-                    strokeWidth="0.4"
-                  />
-                  <text
-                    x={midWp.x}
-                    y={midWp.y + 0.8}
-                    fill={isSelected || isOnPath ? '#fb7185' : '#94a3b8'}
-                    fontSize="2.2"
-                    fontWeight="bold"
-                    textAnchor="middle"
+                {/* Weight Minutes Badge */}
+                {(!isNavigating || isOnPath) && (
+                  <g
+                    transform={`translate(${midWp.x}, ${midWp.y}) scale(${1 / scale})`}
+                    className="pointer-events-none select-none"
                   >
-                    {edge.weightMinutes}분
-                  </text>
-                </g>
+                    <rect
+                      x="-3.5"
+                      y="-1.8"
+                      width="7"
+                      height="3.6"
+                      rx="1"
+                      fill={isOnPath ? '#e11d48' : '#1e293b'}
+                      stroke={isOnPath ? '#ffffff' : '#475569'}
+                      strokeWidth="0.3"
+                    />
+                    <text
+                      x="0"
+                      y="0.7"
+                      fill="#ffffff"
+                      fontSize="2.2"
+                      fontWeight="bold"
+                      textAnchor="middle"
+                    >
+                      {edge.weightMinutes}분
+                    </text>
+                  </g>
+                )}
               </g>
             );
           })}
-
-          {/* Eating Zones Overlay */}
-          {showEatingZones && (
-            <g>
-              <polygon
-                points="45,55 60,55 58,68 43,68"
-                fill="#d97706"
-                opacity="0.3"
-                stroke="#f59e0b"
-                strokeWidth={0.8 / scale}
-              />
-            </g>
-          )}
-
-          {/* Rest Area Overlay */}
-          {showRestAreas && (
-            <g>
-              <circle
-                cx="65"
-                cy="42"
-                r="7"
-                fill="#059669"
-                opacity="0.25"
-                stroke="#10b981"
-                strokeWidth={0.8 / scale}
-              />
-            </g>
-          )}
-
-          {/* Active Navigation Polyline Overlay */}
-          {isNavigating && navResult && navResult.pathWaypoints.length > 0 && (
-            <g>
-              <polyline
-                points={navResult.pathWaypoints.map((p) => `${p.x},${p.y}`).join(' ')}
-                fill="none"
-                stroke="#C80036"
-                strokeWidth={2.5 / scale}
-                strokeDasharray={`${2 / scale},${2 / scale}`}
-              />
-              {navResult.pathWaypoints.map((p, idx) => (
-                <circle
-                  key={idx}
-                  cx={p.x}
-                  cy={p.y}
-                  r={(idx === 0 || idx === navResult.pathWaypoints.length - 1 ? 2.5 : 1.2) / scale}
-                  fill={idx === 0 ? '#C80036' : idx === navResult.pathWaypoints.length - 1 ? '#f43f5e' : '#fb7185'}
-                />
-              ))}
-            </g>
-          )}
         </svg>
 
-        {/* Render Node Pins Layer */}
+        {/* Venue Nodes (POIs) */}
         {nodes.map((node) => {
           const isSelected = selectedNodeId === node.id;
-          const isEating = node.isEatingZone && showEatingZones;
-          const isRest = node.isRestArea && showRestAreas;
+          const isNavStart = isNavigating && startVenue === node.id;
+          const isNavDest = isNavigating && destVenue === node.id;
+
+          const isHighlighted =
+            (showEatingZones && node.isEatingZone) ||
+            (showRestAreas && node.isRestArea);
 
           return (
             <div
               key={node.id}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onNodeClick) onNodeClick(node);
+              }}
               style={{
                 top: `${node.y}%`,
                 left: `${node.x}%`,
                 transform: `translate(-50%, -50%) scale(${1 / scale})`,
                 transition: isDragging ? 'none' : 'transform 0.15s ease-out',
               }}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (onNodeClick) onNodeClick(node);
-              }}
-              className={`absolute cursor-pointer z-20 ${isSelected ? 'z-30' : ''}`}
+              className="absolute z-20 flex flex-col items-center cursor-pointer group"
             >
-              {/* Node Icon Badge */}
+              {/* Pin Icon Bubble */}
               <div
-                className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm shadow-md border-2 transition-all ${
-                  isSelected
-                    ? 'bg-rose-600 text-white border-white ring-4 ring-rose-500/50'
-                    : isEating
-                    ? 'bg-amber-600 text-white border-slate-900'
-                    : isRest
-                    ? 'bg-emerald-600 text-white border-slate-900'
-                    : 'bg-postech text-white border-slate-900'
+                className={`w-7 h-7 rounded-full flex items-center justify-center shadow-lg transition-transform ${
+                  isNavDest
+                    ? 'bg-rose-600 ring-4 ring-rose-300 scale-125'
+                    : isNavStart
+                    ? 'bg-blue-600 ring-4 ring-blue-300 scale-125'
+                    : isSelected
+                    ? 'bg-amber-500 ring-4 ring-amber-200 scale-125'
+                    : isHighlighted
+                    ? 'bg-emerald-500 ring-4 ring-emerald-200 scale-115'
+                    : 'bg-white/95 border border-gray-300 hover:scale-110'
                 }`}
               >
-                {node.icon}
+                <span className="text-xs">{node.icon || '📍'}</span>
               </div>
 
-              {/* Node Label */}
+              {/* Venue Name Label */}
               {showVenueInfo && (
-                <div className="absolute top-9 left-1/2 -translate-x-1/2 bg-white/95 text-gray-900 text-[10px] font-extrabold px-2 py-0.5 rounded-md whitespace-nowrap border border-gray-200 shadow-md">
+                <div className="absolute top-8 left-1/2 -translate-x-1/2 bg-white/95 text-gray-900 text-[10px] font-extrabold px-2 py-0.5 rounded-md whitespace-nowrap border border-gray-200 shadow-md">
                   {node.name}
                 </div>
               )}
@@ -386,29 +358,32 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
         )}
       </div>
 
-      {/* Floating Zoom Controls Box (White Theme) */}
-      <div className="absolute right-3 bottom-6 z-30 flex flex-col gap-1.5 bg-white/95 backdrop-blur-md p-1.5 rounded-xl border border-gray-200 shadow-lg">
-        <button
-          onClick={handleZoomIn}
-          className="p-2 rounded-lg text-gray-700 hover:bg-gray-100 active:bg-gray-200 transition-colors"
-          title="확대 (+)"
-        >
-          <ZoomIn className="w-4 h-4" />
-        </button>
-        <button
-          onClick={handleZoomOut}
-          className="p-2 rounded-lg text-gray-700 hover:bg-gray-100 active:bg-gray-200 transition-colors"
-          title="축소 (-)"
-        >
-          <ZoomOut className="w-4 h-4" />
-        </button>
-        <button
-          onClick={handleResetZoom}
-          className="p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 active:bg-gray-200 transition-colors"
-          title="줌 초기화"
-        >
-          <RotateCcw className="w-3.5 h-3.5" />
-        </button>
+      {/* Floating Minimalist Zoom Slider (Transparent, No Background, Prevents Map Drag) */}
+      <div
+        onMouseDown={(e) => e.stopPropagation()}
+        onMouseMove={(e) => e.stopPropagation()}
+        onMouseUp={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
+        onTouchEnd={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+        className="absolute right-2.5 top-20 z-20 flex flex-col items-center gap-1 select-none pointer-events-auto"
+      >
+        <Search className="w-3.5 h-3.5 text-white/80 drop-shadow-md mb-0.5" />
+        
+        {/* Compact Vertical Slider */}
+        <div className="h-24 flex items-center justify-center">
+          <input
+            type="range"
+            min={MIN_SCALE}
+            max={MAX_SCALE}
+            step={0.05}
+            value={scale}
+            onChange={(e) => setScale(parseFloat(e.target.value))}
+            className="w-20 h-1 accent-rose-500 cursor-pointer -rotate-90 rounded-full bg-white/30 backdrop-blur-xs"
+            title={`줌: ${scale.toFixed(1)}x`}
+          />
+        </div>
       </div>
     </div>
   );
