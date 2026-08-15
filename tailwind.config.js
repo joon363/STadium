@@ -8,30 +8,30 @@ export default {
     extend: {
       colors: {
         postech: {
-          DEFAULT: '#C80036',
-          dark: '#A0002B',
-          light: '#FFF0F3',
+          DEFAULT: '#A61955',
+          dark: '#8B1446',
+          light: '#FFF0F5',
         },
         kaist: {
-          DEFAULT: '#004182',
-          dark: '#002E5D',
-          light: '#E6F0FA',
+          DEFAULT: '#1487C8',
+          dark: '#0E6DA3',
+          light: '#EBF6FC',
         },
         gist: {
-          DEFAULT: '#F37023',
-          light: '#FFF3EB',
+          DEFAULT: '#DF3128',
+          light: '#FDF1F0',
         },
         dgist: {
-          DEFAULT: '#0088CC',
-          light: '#E6F5FC',
+          DEFAULT: '#0BBFF2',
+          light: '#E8F9FE',
         },
         unist: {
-          DEFAULT: '#002855',
-          light: '#E6ECF5',
+          DEFAULT: '#001B54',
+          light: '#E8EDF6',
         },
         kentech: {
-          DEFAULT: '#1D6740',
-          light: '#EAF3ED',
+          DEFAULT: '#00316C',
+          light: '#EBF1F7',
         }
       },
       fontFamily: {

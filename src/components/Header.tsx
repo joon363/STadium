@@ -22,7 +22,7 @@ export const Header: React.FC = () => {
           ? { backgroundColor: activeSchoolObj.color, color: activeSchoolObj.textColor }
           : { backgroundColor: '#ffffff', color: '#111827' }
       }
-      className="sticky top-0 z-40 border-b border-gray-200/90 px-4 py-2 flex items-center justify-between shadow-2xs transition-colors duration-200"
+      className="sticky top-0 z-40 border-b border-gray-200/90 px-4 py-3 flex items-center justify-between shadow-2xs transition-colors duration-200"
     >
       {/* Brand Logo Title */}
       <div

@@ -77,7 +77,10 @@ function saveToCache<T>(key: string, data: T) {
 /**
  * Supabase Storage에 이미지 파일 업로드 후 Public URL 반환
  */
-export async function uploadImageToSupabase(file: File, bucket: string = 'images'): Promise<{ url?: string; error?: string }> {
+export async function uploadImageToSupabase(
+  file: File,
+  bucket: string = 'images'
+): Promise<{ url?: string; error?: string }> {
   if (!supabase) return { error: 'Supabase 미설정' };
   try {
     const fileExt = file.name.split('.').pop();
@@ -106,7 +109,9 @@ function rawString(val: any): string {
 }
 
 // Fetch all matches from Supabase (Cached)
-export async function getSupabaseMatches(forceRefresh: boolean = false): Promise<RawScheduledMatch[] | null> {
+export async function getSupabaseMatches(
+  forceRefresh: boolean = false
+): Promise<RawScheduledMatch[] | null> {
   if (!forceRefresh) {
     const cached = getFromCache<RawScheduledMatch[]>('matches');
     if (cached) return cached;
@@ -115,7 +120,10 @@ export async function getSupabaseMatches(forceRefresh: boolean = false): Promise
   if (!supabase) return null;
 
   try {
-    const { data, error } = await supabase.from('matches').select('*').order('id', { ascending: true });
+    const { data, error } = await supabase
+      .from('matches')
+      .select('*')
+      .order('id', { ascending: true });
     if (error || !data || data.length === 0) {
       console.warn('Supabase matches query warning/error:', error);
       return null;
@@ -153,26 +161,24 @@ export async function updateSupabaseMatch(match: RawScheduledMatch): Promise<boo
   if (!supabase) return false;
 
   try {
-    const { error } = await supabase
-      .from('matches')
-      .upsert({
-        id: match.id,
-        sport_key: match.sportKey,
-        sport_name: match.sportName,
-        icon: match.icon,
-        team1: match.team1,
-        team2: match.team2,
-        start_hour: match.startHour,
-        start_minute: match.startMinute,
-        end_hour: match.endHour,
-        end_minute: match.endMinute,
-        venue: match.venue,
-        round: match.round,
-        score1_final: match.score1Final,
-        score2_final: match.score2Final,
-        winning_team_final: match.winningTeamFinal,
-        subtitle: match.subtitle || null,
-      });
+    const { error } = await supabase.from('matches').upsert({
+      id: match.id,
+      sport_key: match.sportKey,
+      sport_name: match.sportName,
+      icon: match.icon,
+      team1: match.team1,
+      team2: match.team2,
+      start_hour: match.startHour,
+      start_minute: match.startMinute,
+      end_hour: match.endHour,
+      end_minute: match.endMinute,
+      venue: match.venue,
+      round: match.round,
+      score1_final: match.score1Final,
+      score2_final: match.score2Final,
+      winning_team_final: match.winningTeamFinal,
+      subtitle: match.subtitle || null,
+    });
 
     if (error) {
       console.error('Failed to update match in Supabase:', error);
@@ -187,7 +193,9 @@ export async function updateSupabaseMatch(match: RawScheduledMatch): Promise<boo
 }
 
 // Fetch Stage Performances from Supabase (Cached)
-export async function getSupabaseStagePerformances(forceRefresh: boolean = false): Promise<StageItem[] | null> {
+export async function getSupabaseStagePerformances(
+  forceRefresh: boolean = false
+): Promise<StageItem[] | null> {
   if (!forceRefresh) {
     const cached = getFromCache<StageItem[]>('stage_performances');
     if (cached) return cached;
@@ -227,24 +235,25 @@ export async function getSupabaseStagePerformances(forceRefresh: boolean = false
 }
 
 // Update Stage Performance in Supabase
-export async function updateSupabaseStagePerformance(index: number, item: StageItem): Promise<boolean> {
+export async function updateSupabaseStagePerformance(
+  index: number,
+  item: StageItem
+): Promise<boolean> {
   if (!supabase) return false;
 
   try {
-    const { error } = await supabase
-      .from('stage_performances')
-      .upsert({
-        id: index + 1,
-        school: item.school,
-        club_name: item.clubName,
-        category: item.category || '기타',
-        genre: item.genre || '',
-        song_title: item.songTitle,
-        start_hour: item.startHour,
-        start_minute: item.startMinute,
-        end_hour: item.endHour,
-        end_minute: item.endMinute,
-      });
+    const { error } = await supabase.from('stage_performances').upsert({
+      id: index + 1,
+      school: item.school,
+      club_name: item.clubName,
+      category: item.category || '기타',
+      genre: item.genre || '',
+      song_title: item.songTitle,
+      start_hour: item.startHour,
+      start_minute: item.startMinute,
+      end_hour: item.endHour,
+      end_minute: item.endMinute,
+    });
 
     if (error) {
       console.error('Failed to update stage performance in Supabase:', error);
@@ -388,7 +397,9 @@ export async function getSupabaseMapRoads(forceRefresh: boolean = false): Promis
 }
 
 // Combined fetch for convenience
-export async function getSupabaseMapData(forceRefresh: boolean = false): Promise<{ nodes: VenueNode[]; edges: MapEdge[] } | null> {
+export async function getSupabaseMapData(
+  forceRefresh: boolean = false
+): Promise<{ nodes: VenueNode[]; edges: MapEdge[] } | null> {
   const [nodes, edges] = await Promise.all([
     getSupabaseMapVenues(forceRefresh),
     getSupabaseMapRoads(forceRefresh),
@@ -399,25 +410,25 @@ export async function getSupabaseMapData(forceRefresh: boolean = false): Promise
 }
 
 // Upsert a single venue
-export async function upsertMapVenue(node: VenueNode): Promise<{ success: boolean; error?: string }> {
+export async function upsertMapVenue(
+  node: VenueNode
+): Promise<{ success: boolean; error?: string }> {
   if (!supabase) return { success: false, error: 'Supabase 미설정' };
 
   try {
-    const { error } = await supabase
-      .from('map_venues')
-      .upsert({
-        id: node.id,
-        name: node.name,
-        category: node.category,
-        x: node.x,
-        y: node.y,
-        lat: node.lat,
-        lng: node.lng,
-        description: node.description,
-        icon: node.icon,
-        is_eating_zone: node.isEatingZone || false,
-        is_rest_area: node.isRestArea || false,
-      });
+    const { error } = await supabase.from('map_venues').upsert({
+      id: node.id,
+      name: node.name,
+      category: node.category,
+      x: node.x,
+      y: node.y,
+      lat: node.lat,
+      lng: node.lng,
+      description: node.description,
+      icon: node.icon,
+      is_eating_zone: node.isEatingZone || false,
+      is_rest_area: node.isRestArea || false,
+    });
 
     if (error) {
       console.error('[Supabase Venue Upsert]', error);
@@ -435,10 +446,7 @@ export async function deleteMapVenue(id: string): Promise<{ success: boolean; er
   if (!supabase) return { success: false, error: 'Supabase 미설정' };
 
   try {
-    const { error } = await supabase
-      .from('map_venues')
-      .delete()
-      .eq('id', id);
+    const { error } = await supabase.from('map_venues').delete().eq('id', id);
 
     if (error) {
       console.error('[Supabase Venue Delete]', error);
@@ -456,15 +464,13 @@ export async function upsertMapRoad(edge: MapEdge): Promise<{ success: boolean; 
   if (!supabase) return { success: false, error: 'Supabase 미설정' };
 
   try {
-    const { error } = await supabase
-      .from('map_roads')
-      .upsert({
-        id: edge.id,
-        from_node_id: edge.fromNodeId,
-        to_node_id: edge.toNodeId,
-        weight_minutes: edge.weightMinutes,
-        waypoints: edge.waypoints || [],
-      });
+    const { error } = await supabase.from('map_roads').upsert({
+      id: edge.id,
+      from_node_id: edge.fromNodeId,
+      to_node_id: edge.toNodeId,
+      weight_minutes: edge.weightMinutes,
+      waypoints: edge.waypoints || [],
+    });
 
     if (error) {
       console.error('[Supabase Road Upsert]', error);
@@ -482,10 +488,7 @@ export async function deleteMapRoad(id: string): Promise<{ success: boolean; err
   if (!supabase) return { success: false, error: 'Supabase 미설정' };
 
   try {
-    const { error } = await supabase
-      .from('map_roads')
-      .delete()
-      .eq('id', id);
+    const { error } = await supabase.from('map_roads').delete().eq('id', id);
 
     if (error) {
       console.error('[Supabase Road Delete]', error);
@@ -631,7 +634,9 @@ export async function getSupabaseBooths(forceRefresh: boolean = false): Promise<
   }
 }
 
-export async function upsertSupabaseBooth(item: BoothItem): Promise<{ success: boolean; error?: string }> {
+export async function upsertSupabaseBooth(
+  item: BoothItem
+): Promise<{ success: boolean; error?: string }> {
   if (!supabase) return { success: false, error: 'Supabase 미설정' };
   try {
     const { error } = await supabase.from('booths').upsert({
@@ -655,7 +660,9 @@ export async function upsertSupabaseBooth(item: BoothItem): Promise<{ success: b
   }
 }
 
-export async function deleteSupabaseBooth(id: string): Promise<{ success: boolean; error?: string }> {
+export async function deleteSupabaseBooth(
+  id: string
+): Promise<{ success: boolean; error?: string }> {
   if (!supabase) return { success: false, error: 'Supabase 미설정' };
   try {
     const { error } = await supabase.from('booths').delete().eq('id', id);
@@ -706,7 +713,9 @@ export async function getSupabaseSponsors(forceRefresh: boolean = false): Promis
   }
 }
 
-export async function upsertSupabaseSponsor(item: SponsorItem): Promise<{ success: boolean; error?: string }> {
+export async function upsertSupabaseSponsor(
+  item: SponsorItem
+): Promise<{ success: boolean; error?: string }> {
   if (!supabase) return { success: false, error: 'Supabase 미설정' };
   try {
     const { error } = await supabase.from('sponsors').upsert({
@@ -727,7 +736,9 @@ export async function upsertSupabaseSponsor(item: SponsorItem): Promise<{ succes
   }
 }
 
-export async function deleteSupabaseSponsor(id: string): Promise<{ success: boolean; error?: string }> {
+export async function deleteSupabaseSponsor(
+  id: string
+): Promise<{ success: boolean; error?: string }> {
   if (!supabase) return { success: false, error: 'Supabase 미설정' };
   try {
     const { error } = await supabase.from('sponsors').delete().eq('id', id);
@@ -740,7 +751,9 @@ export async function deleteSupabaseSponsor(id: string): Promise<{ success: bool
 }
 
 // ----- Food Trucks API (Cached) -----
-export async function getSupabaseFoodTrucks(forceRefresh: boolean = false): Promise<FoodTruckItem[]> {
+export async function getSupabaseFoodTrucks(
+  forceRefresh: boolean = false
+): Promise<FoodTruckItem[]> {
   if (!forceRefresh) {
     const cached = getFromCache<FoodTruckItem[]>('food_trucks');
     if (cached) return cached;
@@ -779,7 +792,9 @@ export async function getSupabaseFoodTrucks(forceRefresh: boolean = false): Prom
   }
 }
 
-export async function upsertSupabaseFoodTruck(item: FoodTruckItem): Promise<{ success: boolean; error?: string }> {
+export async function upsertSupabaseFoodTruck(
+  item: FoodTruckItem
+): Promise<{ success: boolean; error?: string }> {
   if (!supabase) return { success: false, error: 'Supabase 미설정' };
   try {
     const { error } = await supabase.from('food_trucks').upsert({
@@ -801,7 +816,9 @@ export async function upsertSupabaseFoodTruck(item: FoodTruckItem): Promise<{ su
   }
 }
 
-export async function deleteSupabaseFoodTruck(id: string): Promise<{ success: boolean; error?: string }> {
+export async function deleteSupabaseFoodTruck(
+  id: string
+): Promise<{ success: boolean; error?: string }> {
   if (!supabase) return { success: false, error: 'Supabase 미설정' };
   try {
     const { error } = await supabase.from('food_trucks').delete().eq('id', id);
@@ -867,7 +884,9 @@ export async function getSupabaseNotices(forceRefresh: boolean = false): Promise
   }
 }
 
-export async function upsertSupabaseNotice(item: NoticeItem): Promise<{ success: boolean; error?: string }> {
+export async function upsertSupabaseNotice(
+  item: NoticeItem
+): Promise<{ success: boolean; error?: string }> {
   if (!supabase) return { success: false, error: 'Supabase 미설정' };
   try {
     const row: any = {
@@ -886,7 +905,9 @@ export async function upsertSupabaseNotice(item: NoticeItem): Promise<{ success:
   }
 }
 
-export async function deleteSupabaseNotice(id: number): Promise<{ success: boolean; error?: string }> {
+export async function deleteSupabaseNotice(
+  id: number
+): Promise<{ success: boolean; error?: string }> {
   if (!supabase) return { success: false, error: 'Supabase 미설정' };
   try {
     const { error } = await supabase.from('notices').delete().eq('id', id);
@@ -934,7 +955,9 @@ export async function getSupabaseFAQs(forceRefresh: boolean = false): Promise<FA
   }
 }
 
-export async function upsertSupabaseFAQ(item: FAQItem): Promise<{ success: boolean; error?: string }> {
+export async function upsertSupabaseFAQ(
+  item: FAQItem
+): Promise<{ success: boolean; error?: string }> {
   if (!supabase) return { success: false, error: 'Supabase 미설정' };
   try {
     const row: any = {
@@ -964,4 +987,28 @@ export async function deleteSupabaseFAQ(id: number): Promise<{ success: boolean;
   } catch (err: any) {
     return { success: false, error: err?.message || String(err) };
   }
+}
+
+/**
+ * Supabase Postgres Changes Realtime WebSocket 구독 (폴링 부하 0화)
+ */
+export function subscribeToRealtimeTables(
+  tables: string[],
+  onUpdate: (table: string, payload: any) => void
+): () => void {
+  if (!supabase) return () => {};
+
+  const channel = supabase
+    .channel('public-schedule-realtime')
+    .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
+      if (tables.includes(payload.table)) {
+        invalidateAppCache(payload.table);
+        onUpdate(payload.table, payload);
+      }
+    })
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
 }

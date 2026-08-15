@@ -1,11 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { CONTACT_CONFIG } from '../config/stadiumConfig';
-import {
-  getSupabaseNotices,
-  getSupabaseFAQs,
-  NoticeItem,
-  FAQItem
-} from '../lib/supabase';
+import { getSupabaseNotices, getSupabaseFAQs, NoticeItem, FAQItem } from '../lib/supabase';
 import {
   Bell,
   Phone,
@@ -18,7 +13,8 @@ import {
   ChevronDown,
   ChevronUp,
   Pin,
-  Calendar
+  Calendar,
+  Loader2,
 } from 'lucide-react';
 
 export const Contact: React.FC = () => {
@@ -115,8 +111,9 @@ export const Contact: React.FC = () => {
       {activeTab === 'notice' && (
         <div className="space-y-2">
           {loading ? (
-            <div className="bg-white border border-gray-200 rounded-xl p-6 text-center text-xs font-bold text-gray-400">
-              공지사항 불러오는 중...
+            <div className="bg-white border border-gray-200 rounded-xl p-8 flex flex-col items-center justify-center gap-2 text-xs font-bold text-gray-400">
+              <Loader2 className="w-6 h-6 text-postech animate-spin" />
+              <span>공지사항을 불러오는 중...</span>
             </div>
           ) : notices.length === 0 ? (
             <div className="bg-white border border-gray-200 rounded-xl p-6 text-center text-xs font-bold text-gray-500">
@@ -136,7 +133,7 @@ export const Contact: React.FC = () => {
                 return (
                   <div
                     key={notice.id}
-                    onClick={() => setExpandedNoticeId(isExpanded ? null : (notice.id || null))}
+                    onClick={() => setExpandedNoticeId(isExpanded ? null : notice.id || null)}
                     className={`bg-white border rounded-xl px-3 py-2.5 shadow-2xs cursor-pointer transition-all ${
                       notice.isPinned
                         ? 'border-rose-300 bg-gradient-to-r from-rose-50/40 via-white to-white'
@@ -167,7 +164,11 @@ export const Contact: React.FC = () => {
                       </div>
 
                       <div className="text-gray-400 p-0.5 shrink-0">
-                        {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        {isExpanded ? (
+                          <ChevronUp className="w-4 h-4" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4" />
+                        )}
                       </div>
                     </div>
 
@@ -333,7 +334,7 @@ export const Contact: React.FC = () => {
                 return (
                   <div
                     key={faq.id}
-                    onClick={() => setExpandedFaqId(isExpanded ? null : (faq.id || null))}
+                    onClick={() => setExpandedFaqId(isExpanded ? null : faq.id || null)}
                     className="bg-white border border-gray-200 rounded-xl px-3 py-2.5 shadow-2xs cursor-pointer hover:border-gray-300 transition-all"
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -345,7 +346,11 @@ export const Contact: React.FC = () => {
                       </div>
 
                       <div className="text-gray-400 p-0.5 shrink-0">
-                        {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        {isExpanded ? (
+                          <ChevronUp className="w-4 h-4" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4" />
+                        )}
                       </div>
                     </div>
 

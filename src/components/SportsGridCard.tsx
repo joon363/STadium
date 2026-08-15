@@ -9,14 +9,32 @@ interface SportsGridCardProps {
   layout?: 'grid' | 'horizontal';
 }
 
-export const SportsGridCard: React.FC<SportsGridCardProps> = ({ match, path, layout = 'horizontal' }) => {
+export const SportsGridCard: React.FC<SportsGridCardProps> = ({
+  match,
+  path,
+  layout = 'horizontal',
+}) => {
   const navigate = useNavigate();
 
-  const isUpcoming = !match.isLive && (match.countdownText !== undefined || match.statusText.includes('예정') || match.startTimeObj.getTime() > Date.now());
+  const isUpcoming =
+    !match.isLive &&
+    (match.countdownText !== undefined ||
+      match.statusText.includes('예정') ||
+      match.startTimeObj.getTime() > Date.now());
   const isFinished = !match.isLive && !isUpcoming;
 
-  const team1School = SCHOOLS[match.team1] || { color: '#64748b', bgLight: '#f1f5f9', logoText: match.team1.slice(0, 1) };
-  const team2School = SCHOOLS[match.team2] || { color: '#64748b', bgLight: '#f1f5f9', logoText: match.team2.slice(0, 1) };
+  const team1School = SCHOOLS[match.team1] || {
+    color: '#64748b',
+    bgLight: '#f1f5f9',
+    logoText: match.team1.slice(0, 1),
+    logoUrl: '/postech.png',
+  };
+  const team2School = SCHOOLS[match.team2] || {
+    color: '#64748b',
+    bgLight: '#f1f5f9',
+    logoText: match.team2.slice(0, 1),
+    logoUrl: '/kaist.png',
+  };
 
   const isTeam1Winning = match.score1 > match.score2;
   const isTeam2Winning = match.score2 > match.score1;
@@ -25,7 +43,7 @@ export const SportsGridCard: React.FC<SportsGridCardProps> = ({ match, path, lay
     return (
       <div
         onClick={() => navigate(path)}
-        className="bg-white border border-gray-200/90 hover:border-gray-300 rounded-xl px-3 py-2 flex flex-col gap-1.5 shadow-2xs hover:shadow-xs transition-colors cursor-pointer active:scale-[0.99] select-none"
+        className="bg-white border border-gray-200/90 hover:border-gray-300 rounded-xl px-3 py-2.5 flex flex-col gap-1.5 shadow-2xs hover:shadow-xs transition-colors cursor-pointer active:scale-[0.99] select-none"
       >
         {/* Top Header: Sport Name, Round, Status Tag */}
         <div className="flex items-center justify-between text-xs text-gray-500 border-b border-gray-100 pb-1">
@@ -54,19 +72,15 @@ export const SportsGridCard: React.FC<SportsGridCardProps> = ({ match, path, lay
           </div>
         </div>
 
-        {/* Score & Teams Row: Slim and Compact */}
-        <div className="flex items-center justify-between py-0.5">
-          {/* Team 1 */}
-          <div className="flex items-center gap-2 flex-1 justify-start min-w-0">
-            <div
-              style={{ backgroundColor: team1School.color }}
-              className="w-6 h-6 rounded-full flex items-center justify-center font-bold text-white text-[10px] shrink-0 border border-white/20"
-            >
-              {team1School.logoText}
-            </div>
-            <span className={`text-xs truncate ${isTeam1Winning ? 'font-bold text-gray-900' : 'font-bold text-gray-700'}`}>
-              {match.team1}
-            </span>
+        {/* Score & Teams Row: Clean Stand-Alone School Logos */}
+        <div className="flex items-center justify-between py-1">
+          {/* Team 1 Logo */}
+          <div className="flex items-center justify-start flex-1 min-w-0">
+            <img
+              src={team1School.logoUrl}
+              alt={match.team1}
+              className="h-6 w-auto max-w-[85px] object-contain shrink-0"
+            />
           </div>
 
           {/* Center Score & Match Status */}
@@ -85,17 +99,13 @@ export const SportsGridCard: React.FC<SportsGridCardProps> = ({ match, path, lay
             </div>
           </div>
 
-          {/* Team 2 */}
-          <div className="flex items-center gap-2 flex-1 justify-end min-w-0 text-right">
-            <span className={`text-xs truncate ${isTeam2Winning ? 'font-bold text-gray-900' : 'font-bold text-gray-700'}`}>
-              {match.team2}
-            </span>
-            <div
-              style={{ backgroundColor: team2School.color }}
-              className="w-6 h-6 rounded-full flex items-center justify-center font-bold text-white text-[10px] shrink-0 border border-white/20"
-            >
-              {team2School.logoText}
-            </div>
+          {/* Team 2 Logo */}
+          <div className="flex items-center justify-end flex-1 min-w-0">
+            <img
+              src={team2School.logoUrl}
+              alt={match.team2}
+              className="h-6 w-auto max-w-[85px] object-contain shrink-0"
+            />
           </div>
         </div>
 
@@ -116,7 +126,7 @@ export const SportsGridCard: React.FC<SportsGridCardProps> = ({ match, path, lay
     );
   }
 
-  // Grid layout
+  // Grid layout (Stand-alone School Logos)
   return (
     <div
       onClick={() => navigate(path)}
@@ -144,20 +154,22 @@ export const SportsGridCard: React.FC<SportsGridCardProps> = ({ match, path, lay
         )}
       </div>
 
-      {/* Teams & Score */}
-      <div className="my-1">
+      {/* Teams & Score Row */}
+      <div className="my-1.5">
         <div className="flex items-center justify-between text-center">
-          <div className="flex flex-col items-center flex-1 min-w-0">
-            <div
-              style={{ backgroundColor: team1School.color }}
-              className="w-4 h-4 rounded-full flex items-center justify-center font-bold text-white text-[8px] shrink-0 mb-0.5"
-            >
-              {team1School.logoText}
-            </div>
-            <span className="text-[10px] text-gray-800 font-bold truncate w-full">{match.team1}</span>
+          {/* Team 1 Logo */}
+          <div className="flex items-center justify-center flex-1 min-w-0 h-9">
+            <img
+              src={team1School.logoUrl}
+              alt={match.team1}
+              loading="eager"
+              decoding="async"
+              className="h-7 w-auto max-w-[65px] object-contain shrink-0"
+            />
           </div>
 
-          <div className="px-1.5 text-sm font-bold flex items-center gap-1">
+          {/* Score */}
+          <div className="px-1 text-sm font-bold flex items-center gap-1">
             <span style={isTeam1Winning ? { color: team1School.color } : { color: '#111827' }}>
               {match.score1}
             </span>
@@ -167,14 +179,15 @@ export const SportsGridCard: React.FC<SportsGridCardProps> = ({ match, path, lay
             </span>
           </div>
 
-          <div className="flex flex-col items-center flex-1 min-w-0">
-            <div
-              style={{ backgroundColor: team2School.color }}
-              className="w-4 h-4 rounded-full flex items-center justify-center font-bold text-white text-[8px] shrink-0 mb-0.5"
-            >
-              {team2School.logoText}
-            </div>
-            <span className="text-[10px] text-gray-800 font-bold truncate w-full">{match.team2}</span>
+          {/* Team 2 Logo */}
+          <div className="flex items-center justify-center flex-1 min-w-0 h-9">
+            <img
+              src={team2School.logoUrl}
+              alt={match.team2}
+              loading="eager"
+              decoding="async"
+              className="h-7 w-auto max-w-[65px] object-contain shrink-0"
+            />
           </div>
         </div>
       </div>

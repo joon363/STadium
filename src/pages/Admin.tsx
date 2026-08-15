@@ -87,7 +87,17 @@ export const Admin: React.FC = () => {
   const [isVerifying, setIsVerifying] = useState<boolean>(false);
 
   // Active Admin Tab
-  const [activeTab, setActiveTab] = useState<'matches' | 'stage' | 'map' | 'booths' | 'foodtrucks' | 'sponsors' | 'notices' | 'faqs' | 'settings'>('matches');
+  const [activeTab, setActiveTab] = useState<
+    | 'matches'
+    | 'stage'
+    | 'map'
+    | 'booths'
+    | 'foodtrucks'
+    | 'sponsors'
+    | 'notices'
+    | 'faqs'
+    | 'settings'
+  >('matches');
 
   // Data States
   const [matches, setMatches] = useState<RawScheduledMatch[]>(DEFAULT_RAW_SCHEDULE_FLAT);
@@ -299,7 +309,18 @@ export const Admin: React.FC = () => {
       setSaveStatus('부스가 삭제되었습니다.');
       setBooths((prev) => prev.filter((b) => b.id !== id));
       if (editingBooth.id === id) {
-        setEditingBooth({ id: '', name: '', operator: '', location: '', category: 'experience', description: '', operatingHours: '', icon: '🎪', isActive: true, displayOrder: 0 });
+        setEditingBooth({
+          id: '',
+          name: '',
+          operator: '',
+          location: '',
+          category: 'experience',
+          description: '',
+          operatingHours: '',
+          icon: '🎪',
+          isActive: true,
+          displayOrder: 0,
+        });
       }
     } else {
       setSaveStatus(`삭제 실패: ${res.error}`);
@@ -365,7 +386,16 @@ export const Admin: React.FC = () => {
       setSaveStatus('푸드트럭이 삭제되었습니다.');
       setFoodTrucks((prev) => prev.filter((t) => t.id !== id));
       if (editingFoodTruck.id === id) {
-        setEditingFoodTruck({ id: '', name: '', menuSummary: '', location: '', operatingHours: '', icon: '🚚', isActive: true, displayOrder: 0 });
+        setEditingFoodTruck({
+          id: '',
+          name: '',
+          menuSummary: '',
+          location: '',
+          operatingHours: '',
+          icon: '🚚',
+          isActive: true,
+          displayOrder: 0,
+        });
       }
     } else {
       setSaveStatus(`삭제 실패: ${res.error}`);
@@ -430,7 +460,16 @@ export const Admin: React.FC = () => {
       setSaveStatus('후원 기업이 삭제되었습니다.');
       setSponsors((prev) => prev.filter((s) => s.id !== id));
       if (editingSponsor.id === id) {
-        setEditingSponsor({ id: '', name: '', tier: 'gold', logoUrl: '', description: '', websiteUrl: '', isActive: true, displayOrder: 0 });
+        setEditingSponsor({
+          id: '',
+          name: '',
+          tier: 'gold',
+          logoUrl: '',
+          description: '',
+          websiteUrl: '',
+          isActive: true,
+          displayOrder: 0,
+        });
       }
     } else {
       setSaveStatus(`삭제 실패: ${res.error}`);
@@ -624,7 +663,16 @@ export const Admin: React.FC = () => {
         setMapNodes([...mapNodes, targetNode]);
       }
       setSelectedNodeId(null);
-      setNodeForm({ name: '', category: 'sports', x: 50, y: 50, icon: '📍', description: '', isEatingZone: false, isRestArea: false });
+      setNodeForm({
+        name: '',
+        category: 'sports',
+        x: 50,
+        y: 50,
+        icon: '📍',
+        description: '',
+        isEatingZone: false,
+        isRestArea: false,
+      });
       setSaveStatus('✅ Supabase DB에 장소가 성공적으로 저장되었습니다!');
     } else {
       setSaveStatus(`❌ Supabase 저장 실패: ${res.error}`);
@@ -667,7 +715,12 @@ export const Admin: React.FC = () => {
         setMapEdges([...mapEdges, targetEdge]);
       }
       setSelectedEdgeId(null);
-      setEdgeForm({ fromNodeId: mapNodes[0]?.id || '', toNodeId: mapNodes[1]?.id || '', weightMinutes: 3, waypoints: [] });
+      setEdgeForm({
+        fromNodeId: mapNodes[0]?.id || '',
+        toNodeId: mapNodes[1]?.id || '',
+        weightMinutes: 3,
+        waypoints: [],
+      });
       setSaveStatus('✅ Supabase DB에 도로 경로가 성공적으로 저장되었습니다!');
     } else {
       setSaveStatus(`❌ Supabase 저장 실패: ${res.error}`);
@@ -745,9 +798,7 @@ export const Admin: React.FC = () => {
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="text-xs font-bold text-slate-300 block mb-1">
-                관리자 비밀번호
-              </label>
+              <label className="text-xs font-bold text-slate-300 block mb-1">관리자 비밀번호</label>
               <input
                 type="password"
                 value={inputPassword}
@@ -797,7 +848,9 @@ export const Admin: React.FC = () => {
             <ShieldCheck className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="font-extrabold text-base tracking-tight">2026 STadium 통합 관리자 시스템</h1>
+            <h1 className="font-extrabold text-base tracking-tight">
+              2026 STadium 통합 관리자 시스템
+            </h1>
             <p className="text-[11px] text-slate-400">16:9 PC 최적화 웹 대시보드</p>
           </div>
         </div>
@@ -826,10 +879,11 @@ export const Admin: React.FC = () => {
         <div className="flex items-center gap-2 border-b border-gray-200 bg-white px-4 pt-2 rounded-t-xl shadow-2xs">
           <button
             onClick={() => setActiveTab('matches')}
-            className={`px-4 py-2.5 rounded-t-lg font-bold text-xs flex items-center gap-2 transition-colors border-b-2 ${activeTab === 'matches'
-              ? 'bg-white text-postech border-postech shadow-2xs'
-              : 'text-gray-600 hover:bg-gray-100 border-transparent'
-              }`}
+            className={`px-4 py-2.5 rounded-t-lg font-bold text-xs flex items-center gap-2 transition-colors border-b-2 ${
+              activeTab === 'matches'
+                ? 'bg-white text-postech border-postech shadow-2xs'
+                : 'text-gray-600 hover:bg-gray-100 border-transparent'
+            }`}
           >
             <Trophy className="w-4 h-4" />
             <span>운동경기 스코어 & 일정</span>
@@ -837,10 +891,11 @@ export const Admin: React.FC = () => {
 
           <button
             onClick={() => setActiveTab('stage')}
-            className={`px-4 py-2.5 rounded-t-lg font-bold text-xs flex items-center gap-2 transition-colors border-b-2 ${activeTab === 'stage'
-              ? 'bg-white text-postech border-postech shadow-2xs'
-              : 'text-gray-600 hover:bg-gray-100 border-transparent'
-              }`}
+            className={`px-4 py-2.5 rounded-t-lg font-bold text-xs flex items-center gap-2 transition-colors border-b-2 ${
+              activeTab === 'stage'
+                ? 'bg-white text-postech border-postech shadow-2xs'
+                : 'text-gray-600 hover:bg-gray-100 border-transparent'
+            }`}
           >
             <Music className="w-4 h-4" />
             <span>대강당 무대 공연</span>
@@ -848,10 +903,11 @@ export const Admin: React.FC = () => {
 
           <button
             onClick={() => setActiveTab('map')}
-            className={`px-4 py-2.5 rounded-t-lg font-bold text-xs flex items-center gap-2 transition-colors border-b-2 ${activeTab === 'map'
-              ? 'bg-white text-postech border-postech shadow-2xs'
-              : 'text-gray-600 hover:bg-gray-100 border-transparent'
-              }`}
+            className={`px-4 py-2.5 rounded-t-lg font-bold text-xs flex items-center gap-2 transition-colors border-b-2 ${
+              activeTab === 'map'
+                ? 'bg-white text-postech border-postech shadow-2xs'
+                : 'text-gray-600 hover:bg-gray-100 border-transparent'
+            }`}
           >
             <MapPin className="w-4 h-4" />
             <span>📍 장소 & 도로 편집</span>
@@ -859,10 +915,11 @@ export const Admin: React.FC = () => {
 
           <button
             onClick={() => setActiveTab('booths')}
-            className={`px-4 py-2.5 rounded-t-lg font-bold text-xs flex items-center gap-2 transition-colors border-b-2 ${activeTab === 'booths'
-              ? 'bg-white text-postech border-postech shadow-2xs'
-              : 'text-gray-600 hover:bg-gray-100 border-transparent'
-              }`}
+            className={`px-4 py-2.5 rounded-t-lg font-bold text-xs flex items-center gap-2 transition-colors border-b-2 ${
+              activeTab === 'booths'
+                ? 'bg-white text-postech border-postech shadow-2xs'
+                : 'text-gray-600 hover:bg-gray-100 border-transparent'
+            }`}
           >
             <Store className="w-4 h-4 text-amber-500" />
             <span>🎪 부스 관리</span>
@@ -870,10 +927,11 @@ export const Admin: React.FC = () => {
 
           <button
             onClick={() => setActiveTab('foodtrucks')}
-            className={`px-4 py-2.5 rounded-t-lg font-bold text-xs flex items-center gap-2 transition-colors border-b-2 ${activeTab === 'foodtrucks'
-              ? 'bg-white text-postech border-postech shadow-2xs'
-              : 'text-gray-600 hover:bg-gray-100 border-transparent'
-              }`}
+            className={`px-4 py-2.5 rounded-t-lg font-bold text-xs flex items-center gap-2 transition-colors border-b-2 ${
+              activeTab === 'foodtrucks'
+                ? 'bg-white text-postech border-postech shadow-2xs'
+                : 'text-gray-600 hover:bg-gray-100 border-transparent'
+            }`}
           >
             <Truck className="w-4 h-4 text-orange-500" />
             <span>🚚 푸드트럭 관리</span>
@@ -881,10 +939,11 @@ export const Admin: React.FC = () => {
 
           <button
             onClick={() => setActiveTab('sponsors')}
-            className={`px-4 py-2.5 rounded-t-lg font-bold text-xs flex items-center gap-2 transition-colors border-b-2 ${activeTab === 'sponsors'
-              ? 'bg-white text-postech border-postech shadow-2xs'
-              : 'text-gray-600 hover:bg-gray-100 border-transparent'
-              }`}
+            className={`px-4 py-2.5 rounded-t-lg font-bold text-xs flex items-center gap-2 transition-colors border-b-2 ${
+              activeTab === 'sponsors'
+                ? 'bg-white text-postech border-postech shadow-2xs'
+                : 'text-gray-600 hover:bg-gray-100 border-transparent'
+            }`}
           >
             <Building2 className="w-4 h-4 text-blue-500" />
             <span>🏢 후원 기업 관리</span>
@@ -892,10 +951,11 @@ export const Admin: React.FC = () => {
 
           <button
             onClick={() => setActiveTab('notices')}
-            className={`px-4 py-2.5 rounded-t-lg font-bold text-xs flex items-center gap-2 transition-colors border-b-2 ${activeTab === 'notices'
-              ? 'bg-white text-postech border-postech shadow-2xs'
-              : 'text-gray-600 hover:bg-gray-100 border-transparent'
-              }`}
+            className={`px-4 py-2.5 rounded-t-lg font-bold text-xs flex items-center gap-2 transition-colors border-b-2 ${
+              activeTab === 'notices'
+                ? 'bg-white text-postech border-postech shadow-2xs'
+                : 'text-gray-600 hover:bg-gray-100 border-transparent'
+            }`}
           >
             <Bell className="w-4 h-4 text-rose-600" />
             <span>📢 공지사항 관리</span>
@@ -903,10 +963,11 @@ export const Admin: React.FC = () => {
 
           <button
             onClick={() => setActiveTab('faqs')}
-            className={`px-4 py-2.5 rounded-t-lg font-bold text-xs flex items-center gap-2 transition-colors border-b-2 ${activeTab === 'faqs'
-              ? 'bg-white text-postech border-postech shadow-2xs'
-              : 'text-gray-600 hover:bg-gray-100 border-transparent'
-              }`}
+            className={`px-4 py-2.5 rounded-t-lg font-bold text-xs flex items-center gap-2 transition-colors border-b-2 ${
+              activeTab === 'faqs'
+                ? 'bg-white text-postech border-postech shadow-2xs'
+                : 'text-gray-600 hover:bg-gray-100 border-transparent'
+            }`}
           >
             <HelpCircle className="w-4 h-4 text-purple-600" />
             <span>❓ FAQ 관리</span>
@@ -914,10 +975,11 @@ export const Admin: React.FC = () => {
 
           <button
             onClick={() => setActiveTab('settings')}
-            className={`px-4 py-2.5 rounded-t-lg font-bold text-xs flex items-center gap-2 transition-colors border-b-2 ${activeTab === 'settings'
-              ? 'bg-white text-postech border-postech shadow-2xs'
-              : 'text-gray-600 hover:bg-gray-100 border-transparent'
-              }`}
+            className={`px-4 py-2.5 rounded-t-lg font-bold text-xs flex items-center gap-2 transition-colors border-b-2 ${
+              activeTab === 'settings'
+                ? 'bg-white text-postech border-postech shadow-2xs'
+                : 'text-gray-600 hover:bg-gray-100 border-transparent'
+            }`}
           >
             <KeyRound className="w-4 h-4" />
             <span>관리자 설정 & Supabase</span>
@@ -1222,7 +1284,8 @@ export const Admin: React.FC = () => {
                   📍 캠퍼스 장소 & 도로(가중치 / 최단길찾기) 비주얼 편집기
                 </h2>
                 <p className="text-xs text-gray-500 font-medium mt-0.5">
-                  지도 위를 직접 클릭하여 장소(노드) 위치와 도로(다중 세그먼트 웨이포인트 & 소요시간 분)를 설정하실 수 있습니다.
+                  지도 위를 직접 클릭하여 장소(노드) 위치와 도로(다중 세그먼트 웨이포인트 & 소요시간
+                  분)를 설정하실 수 있습니다.
                 </p>
               </div>
 
@@ -1242,10 +1305,11 @@ export const Admin: React.FC = () => {
               <span className="text-xs font-bold text-slate-700 ml-2">편집 모드 선택:</span>
               <button
                 onClick={() => setMapEditorMode('node')}
-                className={`px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1.5 transition-colors ${mapEditorMode === 'node'
-                  ? 'bg-postech text-white shadow-2xs'
-                  : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50'
-                  }`}
+                className={`px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1.5 transition-colors ${
+                  mapEditorMode === 'node'
+                    ? 'bg-postech text-white shadow-2xs'
+                    : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50'
+                }`}
               >
                 <MapPin className="w-3.5 h-3.5" />
                 <span>📍 장소(노드) 클릭 배치 & 편집</span>
@@ -1253,10 +1317,11 @@ export const Admin: React.FC = () => {
 
               <button
                 onClick={() => setMapEditorMode('edge')}
-                className={`px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1.5 transition-colors ${mapEditorMode === 'edge'
-                  ? 'bg-postech text-white shadow-2xs'
-                  : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50'
-                  }`}
+                className={`px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1.5 transition-colors ${
+                  mapEditorMode === 'edge'
+                    ? 'bg-postech text-white shadow-2xs'
+                    : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50'
+                }`}
               >
                 <Waypoints className="w-3.5 h-3.5" />
                 <span>🛣️ 도로 경로 (직선 여러개 연결 & 소요시간 가중치) 편집</span>
@@ -1316,7 +1381,14 @@ export const Admin: React.FC = () => {
                         <button
                           onClick={() => {
                             setSelectedNodeId(null);
-                            setNodeForm({ name: '', category: 'sports', x: 50, y: 50, icon: '📍', description: '' });
+                            setNodeForm({
+                              name: '',
+                              category: 'sports',
+                              x: 50,
+                              y: 50,
+                              icon: '📍',
+                              description: '',
+                            });
                           }}
                           className="text-xs font-bold text-slate-500 hover:text-slate-900"
                         >
@@ -1339,7 +1411,9 @@ export const Admin: React.FC = () => {
 
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="font-bold text-slate-700 block mb-1">아이콘 (이모지)</label>
+                          <label className="font-bold text-slate-700 block mb-1">
+                            아이콘 (이모지)
+                          </label>
                           <input
                             type="text"
                             value={nodeForm.icon || '📍'}
@@ -1351,7 +1425,9 @@ export const Admin: React.FC = () => {
                           <label className="font-bold text-slate-700 block mb-1">카테고리</label>
                           <select
                             value={nodeForm.category || 'sports'}
-                            onChange={(e) => setNodeForm({ ...nodeForm, category: e.target.value as any })}
+                            onChange={(e) =>
+                              setNodeForm({ ...nodeForm, category: e.target.value as any })
+                            }
                             className="w-full bg-white border border-slate-300 rounded px-2 py-1.5 font-bold"
                           >
                             <option value="sports">경기장 (sports)</option>
@@ -1368,7 +1444,9 @@ export const Admin: React.FC = () => {
                           <input
                             type="number"
                             value={nodeForm.x || 0}
-                            onChange={(e) => setNodeForm({ ...nodeForm, x: Number(e.target.value) })}
+                            onChange={(e) =>
+                              setNodeForm({ ...nodeForm, x: Number(e.target.value) })
+                            }
                             className="w-full border border-slate-300 rounded px-2 py-1 text-xs font-bold"
                           />
                         </div>
@@ -1377,7 +1455,9 @@ export const Admin: React.FC = () => {
                           <input
                             type="number"
                             value={nodeForm.y || 0}
-                            onChange={(e) => setNodeForm({ ...nodeForm, y: Number(e.target.value) })}
+                            onChange={(e) =>
+                              setNodeForm({ ...nodeForm, y: Number(e.target.value) })
+                            }
                             className="w-full border border-slate-300 rounded px-2 py-1 text-xs font-bold"
                           />
                         </div>
@@ -1388,7 +1468,9 @@ export const Admin: React.FC = () => {
                         <input
                           type="text"
                           value={nodeForm.description || ''}
-                          onChange={(e) => setNodeForm({ ...nodeForm, description: e.target.value })}
+                          onChange={(e) =>
+                            setNodeForm({ ...nodeForm, description: e.target.value })
+                          }
                           placeholder="장소 관련 추가 안내 문구"
                           className="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5"
                         />
@@ -1399,7 +1481,9 @@ export const Admin: React.FC = () => {
                           <input
                             type="checkbox"
                             checked={nodeForm.isEatingZone || false}
-                            onChange={(e) => setNodeForm({ ...nodeForm, isEatingZone: e.target.checked })}
+                            onChange={(e) =>
+                              setNodeForm({ ...nodeForm, isEatingZone: e.target.checked })
+                            }
                           />
                           <span>취식 공간</span>
                         </label>
@@ -1407,7 +1491,9 @@ export const Admin: React.FC = () => {
                           <input
                             type="checkbox"
                             checked={nodeForm.isRestArea || false}
-                            onChange={(e) => setNodeForm({ ...nodeForm, isRestArea: e.target.checked })}
+                            onChange={(e) =>
+                              setNodeForm({ ...nodeForm, isRestArea: e.target.checked })
+                            }
                           />
                           <span>휴식 공간</span>
                         </label>
@@ -1438,13 +1524,20 @@ export const Admin: React.FC = () => {
                     <div className="flex items-center justify-between border-b border-slate-200 pb-2">
                       <div className="flex items-center gap-1.5 font-extrabold text-sm text-slate-900">
                         <Waypoints className="w-4 h-4 text-postech" />
-                        <span>{selectedEdgeId ? '도로(경로/가중치) 수정' : '새 도로(경로) 연결'}</span>
+                        <span>
+                          {selectedEdgeId ? '도로(경로/가중치) 수정' : '새 도로(경로) 연결'}
+                        </span>
                       </div>
                       {selectedEdgeId && (
                         <button
                           onClick={() => {
                             setSelectedEdgeId(null);
-                            setEdgeForm({ fromNodeId: mapNodes[0]?.id || '', toNodeId: mapNodes[1]?.id || '', weightMinutes: 3, waypoints: [] });
+                            setEdgeForm({
+                              fromNodeId: mapNodes[0]?.id || '',
+                              toNodeId: mapNodes[1]?.id || '',
+                              weightMinutes: 3,
+                              waypoints: [],
+                            });
                           }}
                           className="text-xs font-bold text-slate-500 hover:text-slate-900"
                         >
@@ -1494,7 +1587,9 @@ export const Admin: React.FC = () => {
                             min={1}
                             max={60}
                             value={edgeForm.weightMinutes || 1}
-                            onChange={(e) => setEdgeForm({ ...edgeForm, weightMinutes: Number(e.target.value) })}
+                            onChange={(e) =>
+                              setEdgeForm({ ...edgeForm, weightMinutes: Number(e.target.value) })
+                            }
                             className="bg-white border border-slate-300 rounded px-3 py-1.5 w-24 font-bold text-sm text-center"
                           />
                           <span className="font-bold text-slate-700">분 소요</span>
@@ -1515,7 +1610,8 @@ export const Admin: React.FC = () => {
                           </button>
                         </div>
                         <p className="text-[10px] text-slate-500">
-                          지도를 클릭하면 도로가 지나가는 중간 굴곡점(웨이포인트)이 추가되어 곡선/꺾인 도로를 만듭니다.
+                          지도를 클릭하면 도로가 지나가는 중간 굴곡점(웨이포인트)이 추가되어
+                          곡선/꺾인 도로를 만듭니다.
                         </p>
                         <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
                           {(edgeForm.waypoints || []).map((wp, wpIdx) => (
@@ -1523,7 +1619,9 @@ export const Admin: React.FC = () => {
                               key={wpIdx}
                               className="bg-slate-100 border border-slate-300 text-slate-700 text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1"
                             >
-                              <span>#{wpIdx + 1}: ({wp.x}, {wp.y})</span>
+                              <span>
+                                #{wpIdx + 1}: ({wp.x}, {wp.y})
+                              </span>
                               <button
                                 onClick={() => {
                                   const updatedWps = [...(edgeForm.waypoints || [])];
@@ -1579,8 +1677,11 @@ export const Admin: React.FC = () => {
                             setEdgeForm(edge);
                             setMapEditorMode('edge');
                           }}
-                          className={`p-1.5 rounded cursor-pointer flex items-center justify-between text-[11px] font-bold transition-colors ${isSelected ? 'bg-rose-950 border border-rose-500 text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
-                            }`}
+                          className={`p-1.5 rounded cursor-pointer flex items-center justify-between text-[11px] font-bold transition-colors ${
+                            isSelected
+                              ? 'bg-rose-950 border border-rose-500 text-white'
+                              : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                          }`}
                         >
                           <span className="truncate">
                             {fromNode?.name || edge.fromNodeId} ➔ {toNode?.name || edge.toNodeId}
@@ -1607,10 +1708,25 @@ export const Admin: React.FC = () => {
                   <Store className="w-5 h-5 text-amber-500" />
                   <span>🎪 부스 관리</span>
                 </h2>
-                <p className="text-xs text-gray-500 font-medium">행사장 내 동아리/체험 부스 정보를 추가 및 편집합니다.</p>
+                <p className="text-xs text-gray-500 font-medium">
+                  행사장 내 동아리/체험 부스 정보를 추가 및 편집합니다.
+                </p>
               </div>
               <button
-                onClick={() => setEditingBooth({ id: '', name: '', operator: '', location: '', category: 'experience', description: '', operatingHours: '10:00 ~ 18:00', icon: '🎪', isActive: true, displayOrder: booths.length + 1 })}
+                onClick={() =>
+                  setEditingBooth({
+                    id: '',
+                    name: '',
+                    operator: '',
+                    location: '',
+                    category: 'experience',
+                    description: '',
+                    operatingHours: '10:00 ~ 18:00',
+                    icon: '🎪',
+                    isActive: true,
+                    displayOrder: booths.length + 1,
+                  })
+                }
                 className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold flex items-center gap-1 transition-colors"
               >
                 <Plus className="w-4 h-4" />
@@ -1641,7 +1757,9 @@ export const Admin: React.FC = () => {
                       <input
                         type="text"
                         value={editingBooth.operator || ''}
-                        onChange={(e) => setEditingBooth({ ...editingBooth, operator: e.target.value })}
+                        onChange={(e) =>
+                          setEditingBooth({ ...editingBooth, operator: e.target.value })
+                        }
                         placeholder="예: POSTECH 로봇동아리"
                         className="w-full border border-gray-300 p-2 rounded text-xs"
                       />
@@ -1650,7 +1768,9 @@ export const Admin: React.FC = () => {
                       <label className="font-bold text-gray-700 block mb-1">카테고리</label>
                       <select
                         value={editingBooth.category || 'experience'}
-                        onChange={(e) => setEditingBooth({ ...editingBooth, category: e.target.value })}
+                        onChange={(e) =>
+                          setEditingBooth({ ...editingBooth, category: e.target.value })
+                        }
                         className="w-full border border-gray-300 p-2 rounded text-xs font-bold"
                       >
                         <option value="experience">체험 부스</option>
@@ -1666,7 +1786,9 @@ export const Admin: React.FC = () => {
                       <input
                         type="text"
                         value={editingBooth.location || ''}
-                        onChange={(e) => setEditingBooth({ ...editingBooth, location: e.target.value })}
+                        onChange={(e) =>
+                          setEditingBooth({ ...editingBooth, location: e.target.value })
+                        }
                         placeholder="예: 학생회관 앞 광장"
                         className="w-full border border-gray-300 p-2 rounded text-xs"
                       />
@@ -1676,7 +1798,9 @@ export const Admin: React.FC = () => {
                       <input
                         type="text"
                         value={editingBooth.operatingHours || ''}
-                        onChange={(e) => setEditingBooth({ ...editingBooth, operatingHours: e.target.value })}
+                        onChange={(e) =>
+                          setEditingBooth({ ...editingBooth, operatingHours: e.target.value })
+                        }
                         placeholder="10:00 ~ 18:00"
                         className="w-full border border-gray-300 p-2 rounded text-xs"
                       />
@@ -1692,12 +1816,16 @@ export const Admin: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="font-bold text-gray-700 block mb-1">이미지 업로드 (Supabase Storage)</label>
+                    <label className="font-bold text-gray-700 block mb-1">
+                      이미지 업로드 (Supabase Storage)
+                    </label>
                     <div className="flex items-center gap-2">
                       <input
                         type="text"
                         value={editingBooth.imageUrl || ''}
-                        onChange={(e) => setEditingBooth({ ...editingBooth, imageUrl: e.target.value })}
+                        onChange={(e) =>
+                          setEditingBooth({ ...editingBooth, imageUrl: e.target.value })
+                        }
                         placeholder="이미지 URL 또는 직접 업로드"
                         className="flex-1 border border-gray-300 p-2 rounded text-xs"
                       />
@@ -1731,7 +1859,9 @@ export const Admin: React.FC = () => {
                     <textarea
                       rows={3}
                       value={editingBooth.description || ''}
-                      onChange={(e) => setEditingBooth({ ...editingBooth, description: e.target.value })}
+                      onChange={(e) =>
+                        setEditingBooth({ ...editingBooth, description: e.target.value })
+                      }
                       placeholder="부스 상세 설명 및 진행 프로그램"
                       className="w-full border border-gray-300 p-2 rounded text-xs"
                     />
@@ -1741,7 +1871,9 @@ export const Admin: React.FC = () => {
                       <input
                         type="checkbox"
                         checked={editingBooth.isActive ?? true}
-                        onChange={(e) => setEditingBooth({ ...editingBooth, isActive: e.target.checked })}
+                        onChange={(e) =>
+                          setEditingBooth({ ...editingBooth, isActive: e.target.checked })
+                        }
                       />
                       <span>공개 표시 여부</span>
                     </label>
@@ -1797,9 +1929,13 @@ export const Admin: React.FC = () => {
                             <td className="p-2.5 text-slate-600">{b.location || '-'}</td>
                             <td className="p-2.5">
                               {b.isActive ? (
-                                <span className="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-bold text-[10px]">공개</span>
+                                <span className="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-bold text-[10px]">
+                                  공개
+                                </span>
                               ) : (
-                                <span className="text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded font-bold text-[10px]">숨김</span>
+                                <span className="text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded font-bold text-[10px]">
+                                  숨김
+                                </span>
                               )}
                             </td>
                             <td className="p-2.5 text-right">
@@ -1830,10 +1966,23 @@ export const Admin: React.FC = () => {
                   <Truck className="w-5 h-5 text-orange-500" />
                   <span>🚚 푸드트럭 관리</span>
                 </h2>
-                <p className="text-xs text-gray-500 font-medium">행사장 푸드트럭 라인업 및 메뉴 정보를 추가/편집합니다.</p>
+                <p className="text-xs text-gray-500 font-medium">
+                  행사장 푸드트럭 라인업 및 메뉴 정보를 추가/편집합니다.
+                </p>
               </div>
               <button
-                onClick={() => setEditingFoodTruck({ id: '', name: '', menuSummary: '', location: '기계동 잔디밭 푸드트럭존', operatingHours: '11:00 ~ 21:00', icon: '🚚', isActive: true, displayOrder: foodTrucks.length + 1 })}
+                onClick={() =>
+                  setEditingFoodTruck({
+                    id: '',
+                    name: '',
+                    menuSummary: '',
+                    location: '기계동 잔디밭 푸드트럭존',
+                    operatingHours: '11:00 ~ 21:00',
+                    icon: '🚚',
+                    isActive: true,
+                    displayOrder: foodTrucks.length + 1,
+                  })
+                }
                 className="px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-xs font-bold flex items-center gap-1 transition-colors"
               >
                 <Plus className="w-4 h-4" />
@@ -1853,7 +2002,9 @@ export const Admin: React.FC = () => {
                     <input
                       type="text"
                       value={editingFoodTruck.name || ''}
-                      onChange={(e) => setEditingFoodTruck({ ...editingFoodTruck, name: e.target.value })}
+                      onChange={(e) =>
+                        setEditingFoodTruck({ ...editingFoodTruck, name: e.target.value })
+                      }
                       placeholder="예: 츄러스 & 스테이크 트럭"
                       className="w-full border border-gray-300 p-2 rounded text-xs font-bold"
                     />
@@ -1864,7 +2015,9 @@ export const Admin: React.FC = () => {
                       <input
                         type="text"
                         value={editingFoodTruck.location || ''}
-                        onChange={(e) => setEditingFoodTruck({ ...editingFoodTruck, location: e.target.value })}
+                        onChange={(e) =>
+                          setEditingFoodTruck({ ...editingFoodTruck, location: e.target.value })
+                        }
                         placeholder="예: 기계동 잔디밭"
                         className="w-full border border-gray-300 p-2 rounded text-xs"
                       />
@@ -1874,7 +2027,12 @@ export const Admin: React.FC = () => {
                       <input
                         type="text"
                         value={editingFoodTruck.operatingHours || ''}
-                        onChange={(e) => setEditingFoodTruck({ ...editingFoodTruck, operatingHours: e.target.value })}
+                        onChange={(e) =>
+                          setEditingFoodTruck({
+                            ...editingFoodTruck,
+                            operatingHours: e.target.value,
+                          })
+                        }
                         placeholder="11:00 ~ 21:00"
                         className="w-full border border-gray-300 p-2 rounded text-xs"
                       />
@@ -1885,7 +2043,9 @@ export const Admin: React.FC = () => {
                     <input
                       type="text"
                       value={editingFoodTruck.icon || '🚚'}
-                      onChange={(e) => setEditingFoodTruck({ ...editingFoodTruck, icon: e.target.value })}
+                      onChange={(e) =>
+                        setEditingFoodTruck({ ...editingFoodTruck, icon: e.target.value })
+                      }
                       className="w-20 border border-gray-300 p-2 rounded text-xs text-center font-bold"
                     />
                   </div>
@@ -1894,7 +2054,9 @@ export const Admin: React.FC = () => {
                     <textarea
                       rows={3}
                       value={editingFoodTruck.menuSummary || ''}
-                      onChange={(e) => setEditingFoodTruck({ ...editingFoodTruck, menuSummary: e.target.value })}
+                      onChange={(e) =>
+                        setEditingFoodTruck({ ...editingFoodTruck, menuSummary: e.target.value })
+                      }
                       placeholder="예: 큐브스테이크 9,000원, 수제 츄러스 4,000원, 에이드 3,500원"
                       className="w-full border border-gray-300 p-2 rounded text-xs"
                     />
@@ -1904,7 +2066,9 @@ export const Admin: React.FC = () => {
                       <input
                         type="checkbox"
                         checked={editingFoodTruck.isActive ?? true}
-                        onChange={(e) => setEditingFoodTruck({ ...editingFoodTruck, isActive: e.target.checked })}
+                        onChange={(e) =>
+                          setEditingFoodTruck({ ...editingFoodTruck, isActive: e.target.checked })
+                        }
                       />
                       <span>공개 표시 여부</span>
                     </label>
@@ -1955,12 +2119,18 @@ export const Admin: React.FC = () => {
                               <span>{t.icon}</span>
                               <span>{t.name}</span>
                             </td>
-                            <td className="p-2.5 text-slate-600 truncate max-w-[200px]">{t.menuSummary || '-'}</td>
+                            <td className="p-2.5 text-slate-600 truncate max-w-[200px]">
+                              {t.menuSummary || '-'}
+                            </td>
                             <td className="p-2.5">
                               {t.isActive ? (
-                                <span className="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-bold text-[10px]">공개</span>
+                                <span className="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-bold text-[10px]">
+                                  공개
+                                </span>
                               ) : (
-                                <span className="text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded font-bold text-[10px]">숨김</span>
+                                <span className="text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded font-bold text-[10px]">
+                                  숨김
+                                </span>
                               )}
                             </td>
                             <td className="p-2.5 text-right">
@@ -1991,10 +2161,23 @@ export const Admin: React.FC = () => {
                   <Building2 className="w-5 h-5 text-blue-500" />
                   <span>🏢 후원 기업 관리</span>
                 </h2>
-                <p className="text-xs text-gray-500 font-medium">STadium 행사 후원 기업 및 로고/등급 목록을 추가/편집합니다.</p>
+                <p className="text-xs text-gray-500 font-medium">
+                  STadium 행사 후원 기업 및 로고/등급 목록을 추가/편집합니다.
+                </p>
               </div>
               <button
-                onClick={() => setEditingSponsor({ id: '', name: '', tier: 'gold', logoUrl: '', description: '', websiteUrl: '', isActive: true, displayOrder: sponsors.length + 1 })}
+                onClick={() =>
+                  setEditingSponsor({
+                    id: '',
+                    name: '',
+                    tier: 'gold',
+                    logoUrl: '',
+                    description: '',
+                    websiteUrl: '',
+                    isActive: true,
+                    displayOrder: sponsors.length + 1,
+                  })
+                }
                 className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold flex items-center gap-1 transition-colors"
               >
                 <Plus className="w-4 h-4" />
@@ -2014,7 +2197,9 @@ export const Admin: React.FC = () => {
                     <input
                       type="text"
                       value={editingSponsor.name || ''}
-                      onChange={(e) => setEditingSponsor({ ...editingSponsor, name: e.target.value })}
+                      onChange={(e) =>
+                        setEditingSponsor({ ...editingSponsor, name: e.target.value })
+                      }
                       placeholder="예: 포스코 (POSCO)"
                       className="w-full border border-gray-300 p-2 rounded text-xs font-bold"
                     />
@@ -2023,7 +2208,9 @@ export const Admin: React.FC = () => {
                     <label className="font-bold text-gray-700 block mb-1">후원 등급</label>
                     <select
                       value={editingSponsor.tier || 'gold'}
-                      onChange={(e) => setEditingSponsor({ ...editingSponsor, tier: e.target.value })}
+                      onChange={(e) =>
+                        setEditingSponsor({ ...editingSponsor, tier: e.target.value })
+                      }
                       className="w-full border border-gray-300 p-2 rounded text-xs font-bold"
                     >
                       <option value="main">👑 메인 후원사 (Main)</option>
@@ -2034,12 +2221,16 @@ export const Admin: React.FC = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="font-bold text-gray-700 block mb-1">로고 이미지 (Supabase Storage)</label>
+                    <label className="font-bold text-gray-700 block mb-1">
+                      로고 이미지 (Supabase Storage)
+                    </label>
                     <div className="flex items-center gap-2">
                       <input
                         type="text"
                         value={editingSponsor.logoUrl || ''}
-                        onChange={(e) => setEditingSponsor({ ...editingSponsor, logoUrl: e.target.value })}
+                        onChange={(e) =>
+                          setEditingSponsor({ ...editingSponsor, logoUrl: e.target.value })
+                        }
                         placeholder="https://example.com/logo.png"
                         className="flex-1 border border-gray-300 p-2 rounded text-xs"
                       />
@@ -2073,7 +2264,9 @@ export const Admin: React.FC = () => {
                     <input
                       type="text"
                       value={editingSponsor.websiteUrl || ''}
-                      onChange={(e) => setEditingSponsor({ ...editingSponsor, websiteUrl: e.target.value })}
+                      onChange={(e) =>
+                        setEditingSponsor({ ...editingSponsor, websiteUrl: e.target.value })
+                      }
                       placeholder="https://posco.com"
                       className="w-full border border-gray-300 p-2 rounded text-xs"
                     />
@@ -2083,7 +2276,9 @@ export const Admin: React.FC = () => {
                     <textarea
                       rows={3}
                       value={editingSponsor.description || ''}
-                      onChange={(e) => setEditingSponsor({ ...editingSponsor, description: e.target.value })}
+                      onChange={(e) =>
+                        setEditingSponsor({ ...editingSponsor, description: e.target.value })
+                      }
                       placeholder="후원 기업 간단 소개 및 응원 메시지"
                       className="w-full border border-gray-300 p-2 rounded text-xs"
                     />
@@ -2093,7 +2288,9 @@ export const Admin: React.FC = () => {
                       <input
                         type="checkbox"
                         checked={editingSponsor.isActive ?? true}
-                        onChange={(e) => setEditingSponsor({ ...editingSponsor, isActive: e.target.checked })}
+                        onChange={(e) =>
+                          setEditingSponsor({ ...editingSponsor, isActive: e.target.checked })
+                        }
                       />
                       <span>공개 표시 여부</span>
                     </label>
@@ -2141,12 +2338,18 @@ export const Admin: React.FC = () => {
                         sponsors.map((s) => (
                           <tr key={s.id} className="hover:bg-slate-50">
                             <td className="p-2.5 font-bold text-slate-900">{s.name}</td>
-                            <td className="p-2.5 font-bold text-amber-600 uppercase text-[11px]">{s.tier}</td>
+                            <td className="p-2.5 font-bold text-amber-600 uppercase text-[11px]">
+                              {s.tier}
+                            </td>
                             <td className="p-2.5">
                               {s.isActive ? (
-                                <span className="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-bold text-[10px]">공개</span>
+                                <span className="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-bold text-[10px]">
+                                  공개
+                                </span>
                               ) : (
-                                <span className="text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded font-bold text-[10px]">숨김</span>
+                                <span className="text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded font-bold text-[10px]">
+                                  숨김
+                                </span>
                               )}
                             </td>
                             <td className="p-2.5 text-right">
@@ -2198,7 +2401,9 @@ export const Admin: React.FC = () => {
                     <input
                       type="text"
                       value={editingNotice.title || ''}
-                      onChange={(e) => setEditingNotice({ ...editingNotice, title: e.target.value })}
+                      onChange={(e) =>
+                        setEditingNotice({ ...editingNotice, title: e.target.value })
+                      }
                       placeholder="공지 제목 입력"
                       className="w-full border border-gray-300 p-2 rounded text-xs font-bold"
                     />
@@ -2209,7 +2414,9 @@ export const Admin: React.FC = () => {
                     <textarea
                       rows={6}
                       value={editingNotice.content || ''}
-                      onChange={(e) => setEditingNotice({ ...editingNotice, content: e.target.value })}
+                      onChange={(e) =>
+                        setEditingNotice({ ...editingNotice, content: e.target.value })
+                      }
                       placeholder="상세 공지 내용을 입력하세요 (줄바꿈 지원)"
                       className="w-full border border-gray-300 p-2 rounded text-xs leading-relaxed font-medium"
                     />
@@ -2220,7 +2427,9 @@ export const Admin: React.FC = () => {
                       <input
                         type="checkbox"
                         checked={editingNotice.isPinned ?? false}
-                        onChange={(e) => setEditingNotice({ ...editingNotice, isPinned: e.target.checked })}
+                        onChange={(e) =>
+                          setEditingNotice({ ...editingNotice, isPinned: e.target.checked })
+                        }
                       />
                       <span>상단 필독(📌) 고정</span>
                     </label>
@@ -2305,7 +2514,9 @@ export const Admin: React.FC = () => {
                 <span>❓ FAQ 자주 묻는 질문 관리</span>
               </h2>
               <button
-                onClick={() => setEditingFaq({ category: '일반', question: '', answer: '', displayOrder: 0 })}
+                onClick={() =>
+                  setEditingFaq({ category: '일반', question: '', answer: '', displayOrder: 0 })
+                }
                 className="px-3 py-1.5 bg-slate-900 text-white rounded text-xs font-bold flex items-center gap-1 hover:bg-slate-800"
               >
                 <Plus className="w-4 h-4" />
@@ -2355,11 +2566,18 @@ export const Admin: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="font-bold text-gray-700 block mb-1">정렬 순서 (낮을수록 먼저 노출)</label>
+                    <label className="font-bold text-gray-700 block mb-1">
+                      정렬 순서 (낮을수록 먼저 노출)
+                    </label>
                     <input
                       type="number"
                       value={editingFaq.displayOrder || 0}
-                      onChange={(e) => setEditingFaq({ ...editingFaq, displayOrder: parseInt(e.target.value) || 0 })}
+                      onChange={(e) =>
+                        setEditingFaq({
+                          ...editingFaq,
+                          displayOrder: parseInt(e.target.value) || 0,
+                        })
+                      }
                       className="w-full border border-gray-300 p-2 rounded text-xs font-bold"
                     />
                   </div>
@@ -2501,9 +2719,6 @@ export const Admin: React.FC = () => {
             </div>
           </div>
         )}
-
-
-
 
         {/* Global Save Status Message */}
         {saveStatus && (

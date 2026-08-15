@@ -1,10 +1,9 @@
-
-
 export interface School {
   id: string;
   name: string;
   shortName: string;
   logoText: string;
+  logoUrl: string;
   color: string;
   bgLight: string;
   textColor: string;
@@ -16,8 +15,9 @@ export const SCHOOLS: Record<string, School> = {
     name: '포항공과대학교',
     shortName: 'POSTECH',
     logoText: 'P',
-    color: '#C80036',
-    bgLight: '#FFF0F3',
+    logoUrl: '/postech.png',
+    color: '#A61955',
+    bgLight: '#FFF0F5',
     textColor: '#ffffff',
   },
   KAIST: {
@@ -25,8 +25,9 @@ export const SCHOOLS: Record<string, School> = {
     name: '한국과학기술원',
     shortName: 'KAIST',
     logoText: 'K',
-    color: '#004182',
-    bgLight: '#E6F0FA',
+    logoUrl: '/kaist.png',
+    color: '#1487C8',
+    bgLight: '#EBF6FC',
     textColor: '#ffffff',
   },
   GIST: {
@@ -34,8 +35,9 @@ export const SCHOOLS: Record<string, School> = {
     name: '광주과학기술원',
     shortName: 'GIST',
     logoText: 'G',
-    color: '#F37023',
-    bgLight: '#FFF3EB',
+    logoUrl: '/gist.png',
+    color: '#DF3128',
+    bgLight: '#FDF1F0',
     textColor: '#ffffff',
   },
   DGIST: {
@@ -43,8 +45,9 @@ export const SCHOOLS: Record<string, School> = {
     name: '대구경북과학기술원',
     shortName: 'DGIST',
     logoText: 'D',
-    color: '#0088CC',
-    bgLight: '#E6F5FC',
+    logoUrl: '/dgist.png',
+    color: '#0BBFF2',
+    bgLight: '#E8F9FE',
     textColor: '#ffffff',
   },
   UNIST: {
@@ -52,8 +55,9 @@ export const SCHOOLS: Record<string, School> = {
     name: '울산과학기술원',
     shortName: 'UNIST',
     logoText: 'U',
-    color: '#002855',
-    bgLight: '#E6ECF5',
+    logoUrl: '/unist.png',
+    color: '#001B54',
+    bgLight: '#E8EDF6',
     textColor: '#ffffff',
   },
   KENTECH: {
@@ -61,8 +65,9 @@ export const SCHOOLS: Record<string, School> = {
     name: '한국에너지공과대학교',
     shortName: 'KENTECH',
     logoText: 'KE',
-    color: '#1D6740',
-    bgLight: '#EAF3ED',
+    logoUrl: '/kentech.png',
+    color: '#00316C',
+    bgLight: '#EBF1F7',
     textColor: '#ffffff',
   },
 };
@@ -131,6 +136,7 @@ export interface SchoolStanding {
   schoolName: string;
   shortName: string;
   logoText: string;
+  logoUrl: string;
   color: string;
   bgLight: string;
   textColor: string;
@@ -532,13 +538,7 @@ export function getRealtimeSportsConfig(
 
   const allRawMatches = customMatches || DEFAULT_RAW_SCHEDULE_FLAT;
 
-  const sportKeys: SportKey[] = [
-    'soccer',
-    'baseball',
-    'lol',
-    'badminton',
-    'basketball',
-  ];
+  const sportKeys: SportKey[] = ['soccer', 'baseball', 'lol', 'badminton', 'basketball'];
 
   for (const key of sportKeys) {
     const rawMatches = allRawMatches.filter((m: RawScheduledMatch) => m.sportKey === key);
@@ -555,7 +555,9 @@ export function getRealtimeSportsConfig(
         // Priority 1: Currently LIVE match involving selected school
         const live = schoolMatches.find((m: MatchItem) => m.isLive);
         // Priority 2: UPCOMING match involving selected school
-        const upcoming = schoolMatches.find((m: MatchItem) => m.startTimeObj.getTime() > now.getTime());
+        const upcoming = schoolMatches.find(
+          (m: MatchItem) => m.startTimeObj.getTime() > now.getTime()
+        );
         // Priority 3: FINISHED match involving selected school
         const finished = schoolMatches[schoolMatches.length - 1];
 
@@ -708,6 +710,7 @@ export function calculateOverallStandings(
       schoolName: schoolObj.name,
       shortName: schoolObj.shortName,
       logoText: schoolObj.logoText,
+      logoUrl: schoolObj.logoUrl,
       color: schoolObj.color,
       bgLight: schoolObj.bgLight,
       textColor: schoolObj.textColor,
@@ -733,7 +736,7 @@ export interface StageItem {
   school: string;
   clubName: string;
   category: string; // 구분 (e.g., '밴드', '댄스', '힙합', '응원단', '기타')
-  genre?: string;   // 장르 (optional e.g., '모던락', 'K-POP' 등)
+  genre?: string; // 장르 (optional e.g., '모던락', 'K-POP' 등)
   songTitle: string;
   startHour: number;
   startMinute: number;
@@ -920,8 +923,6 @@ export interface MapEdge {
 
 export const DEFAULT_MAP_EDGES: MapEdge[] = [];
 
-
-
 export interface NavigationResult {
   totalMinutes: number;
   pathWaypoints: MapWaypoint[];
@@ -944,13 +945,20 @@ export function findShortestPath(
   const nodeMap = new Map<string, VenueNode>();
   nodes.forEach((n) => nodeMap.set(n.id, n));
 
-  const adj = new Map<string, Array<{ to: string; weight: number; edge: MapEdge; isForward: boolean }>>();
+  const adj = new Map<
+    string,
+    Array<{ to: string; weight: number; edge: MapEdge; isForward: boolean }>
+  >();
   nodes.forEach((n) => adj.set(n.id, []));
 
   edges.forEach((edge) => {
     if (adj.has(edge.fromNodeId) && adj.has(edge.toNodeId)) {
-      adj.get(edge.fromNodeId)!.push({ to: edge.toNodeId, weight: edge.weightMinutes, edge, isForward: true });
-      adj.get(edge.toNodeId)!.push({ to: edge.fromNodeId, weight: edge.weightMinutes, edge, isForward: false });
+      adj
+        .get(edge.fromNodeId)!
+        .push({ to: edge.toNodeId, weight: edge.weightMinutes, edge, isForward: true });
+      adj
+        .get(edge.toNodeId)!
+        .push({ to: edge.fromNodeId, weight: edge.weightMinutes, edge, isForward: false });
     }
   });
 

@@ -4,15 +4,10 @@ import {
   getSupabaseBooths,
   getSupabaseFoodTrucks,
   BoothItem,
-  FoodTruckItem
+  FoodTruckItem,
 } from '../lib/supabase';
 import { CampusMapView } from '../components/CampusMapView';
-import {
-  VenueNode,
-  MapEdge,
-  NavigationResult,
-  findShortestPath
-} from '../config/stadiumConfig';
+import { VenueNode, MapEdge, NavigationResult, findShortestPath } from '../config/stadiumConfig';
 import {
   Utensils,
   Coffee,
@@ -23,12 +18,13 @@ import {
   Truck,
   MapPin,
   ChevronUp,
-  ChevronDown
+  ChevronDown,
 } from 'lucide-react';
 
 export const CampusMap: React.FC = () => {
   const [nodes, setNodes] = useState<VenueNode[]>([]);
   const [edges, setEdges] = useState<MapEdge[]>([]);
+  const [loadingMap, setLoadingMap] = useState<boolean>(true);
 
   // Booths & Food Trucks Data from Supabase
   const [booths, setBooths] = useState<BoothItem[]>([]);
@@ -65,6 +61,7 @@ export const CampusMap: React.FC = () => {
 
   // Fetch all map nodes, edges, booths, and food trucks from Supabase (Cached 0ms)
   useEffect(() => {
+    let isMounted = true;
     const loadAllMapContent = async () => {
       try {
         const [mapData, fetchedBooths, fetchedTrucks] = await Promise.all([
@@ -73,22 +70,29 @@ export const CampusMap: React.FC = () => {
           getSupabaseFoodTrucks(),
         ]);
 
-        if (mapData) {
-          setNodes(mapData.nodes);
-          setEdges(mapData.edges);
-          if (mapData.nodes.length > 0) {
-            setStartVenue(mapData.nodes[0].id);
-            if (mapData.nodes.length > 1) setDestVenue(mapData.nodes[1].id);
+        if (isMounted) {
+          if (mapData) {
+            setNodes(mapData.nodes);
+            setEdges(mapData.edges);
+            if (mapData.nodes.length > 0) {
+              setStartVenue(mapData.nodes[0].id);
+              if (mapData.nodes.length > 1) setDestVenue(mapData.nodes[1].id);
+            }
           }
+          setBooths(fetchedBooths.filter((b) => b.isActive));
+          setFoodTrucks(fetchedTrucks.filter((t) => t.isActive));
         }
-        setBooths(fetchedBooths.filter((b) => b.isActive));
-        setFoodTrucks(fetchedTrucks.filter((t) => t.isActive));
       } catch (err) {
         console.error('Failed to load map content:', err);
+      } finally {
+        if (isMounted) setLoadingMap(false);
       }
     };
 
     loadAllMapContent();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Compute shortest path via Dijkstra
@@ -166,13 +170,13 @@ export const CampusMap: React.FC = () => {
 
     if (isDragging) {
       const calculated = baseHeight - dragOffsetY;
-      return Math.max(54, Math.min(window.innerHeight * 0.90, calculated));
+      return Math.max(54, Math.min(window.innerHeight * 0.9, calculated));
     }
     return baseHeight;
   };
 
   return (
-    <div className="flex flex-col h-full w-full bg-slate-900 text-gray-900 relative overflow-hidden select-none">
+    <div className="flex flex-col h-full w-full bg-slate-900 text-gray-900 relative overflow-hidden select-none overscroll-none touch-none">
       {/* Top Controls Overlay (Transparent Floating Chips directly on Map) */}
       <div className="absolute top-3 left-3 right-3 z-30 flex flex-col gap-2 pointer-events-none">
         {/* Filter Toggle Chips */}
@@ -237,7 +241,9 @@ export const CampusMap: React.FC = () => {
           <div className="pointer-events-auto bg-white/90 backdrop-blur-md p-2.5 rounded-xl border border-white/80 space-y-2 shadow-xl">
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div>
-                <label className="text-[10px] font-extrabold text-gray-600 block mb-0.5">출발지</label>
+                <label className="text-[10px] font-extrabold text-gray-600 block mb-0.5">
+                  출발지
+                </label>
                 <select
                   value={startVenue}
                   onChange={(e) => setStartVenue(e.target.value)}
@@ -252,7 +258,9 @@ export const CampusMap: React.FC = () => {
               </div>
 
               <div>
-                <label className="text-[10px] font-extrabold text-gray-600 block mb-0.5">목적지</label>
+                <label className="text-[10px] font-extrabold text-gray-600 block mb-0.5">
+                  목적지
+                </label>
                 <select
                   value={destVenue}
                   onChange={(e) => setDestVenue(e.target.value)}
@@ -280,10 +288,11 @@ export const CampusMap: React.FC = () => {
       </div>
 
       {/* Main Map Interactive Canvas */}
-      <div className="flex-1 w-full h-full relative overflow-hidden bg-slate-900">
+      <div className="flex-1 w-full h-full relative overflow-hidden bg-slate-900 overscroll-none touch-none">
         <CampusMapView
           nodes={nodes}
           edges={edges}
+          isLoading={loadingMap}
           mode="user"
           showEatingZones={showEatingZones}
           showRestAreas={showRestAreas}
@@ -300,7 +309,7 @@ export const CampusMap: React.FC = () => {
       {/* Interactive Resizable 3-Snap Point Bottom Sheet Drawer (Always visible above BottomNav at bottom-[54px]) */}
       <div
         style={{ height: `${getSheetHeight()}px` }}
-        className={`fixed bottom-[54px] inset-x-0 z-30 max-w-[430px] mx-auto bg-white border-t border-gray-200/90 rounded-t-3xl shadow-2xl flex flex-col text-gray-900 ${
+        className={`fixed bottom-[54px] inset-x-0 z-30 w-full bg-white border-t border-gray-200/90 rounded-t-3xl shadow-2xl flex flex-col text-gray-900 ${
           isDragging ? '' : 'transition-all duration-200 ease-out'
         }`}
       >
@@ -331,7 +340,7 @@ export const CampusMap: React.FC = () => {
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
-                🎪 부스 ({booths.length})
+                부스 ({booths.length})
               </button>
 
               <button
@@ -345,7 +354,7 @@ export const CampusMap: React.FC = () => {
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
-                🚚 푸드트럭 ({foodTrucks.length})
+                푸드트럭 ({foodTrucks.length})
               </button>
 
               <button
@@ -381,8 +390,8 @@ export const CampusMap: React.FC = () => {
         {snapState !== 'collapsed' && (
           <div className="flex-1 overflow-y-auto p-3 space-y-2 no-scrollbar">
             {/* Booths Tab */}
-            {sheetTab === 'booth' && (
-              booths.length === 0 ? (
+            {sheetTab === 'booth' &&
+              (booths.length === 0 ? (
                 <div className="p-8 text-center text-xs font-bold text-gray-400">
                   등록된 부스가 없습니다.
                 </div>
@@ -421,12 +430,11 @@ export const CampusMap: React.FC = () => {
                     </div>
                   </div>
                 ))
-              )
-            )}
+              ))}
 
             {/* Food Trucks Tab */}
-            {sheetTab === 'foodtruck' && (
-              foodTrucks.length === 0 ? (
+            {sheetTab === 'foodtruck' &&
+              (foodTrucks.length === 0 ? (
                 <div className="p-8 text-center text-xs font-bold text-gray-400">
                   등록된 푸드트럭이 없습니다.
                 </div>
@@ -441,9 +449,7 @@ export const CampusMap: React.FC = () => {
                         {t.icon || '🚚'}
                       </div>
                       <div className="min-w-0">
-                        <h4 className="font-extrabold text-xs text-gray-900 truncate">
-                          {t.name}
-                        </h4>
+                        <h4 className="font-extrabold text-xs text-gray-900 truncate">{t.name}</h4>
                         <p className="text-[11px] text-gray-700 font-bold leading-relaxed mt-0.5 text-orange-700">
                           메뉴: {t.menuSummary}
                         </p>
@@ -458,8 +464,7 @@ export const CampusMap: React.FC = () => {
                     </div>
                   </div>
                 ))
-              )
-            )}
+              ))}
 
             {/* Event Venues Tab (행사 장소) with Flash Border Highlight Effect */}
             {sheetTab === 'venue' && (
@@ -478,14 +483,18 @@ export const CampusMap: React.FC = () => {
                         <span className="text-2xl">{selectedNode.icon}</span>
                         <div>
                           <div className="flex items-center gap-1.5">
-                            <h3 className="font-extrabold text-xs text-gray-900">{selectedNode.name}</h3>
+                            <h3 className="font-extrabold text-xs text-gray-900">
+                              {selectedNode.name}
+                            </h3>
                             {highlightedNodeId === selectedNode.id && (
                               <span className="text-[9px] font-black bg-blue-600 text-white px-1.5 py-0.2 rounded-md animate-pulse">
                                 지도에서 선택됨
                               </span>
                             )}
                           </div>
-                          <p className="text-[11px] text-gray-600 font-medium">{selectedNode.description}</p>
+                          <p className="text-[11px] text-gray-600 font-medium">
+                            {selectedNode.description}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -508,7 +517,9 @@ export const CampusMap: React.FC = () => {
 
                 {/* All Venues List */}
                 <div className="pt-1 space-y-1.5">
-                  <div className="text-[11px] font-bold text-gray-500 px-1">전체 행사 장소 ({nodes.length})</div>
+                  <div className="text-[11px] font-bold text-gray-500 px-1">
+                    전체 행사 장소 ({nodes.length})
+                  </div>
                   {nodes.map((node) => {
                     const isCurrentlySelected = selectedNode?.id === node.id;
                     const isHighlighted = highlightedNodeId === node.id;
@@ -520,14 +531,16 @@ export const CampusMap: React.FC = () => {
                           isHighlighted
                             ? 'bg-blue-50 border-2 border-blue-500 ring-2 ring-blue-200 shadow-sm'
                             : isCurrentlySelected
-                            ? 'bg-blue-50/60 border border-blue-300'
-                            : 'bg-white border border-gray-200/90 hover:border-gray-300 shadow-2xs'
+                              ? 'bg-blue-50/60 border border-blue-300'
+                              : 'bg-white border border-gray-200/90 hover:border-gray-300 shadow-2xs'
                         }`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
                           <span className="text-xl">{node.icon || '📍'}</span>
                           <div className="min-w-0">
-                            <h4 className="font-bold text-xs text-gray-900 truncate">{node.name}</h4>
+                            <h4 className="font-bold text-xs text-gray-900 truncate">
+                              {node.name}
+                            </h4>
                             <p className="text-[10px] text-gray-500 truncate">{node.description}</p>
                           </div>
                         </div>

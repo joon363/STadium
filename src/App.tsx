@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { SchoolProvider } from './context/SchoolContext';
+import { RealtimeScheduleProvider } from './hooks/useRealtimeSchedule';
 import { MobileContainer } from './components/MobileContainer';
 import { Header } from './components/Header';
 import { Home } from './pages/Home';
@@ -13,7 +14,16 @@ import { FoodTruckGuide } from './pages/FoodTruckGuide';
 import { SponsorGuide } from './pages/SponsorGuide';
 import { Admin } from './pages/Admin';
 
-const HIDE_HEADER_ROUTES = ['/soccer', '/baseball', '/lol', '/badminton', '/basketball', '/map', '/sponsors'];
+const HIDE_HEADER_ROUTES = [
+  '/soccer',
+  '/baseball',
+  '/lol',
+  '/badminton',
+  '/basketball',
+  '/map',
+  '/sponsors',
+  '/contact',
+];
 
 const LayoutWrapper: React.FC = () => {
   const location = useLocation();
@@ -41,15 +51,17 @@ const LayoutWrapper: React.FC = () => {
 export const App: React.FC = () => {
   return (
     <SchoolProvider>
-      <BrowserRouter>
-        <Routes>
-          {/* Admin Route - PC Widescreen 16:9 Layout */}
-          <Route path="/admin" element={<Admin />} />
+      <RealtimeScheduleProvider>
+        <BrowserRouter>
+          <Routes>
+            {/* Admin Route - PC Widescreen 16:9 Layout */}
+            <Route path="/admin" element={<Admin />} />
 
-          {/* Visitor Routes - Mobile Layout */}
-          <Route path="/*" element={<LayoutWrapper />} />
-        </Routes>
-      </BrowserRouter>
+            {/* Visitor Routes - Mobile Layout */}
+            <Route path="/*" element={<LayoutWrapper />} />
+          </Routes>
+        </BrowserRouter>
+      </RealtimeScheduleProvider>
     </SchoolProvider>
   );
 };

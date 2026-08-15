@@ -1,6 +1,6 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { VenueNode, MapEdge, NavigationResult } from '../config/stadiumConfig';
-import { Search } from 'lucide-react';
+import { Search, Loader2 } from 'lucide-react';
 
 export interface CampusMapViewProps {
   nodes: VenueNode[];
@@ -9,6 +9,7 @@ export interface CampusMapViewProps {
   adminEditorMode?: 'node' | 'edge';
   selectedNodeId?: string | null;
   selectedEdgeId?: string | null;
+  isLoading?: boolean;
 
   onNodeClick?: (node: VenueNode) => void;
   onEdgeClick?: (edge: MapEdge) => void;
@@ -27,11 +28,15 @@ export interface CampusMapViewProps {
 const MIN_SCALE = 0.9;
 const MAX_SCALE = 4.5;
 
+// Global memory cache for map image
+let isMapImagePreloadedInMemory = false;
+
 export const CampusMapView: React.FC<CampusMapViewProps> = ({
   nodes,
   edges,
   selectedNodeId = null,
   selectedEdgeId = null,
+  isLoading = false,
   onNodeClick,
   onMapClick,
   showEatingZones = false,
@@ -49,12 +54,31 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
   const [scale, setScale] = useState<number>(1.8);
   const [position, setPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [isMapImageLoaded, setIsMapImageLoaded] = useState<boolean>(isMapImagePreloadedInMemory);
 
   const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const dragDistanceRef = useRef<number>(0);
   const touchStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const pinchStartDistRef = useRef<number | null>(null);
   const pinchStartScaleRef = useRef<number>(1.8);
+
+  // Preload and cache map.png
+  useEffect(() => {
+    if (isMapImagePreloadedInMemory) {
+      setIsMapImageLoaded(true);
+      return;
+    }
+
+    const img = new Image();
+    img.src = '/map.png';
+    img.onload = () => {
+      isMapImagePreloadedInMemory = true;
+      setIsMapImageLoaded(true);
+    };
+    img.onerror = () => {
+      setIsMapImageLoaded(true);
+    };
+  }, []);
 
   // Compute scale so map fills the screen vertically on mount and resize
   useEffect(() => {
@@ -177,6 +201,14 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
+      {/* Loading Spinner Overlay on Initial Load */}
+      {(!isMapImageLoaded || isLoading || nodes.length === 0) && (
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-950/95 backdrop-blur-xs text-white gap-2.5 pointer-events-none select-none">
+          <Loader2 className="w-8 h-8 text-rose-500 animate-spin" />
+          <div className="text-xs font-bold text-slate-300">캠퍼스 지도를 불러오는 중...</div>
+        </div>
+      )}
+
       {/* Map Content Wrapper */}
       <div
         style={{
@@ -195,7 +227,14 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
         >
           {/* Base Terrain */}
           <rect width="100" height="100" fill="#0f172a" />
-          <image href="/map.png" x="0" y="0" width="100" height="100" preserveAspectRatio="xMidYMid meet" />
+          <image
+            href="/map.png"
+            x="0"
+            y="0"
+            width="100"
+            height="100"
+            preserveAspectRatio="xMidYMid meet"
+          />
 
           {/* Road Network Lines & Weight Badges */}
           {edges.map((edge) => {
@@ -240,10 +279,10 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
                     isOnPath
                       ? '#e11d48'
                       : isSelected
-                      ? '#3b82f6'
-                      : isNonPathInNavMode
-                      ? '#475569'
-                      : '#94a3b8'
+                        ? '#3b82f6'
+                        : isNonPathInNavMode
+                          ? '#475569'
+                          : '#94a3b8'
                   }
                   strokeWidth={isOnPath ? 1.2 : isSelected ? 1.0 : 0.6}
                   strokeOpacity={isNonPathInNavMode ? 0.3 : 0.9}
@@ -292,8 +331,7 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
           const isNavDest = isNavigating && destVenue === node.id;
 
           const isHighlighted =
-            (showEatingZones && node.isEatingZone) ||
-            (showRestAreas && node.isRestArea);
+            (showEatingZones && node.isEatingZone) || (showRestAreas && node.isRestArea);
 
           return (
             <div
@@ -316,12 +354,12 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
                   isNavDest
                     ? 'bg-rose-600 ring-4 ring-rose-300 scale-125'
                     : isNavStart
-                    ? 'bg-blue-600 ring-4 ring-blue-300 scale-125'
-                    : isSelected
-                    ? 'bg-amber-500 ring-4 ring-amber-200 scale-125'
-                    : isHighlighted
-                    ? 'bg-emerald-500 ring-4 ring-emerald-200 scale-115'
-                    : 'bg-white/95 border border-gray-300 hover:scale-110'
+                      ? 'bg-blue-600 ring-4 ring-blue-300 scale-125'
+                      : isSelected
+                        ? 'bg-amber-500 ring-4 ring-amber-200 scale-125'
+                        : isHighlighted
+                          ? 'bg-emerald-500 ring-4 ring-emerald-200 scale-115'
+                          : 'bg-white/95 border border-gray-300 hover:scale-110'
                 }`}
               >
                 <span className="text-xs">{node.icon || '📍'}</span>
@@ -370,7 +408,7 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
         className="absolute right-2.5 top-20 z-20 flex flex-col items-center gap-1 select-none pointer-events-auto"
       >
         <Search className="w-3.5 h-3.5 text-white/80 drop-shadow-md mb-0.5" />
-        
+
         {/* Compact Vertical Slider */}
         <div className="h-24 flex items-center justify-center">
           <input

@@ -23,7 +23,7 @@ export const BottomNav: React.FC = () => {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 flex justify-center pointer-events-none">
-      <div className="w-full max-w-[430px] bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-lg flex items-center justify-around py-1 px-1 pointer-events-auto">
+      <div className="w-full bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-lg flex items-center justify-around py-1 px-1 pointer-events-auto">
         {navItems.map((item) => {
           const isActive = currentPath === item.path;
           const Icon = item.icon;

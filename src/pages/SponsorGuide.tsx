@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ExternalLink, Award, Info } from 'lucide-react';
+import { ExternalLink, Award, Info, Loader2 } from 'lucide-react';
 import { getSupabaseSponsors, SponsorItem } from '../lib/supabase';
 
 export const SponsorGuide: React.FC = () => {
@@ -28,26 +28,50 @@ export const SponsorGuide: React.FC = () => {
   };
 
   const tierLabels: Record<string, { label: string; color: string; badge: string }> = {
-    main: { label: '메인 후원사', color: 'border-amber-300 bg-amber-50 text-amber-900 font-extrabold', badge: '👑 Main Sponsor' },
-    platinum: { label: '플래티넘 후원사', color: 'border-cyan-300 bg-cyan-50 text-cyan-900 font-bold', badge: '💎 Platinum' },
-    gold: { label: '골드 후원사', color: 'border-yellow-300 bg-yellow-50 text-yellow-900 font-bold', badge: '🥇 Gold' },
-    silver: { label: '실버 후원사', color: 'border-slate-300 bg-slate-100 text-slate-800 font-bold', badge: '🥈 Silver' },
-    bronze: { label: '브론즈 후원사', color: 'border-orange-300 bg-orange-50 text-orange-900 font-bold', badge: '🥉 Bronze' },
-    other: { label: '협찬 및 파트너', color: 'border-gray-300 bg-gray-100 text-gray-800 font-bold', badge: '🤝 Partner' },
+    main: {
+      label: '메인 후원사',
+      color: 'border-amber-300 bg-amber-50 text-amber-900 font-extrabold',
+      badge: '👑 Main Sponsor',
+    },
+    platinum: {
+      label: '플래티넘 후원사',
+      color: 'border-cyan-300 bg-cyan-50 text-cyan-900 font-bold',
+      badge: '💎 Platinum',
+    },
+    gold: {
+      label: '골드 후원사',
+      color: 'border-yellow-300 bg-yellow-50 text-yellow-900 font-bold',
+      badge: '🥇 Gold',
+    },
+    silver: {
+      label: '실버 후원사',
+      color: 'border-slate-300 bg-slate-100 text-slate-800 font-bold',
+      badge: '🥈 Silver',
+    },
+    bronze: {
+      label: '브론즈 후원사',
+      color: 'border-orange-300 bg-orange-50 text-orange-900 font-bold',
+      badge: '🥉 Bronze',
+    },
+    other: {
+      label: '협찬 및 파트너',
+      color: 'border-gray-300 bg-gray-100 text-gray-800 font-bold',
+      badge: '🤝 Partner',
+    },
   };
 
   return (
     <div className="p-3 space-y-4 select-none text-gray-900 pb-8">
       {/* Content Area (No top banner header / No global header) */}
       {loading ? (
-        <div className="py-12 text-center text-gray-400 text-xs font-bold bg-white border border-gray-200 rounded-2xl">
-          후원 기업 목록 불러오는 중...
+        <div className="py-16 flex flex-col items-center justify-center gap-2.5 text-gray-400 text-xs font-bold bg-white border border-gray-200 rounded-2xl shadow-2xs">
+          <Loader2 className="w-6 h-6 text-postech animate-spin" />
+          <span>후원 기업 목록을 불러오는 중...</span>
         </div>
       ) : activeSponsors.length === 0 ? (
         <div className="py-12 text-center space-y-2 bg-white border border-gray-200 rounded-2xl p-6 shadow-2xs">
           <Info className="w-8 h-8 text-gray-400 mx-auto" />
           <p className="text-sm font-bold text-gray-700">등록된 후원 기업 정보가 없습니다.</p>
-          <p className="text-xs text-gray-400">관리자 페이지에서 후원 기업 정보를 등록하실 수 있습니다.</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -60,11 +84,11 @@ export const SponsorGuide: React.FC = () => {
                 <div className="flex items-center justify-between px-1 border-b border-gray-200 pb-1">
                   <div className="flex items-center gap-1.5">
                     <Award className="w-4 h-4 text-amber-500" />
-                    <h2 className="font-extrabold text-xs text-gray-800 tracking-wide">{meta.label}</h2>
+                    <h2 className="font-extrabold text-xs text-gray-800 tracking-wide">
+                      {meta.label}
+                    </h2>
                   </div>
-                  <span className="text-[10px] font-bold text-gray-400">
-                    {list.length}개 기업
-                  </span>
+                  <span className="text-[10px] font-bold text-gray-400">{list.length}개 기업</span>
                 </div>
 
                 <div className="grid grid-cols-1 gap-2">

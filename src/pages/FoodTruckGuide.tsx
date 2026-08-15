@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Truck, MapPin, Clock, Utensils, Info } from 'lucide-react';
+import { ArrowLeft, Truck, MapPin, Clock, Utensils, Info, Loader2 } from 'lucide-react';
 import { getSupabaseFoodTrucks, FoodTruckItem } from '../lib/supabase';
 
 export const FoodTruckGuide: React.FC = () => {
@@ -38,14 +38,14 @@ export const FoodTruckGuide: React.FC = () => {
 
       {/* Content Area */}
       {loading ? (
-        <div className="py-12 text-center text-slate-400 text-xs">
-          Supabase 데이터 불러오는 중...
+        <div className="py-16 flex flex-col items-center justify-center gap-2.5 text-slate-400 text-xs font-bold bg-slate-900 border border-slate-800 rounded-2xl">
+          <Loader2 className="w-6 h-6 text-orange-500 animate-spin" />
+          <span>푸드트럭 정보를 불러오는 중...</span>
         </div>
       ) : activeTrucks.length === 0 ? (
         <div className="py-16 text-center space-y-2 bg-slate-900/50 border border-slate-800 rounded-xl p-6">
           <Info className="w-8 h-8 text-slate-500 mx-auto" />
           <p className="text-sm font-bold text-slate-300">등록된 푸드트럭 정보가 없습니다.</p>
-          <p className="text-xs text-slate-500">관리자 페이지에서 푸드트럭 정보를 등록해주세요.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-3">

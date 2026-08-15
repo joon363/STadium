@@ -2,7 +2,18 @@ import React, { useState } from 'react';
 import { SCHOOLS, STAGE_CATEGORIES, StageItem } from '../config/stadiumConfig';
 import { useRealtimeSchedule } from '../hooks/useRealtimeSchedule';
 import { useSchool } from '../context/SchoolContext';
-import { Clock, MapPin, Radio, Calendar, Filter, Layers, X, Sparkles, Disc, Info } from 'lucide-react';
+import {
+  Clock,
+  MapPin,
+  Radio,
+  Calendar,
+  Filter,
+  Layers,
+  X,
+  Sparkles,
+  Disc,
+  Info,
+} from 'lucide-react';
 
 export const StageDetail: React.FC = () => {
   const { stageConfig, stageSchedule, now } = useRealtimeSchedule();
@@ -44,10 +55,11 @@ export const StageDetail: React.FC = () => {
         </div>
         <button
           onClick={() => setSelectedCategory('ALL')}
-          className={`px-2.5 py-1 rounded-full text-xs font-bold shrink-0 transition-colors shadow-2xs ${selectedCategory === 'ALL'
-            ? 'bg-slate-900 text-white'
-            : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-            }`}
+          className={`px-2.5 py-1 rounded-full text-xs font-bold shrink-0 transition-colors shadow-2xs ${
+            selectedCategory === 'ALL'
+              ? 'bg-slate-900 text-white'
+              : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+          }`}
         >
           전체
         </button>
@@ -55,10 +67,11 @@ export const StageDetail: React.FC = () => {
           <button
             key={cat}
             onClick={() => setSelectedCategory(cat)}
-            className={`px-2.5 py-1 rounded-full text-xs font-bold shrink-0 transition-colors shadow-2xs ${selectedCategory === cat
-              ? 'bg-slate-900 text-white font-extrabold'
-              : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-              }`}
+            className={`px-2.5 py-1 rounded-full text-xs font-bold shrink-0 transition-colors shadow-2xs ${
+              selectedCategory === cat
+                ? 'bg-slate-900 text-white font-extrabold'
+                : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+            }`}
           >
             {cat}
           </button>
@@ -74,7 +87,8 @@ export const StageDetail: React.FC = () => {
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4" style={{ color: activeSchoolObj.color }} />
             <span className="text-xs font-bold text-gray-900">
-              <strong style={{ color: activeSchoolObj.color }}>{activeSchoolObj.shortName}</strong> 공연 일정 필터링 적용 중
+              <strong style={{ color: activeSchoolObj.color }}>{activeSchoolObj.shortName}</strong>{' '}
+              공연 일정 필터링 적용 중
             </span>
           </div>
           <button
@@ -92,18 +106,12 @@ export const StageDetail: React.FC = () => {
           <div className="flex items-center gap-1.5">
             <Radio className="w-3.5 h-3.5 text-rose-600" />
             {stageConfig.isLive ? (
-              <span className="font-bold text-rose-600 uppercase tracking-wider">
-                LIVE NOW
-              </span>
+              <span className="font-bold text-rose-600 uppercase tracking-wider">LIVE NOW</span>
             ) : (
-              <span className="font-bold text-gray-600">
-                공연 대기중
-              </span>
+              <span className="font-bold text-gray-600">공연 대기중</span>
             )}
           </div>
-          <span className="font-bold text-slate-800">
-            {stageConfig.statusText}
-          </span>
+          <span className="font-bold text-slate-800">{stageConfig.statusText}</span>
         </div>
 
         {/* Performance details */}
@@ -115,9 +123,7 @@ export const StageDetail: React.FC = () => {
             {currentSchool.shortName}
           </span>
 
-          <span className="font-bold text-sm text-gray-900 truncate">
-            {stageConfig.clubName}
-          </span>
+          <span className="font-bold text-sm text-gray-900 truncate">{stageConfig.clubName}</span>
 
           {/* Category Chip */}
           <span className="text-[9px] font-bold bg-slate-100 text-slate-800 border border-slate-200 px-1.5 py-0.5 rounded shrink-0">
@@ -200,8 +206,8 @@ export const StageDetail: React.FC = () => {
                       isFinished
                         ? 'opacity-60 grayscale border-gray-200 bg-slate-50/70'
                         : isLive
-                        ? 'border-rose-300 shadow-xs ring-1 ring-rose-200/50'
-                        : 'border-gray-200/90 shadow-2xs hover:border-gray-300'
+                          ? 'border-rose-300 shadow-xs ring-1 ring-rose-200/50'
+                          : 'border-gray-200/90 shadow-2xs hover:border-gray-300'
                     }`}
                   >
                     {/* Left Vertical School Solid Edge Accent */}
@@ -218,13 +224,25 @@ export const StageDetail: React.FC = () => {
                         viewBox="0 0 100 100"
                       >
                         {/* Step 1: Rightmost wide solid color block */}
-                        <polygon points="52,0 100,0 100,100 40,100" fill={schoolObj.color} fillOpacity="0.75" />
+                        <polygon
+                          points="52,0 100,0 100,100 40,100"
+                          fill={schoolObj.color}
+                          fillOpacity="0.75"
+                        />
 
                         {/* Step 2: Second medium flat solid slice */}
-                        <polygon points="28,0 52,0 40,100 16,100" fill={schoolObj.color} fillOpacity="0.38" />
+                        <polygon
+                          points="28,0 52,0 40,100 16,100"
+                          fill={schoolObj.color}
+                          fillOpacity="0.38"
+                        />
 
                         {/* Step 3: Third shortest flat solid slice extending left */}
-                        <polygon points="14,0 28,0 16,100 2,100" fill={schoolObj.color} fillOpacity="0.12" />
+                        <polygon
+                          points="14,0 28,0 16,100 2,100"
+                          fill={schoolObj.color}
+                          fillOpacity="0.12"
+                        />
                       </svg>
                     )}
 
@@ -232,7 +250,10 @@ export const StageDetail: React.FC = () => {
                     <div className="relative z-10 flex items-center justify-between border-b border-gray-100/80 pb-1.5 text-xs">
                       <div className="flex items-center gap-1.5 min-w-0">
                         <span className="font-bold text-xs text-gray-900 truncate">
-                          <strong style={{ color: isFinished ? '#64748b' : schoolObj.color }} className="mr-1">
+                          <strong
+                            style={{ color: isFinished ? '#64748b' : schoolObj.color }}
+                            className="mr-1"
+                          >
                             [{schoolObj.shortName}]
                           </strong>
                           {item.clubName}
@@ -322,7 +343,10 @@ export const StageDetail: React.FC = () => {
                 <span>세트리스트</span>
               </div>
               {parseSongList(selectedSetlist.songTitle).map((song, songIdx) => (
-                <p key={songIdx} className="text-xs text-gray-800 font-bold flex items-center gap-2 leading-relaxed">
+                <p
+                  key={songIdx}
+                  className="text-xs text-gray-800 font-bold flex items-center gap-2 leading-relaxed"
+                >
                   <span className="w-4 h-4 rounded-full bg-slate-200 text-slate-800 text-[10px] flex items-center justify-center font-black shrink-0">
                     {songIdx + 1}
                   </span>
