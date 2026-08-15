@@ -16,7 +16,11 @@ export type {
 } from '../types/stadium';
 
 // Re-export Domain Services
-export { getSupabaseMatches, updateSupabaseMatch } from '../services/matchesService';
+export {
+  getSupabaseMatches,
+  updateSupabaseMatch,
+  deleteSupabaseMatch,
+} from '../services/matchesService';
 export {
   getSupabaseStagePerformances,
   updateSupabaseStagePerformance,

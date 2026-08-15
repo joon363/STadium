@@ -94,3 +94,26 @@ export async function updateSupabaseMatch(match: RawScheduledMatch): Promise<boo
     return false;
   }
 }
+
+/**
+ * Delete a match in Supabase
+ */
+export async function deleteSupabaseMatch(
+  id: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!supabase) {
+    invalidateAppCache('matches');
+    return { success: true };
+  }
+
+  try {
+    const { error } = await supabase.from('matches').delete().eq('id', id);
+    if (error) throw error;
+    invalidateAppCache('matches');
+    return { success: true };
+  } catch (err: any) {
+    console.error('Failed to delete match in Supabase:', err);
+    return { success: false, error: err.message };
+  }
+}
+

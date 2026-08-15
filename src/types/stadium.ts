@@ -30,6 +30,7 @@ export interface RawScheduledMatch {
   score2Final: number;
   winningTeamFinal?: string | null;
   subtitle?: string;
+  isLive?: boolean;
 }
 
 export interface MatchItem {
