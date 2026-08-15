@@ -32,13 +32,17 @@ export const Header: React.FC<HeaderProps> = ({ isMenuOpen: externalIsOpen, setI
 
   return (
     <>
-      {/* Top Header Bar */}
-      <header className="sticky top-0 z-40 bg-white border-b border-gray-200 px-4 py-2.5 flex items-center justify-between shadow-2xs">
-        {/* Brand & Live Badge */}
+      {/* Top Header Bar (Dynamic Color on Active School Filter) */}
+      <header
+        style={activeSchoolObj ? { backgroundColor: activeSchoolObj.color, color: activeSchoolObj.textColor } : { backgroundColor: '#ffffff', color: '#111827' }}
+        className="sticky top-0 z-40 border-b border-gray-200/90 px-4 py-1 flex items-center justify-between shadow-2xs transition-colors duration-200"
+      >
+        {/* Brand & Menu */}
         <div className="flex items-center gap-2.5">
           <button
             onClick={() => setIsMenuOpen(true)}
-            className="touch-target -ml-2 p-2 rounded-xl text-gray-700 hover:bg-gray-100 active:bg-gray-200 transition-colors"
+            className={`touch-target -ml-2 p-2 rounded-xl transition-colors ${activeSchoolObj ? 'text-white hover:bg-white/10 active:bg-white/20' : 'text-gray-700 hover:bg-gray-100 active:bg-gray-200'
+              }`}
             aria-label="전체 메뉴"
           >
             <Menu className="w-5 h-5" />
@@ -48,7 +52,7 @@ export const Header: React.FC<HeaderProps> = ({ isMenuOpen: externalIsOpen, setI
             onClick={() => handleNavigate('/')}
             className="cursor-pointer flex items-center gap-2 select-none"
           >
-            <span className="font-black text-xl tracking-tight text-postech">
+            <span className={`font-bold text-xl tracking-tight ${activeSchoolObj ? 'text-white' : 'text-postech'}`}>
               STadium
             </span>
           </div>
@@ -57,7 +61,10 @@ export const Header: React.FC<HeaderProps> = ({ isMenuOpen: externalIsOpen, setI
         {/* Right School Selector Pill */}
         <div className="flex items-center gap-2">
           {liveMatchCount > 0 && (
-            <div className="hidden sm:flex items-center gap-1 text-[11px] font-bold text-rose-600 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full">
+            <div className={`hidden sm:flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full ${activeSchoolObj
+              ? 'bg-white/20 text-white border border-white/30'
+              : 'text-rose-600 bg-rose-50 border border-rose-200'
+              }`}>
               <Radio className="w-3 h-3" />
               <span>{liveMatchCount}경기 진행중</span>
             </div>
@@ -68,10 +75,9 @@ export const Header: React.FC<HeaderProps> = ({ isMenuOpen: externalIsOpen, setI
               value={selectedSchool}
               onChange={(e) => setSelectedSchool(e.target.value)}
               className={`appearance-none text-xs font-bold pl-3 pr-7 py-1.5 rounded-full border cursor-pointer focus:outline-none transition-all shadow-2xs ${activeSchoolObj
-                ? 'border-transparent text-white font-extrabold'
+                ? 'bg-white/20 border-white/40 text-white font-bold hover:bg-white/30'
                 : 'bg-white border-gray-200 text-gray-800 hover:bg-gray-50'
                 }`}
-              style={activeSchoolObj ? { backgroundColor: activeSchoolObj.color } : {}}
             >
               <option value="ALL" className="text-gray-900 font-bold bg-white">
                 전체 학교
@@ -101,6 +107,18 @@ export const Header: React.FC<HeaderProps> = ({ isMenuOpen: externalIsOpen, setI
 
           {/* Drawer Content Container */}
           <div className="relative w-4/5 max-w-xs bg-white h-full shadow-2xl flex flex-col z-10 animate-in slide-in-from-left duration-200 text-gray-900">
+            {/* Drawer Header */}
+            <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-slate-50">
+              <div>
+                <h2 className="font-bold text-lg text-gray-900 tracking-tight">2026 STadium</h2>
+              </div>
+              <button
+                onClick={() => setIsMenuOpen(false)}
+                className="touch-target p-2 text-gray-500 hover:text-gray-900 rounded-xl hover:bg-gray-200"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
             {/* Navigation List */}
             <div className="flex-1 overflow-y-auto p-4 space-y-5">
@@ -123,6 +141,10 @@ export const Header: React.FC<HeaderProps> = ({ isMenuOpen: externalIsOpen, setI
 
               {/* Sports Category */}
               <div>
+                <div className="flex items-center gap-2 px-3 mb-2 text-xs font-extrabold text-gray-400 uppercase tracking-wider">
+                  <Trophy className="w-3.5 h-3.5 text-amber-500" />
+                  <span>종목별 경기</span>
+                </div>
                 <div className="space-y-1">
                   {Object.values(sportsConfig).map((sport) => {
                     const isActive = location.pathname === sport.path;
@@ -140,7 +162,7 @@ export const Header: React.FC<HeaderProps> = ({ isMenuOpen: externalIsOpen, setI
                           <span>{sport.name}</span>
                         </div>
                         {sport.liveMatch.isLive && (
-                          <span className="text-[10px] font-black bg-rose-600 text-white px-2 py-0.5 rounded-md">
+                          <span className="text-[10px] font-bold bg-rose-600 text-white px-2 py-0.5 rounded-md">
                             LIVE
                           </span>
                         )}
@@ -166,10 +188,10 @@ export const Header: React.FC<HeaderProps> = ({ isMenuOpen: externalIsOpen, setI
                   >
                     <div className="flex items-center gap-3">
                       <span className="text-lg">🎤</span>
-                      <span>무대 타임테이블</span>
+                      <span>대강당 무대 타임테이블</span>
                     </div>
                     {stageConfig.isLive && (
-                      <span className="text-[10px] font-black bg-purple-600 text-white px-2 py-0.5 rounded-md">
+                      <span className="text-[10px] font-bold bg-purple-600 text-white px-2 py-0.5 rounded-md">
                         LIVE
                       </span>
                     )}

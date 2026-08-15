@@ -66,7 +66,7 @@ export const Home: React.FC = () => {
           </div>
           <button
             onClick={() => setSelectedSchool('ALL')}
-            className="text-[10px] font-black px-2 py-0.5 rounded-md bg-white/80 border text-gray-600 hover:text-gray-900"
+            className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-white/80 border text-gray-600 hover:text-gray-900"
           >
             전체보기
           </button>
@@ -78,7 +78,7 @@ export const Home: React.FC = () => {
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2">
             <span className="inline-block w-2 h-2 rounded-full bg-rose-600"></span>
-            <h2 className="font-black text-sm text-gray-900 tracking-tight">실시간 경기 현황</h2>
+            <h2 className="font-bold text-sm text-gray-900 tracking-tight">실시간 경기 현황</h2>
             {liveMatchesCount > 0 && (
               <span className="text-[10px] font-extrabold bg-rose-50 text-rose-600 border border-rose-200 px-2 py-0.2 rounded-full">
                 {liveMatchesCount}경기 진행중
@@ -131,59 +131,59 @@ export const Home: React.FC = () => {
         )}
       </section>
 
-      {/* 2. Live Stage Performance Banner */}
-      <section
-        onClick={() => navigate('/stages')}
-        className="bg-slate-900 text-white rounded-xl px-3 py-2.5 border border-slate-800 shadow-xs relative overflow-hidden cursor-pointer hover:border-slate-700 transition-colors select-none active:scale-[0.99]"
-      >
-        <div className="flex items-center justify-between mb-1.5 pb-1 border-b border-white/10 text-xs font-semibold text-slate-300">
-          <div className="flex items-center gap-1.5 font-bold text-white">
-            <Music className="w-3.5 h-3.5 text-rose-400" />
-            <span>체육관 무대 공연</span>
+      {/* 2. Live Stage Performance Section */}
+      <section className="space-y-1.5">
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-1.5">
+            <Music className="w-4 h-4 text-postech" />
+            <h2 className="font-black text-sm text-gray-900 tracking-tight">체육관 무대 공연</h2>
           </div>
 
           <div>
             {stageConfig.isLive ? (
-              <span className="text-[10px] font-black bg-rose-600 text-white px-2 py-0.2 rounded-full uppercase">
-                LIVE
+              <span className="text-[10px] font-black bg-rose-50 text-rose-600 border border-rose-200 px-2 py-0.2 rounded-full uppercase">
+                STAGE LIVE
               </span>
             ) : (
-              <span className="text-[10px] font-semibold bg-slate-800 text-slate-300 px-2 py-0.2 rounded-full">
+              <span className="text-[10px] font-semibold bg-gray-100 text-gray-600 px-2 py-0.2 rounded-full">
                 공연 대기중
               </span>
             )}
           </div>
         </div>
 
-        {/* Current Performance Detail */}
-        <div className="flex items-center justify-between">
+        {/* Card Box */}
+        <div
+          onClick={() => navigate('/stages')}
+          className="bg-white text-gray-900 rounded-xl p-3 border border-gray-200/90 shadow-2xs relative overflow-hidden cursor-pointer hover:border-gray-300 transition-colors select-none active:scale-[0.99] flex items-center justify-between"
+        >
           <div className="flex items-center gap-2.5 min-w-0">
             {/* School Emblem */}
             <div
               style={{ backgroundColor: stageSchool.color }}
-              className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-white text-sm shrink-0 border border-white/20"
+              className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-white text-sm shrink-0 shadow-2xs border border-white/20"
             >
               {stageSchool.logoText}
             </div>
 
             <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="font-extrabold text-xs text-white truncate">
+              <div className="flex items-center gap-1.5">
+                <span className="font-extrabold text-xs text-gray-900 truncate">
                   {stageConfig.clubName}
                 </span>
-                <span className="text-[9px] font-semibold bg-slate-800 text-slate-300 px-1.5 py-0.2 rounded shrink-0">
+                <span className="text-[9px] font-semibold bg-gray-100 text-gray-600 px-1.5 py-0.2 rounded border border-gray-200 shrink-0">
                   {stageConfig.genre}
                 </span>
               </div>
 
-              <p className="text-[11px] text-slate-300 font-medium truncate mt-0.5 flex items-center gap-1">
-                <span className="text-rose-400 font-bold">곡:</span>
+              <p className="text-[11px] text-gray-600 font-medium truncate mt-0.5 flex items-center gap-1">
+                <span className="text-postech font-bold">곡:</span>
                 <span className="truncate">{stageConfig.songTitle}</span>
               </p>
             </div>
           </div>
 
-          <ChevronRight className="w-4 h-4 text-slate-400 shrink-0 ml-2" />
+          <ChevronRight className="w-4 h-4 text-gray-400 shrink-0 ml-2" />
         </div>
       </section>
 

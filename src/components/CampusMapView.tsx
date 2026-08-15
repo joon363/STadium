@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { VenueNode, MapEdge, NavigationResult } from '../config/stadiumConfig';
 import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 
@@ -26,11 +26,9 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
   nodes,
   edges,
   mode = 'user',
-  adminEditorMode = 'node',
   selectedNodeId = null,
   selectedEdgeId = null,
   onNodeClick,
-  onEdgeClick,
   onMapClick,
   showEatingZones = false,
   showRestAreas = false,
@@ -39,14 +37,33 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
   isNavigating = false,
   navResult = null,
 }) => {
-  // Zoom & Pan Internal State
-  const [scale, setScale] = useState<number>(1);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Zoom & Pan Internal State (Defaults to vertically full scale)
+  const [scale, setScale] = useState<number>(1.8);
   const [position, setPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState<boolean>(false);
 
   const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const dragDistanceRef = useRef<number>(0);
   const touchStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  // Compute scale so map fills the screen vertically on mount and resize
+  useEffect(() => {
+    const calculateFitScale = () => {
+      if (containerRef.current) {
+        const { clientWidth, clientHeight } = containerRef.current;
+        if (clientWidth > 0 && clientHeight > 0) {
+          const fitScale = Math.max(1.2, clientHeight / clientWidth);
+          setScale(fitScale);
+        }
+      }
+    };
+
+    calculateFitScale();
+    window.addEventListener('resize', calculateFitScale);
+    return () => window.removeEventListener('resize', calculateFitScale);
+  }, []);
 
   // Map Node Lookup
   const nodeMap = useMemo(() => {
@@ -56,10 +73,16 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
   }, [nodes]);
 
   // Zoom Controls
-  const handleZoomIn = () => setScale((prev) => Math.min(prev + 0.3, 4));
-  const handleZoomOut = () => setScale((prev) => Math.max(prev - 0.3, 0.8));
+  const handleZoomIn = () => setScale((prev) => Math.min(prev + 0.3, 4.5));
+  const handleZoomOut = () => setScale((prev) => Math.max(prev - 0.3, 0.9));
   const handleResetZoom = () => {
-    setScale(1);
+    if (containerRef.current) {
+      const { clientWidth, clientHeight } = containerRef.current;
+      const fitScale = Math.max(1.2, clientHeight / clientWidth);
+      setScale(fitScale);
+    } else {
+      setScale(1.8);
+    }
     setPosition({ x: 0, y: 0 });
   };
 
@@ -109,9 +132,9 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
 
   const handleTouchEnd = () => setIsDragging(false);
 
-  // SVG Click Handler for Node / Waypoint Placement
+  // SVG Click Handler
   const handleSvgClick = (e: React.MouseEvent<SVGSVGElement>) => {
-    if (dragDistanceRef.current > 5) return; // Prevent click if user was panning
+    if (dragDistanceRef.current > 5) return;
 
     const rect = e.currentTarget.getBoundingClientRect();
     const x = Math.round(((e.clientX - rect.left) / rect.width) * 100);
@@ -130,6 +153,7 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
 
   return (
     <div
+      ref={containerRef}
       className="w-full h-full relative cursor-grab active:cursor-grabbing overflow-hidden bg-slate-950 flex items-center justify-center select-none"
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
@@ -197,12 +221,6 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
                 key={edge.id}
                 opacity={groupOpacity}
                 className={mode === 'admin' ? 'cursor-pointer' : ''}
-                onClick={(e) => {
-                  if (mode === 'admin' && onEdgeClick) {
-                    e.stopPropagation();
-                    onEdgeClick(edge);
-                  }
-                }}
               >
                 <polyline
                   points={pointsStr}
@@ -212,7 +230,7 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
                   strokeDasharray={strokeDash}
                 />
 
-                {/* Intermediate Waypoints (shown in admin mode or when selected) */}
+                {/* Intermediate Waypoints */}
                 {(edge.waypoints || []).map((wp, wpIdx) => (
                   <circle
                     key={wpIdx}
@@ -339,7 +357,7 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
 
               {/* Node Label */}
               {showVenueInfo && (
-                <div className="absolute top-9 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md whitespace-nowrap border border-slate-700 shadow-sm">
+                <div className="absolute top-9 left-1/2 -translate-x-1/2 bg-white/95 text-gray-900 text-[10px] font-extrabold px-2 py-0.5 rounded-md whitespace-nowrap border border-gray-200 shadow-md">
                   {node.name}
                 </div>
               )}
@@ -368,25 +386,25 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
         )}
       </div>
 
-      {/* Floating Zoom Controls Box */}
-      <div className="absolute right-3 bottom-6 z-30 flex flex-col gap-1.5 bg-slate-900 p-1.5 rounded-lg border border-slate-700 shadow-lg">
+      {/* Floating Zoom Controls Box (White Theme) */}
+      <div className="absolute right-3 bottom-6 z-30 flex flex-col gap-1.5 bg-white/95 backdrop-blur-md p-1.5 rounded-xl border border-gray-200 shadow-lg">
         <button
           onClick={handleZoomIn}
-          className="p-2 rounded-md text-white hover:bg-slate-800 transition-colors"
+          className="p-2 rounded-lg text-gray-700 hover:bg-gray-100 active:bg-gray-200 transition-colors"
           title="확대 (+)"
         >
           <ZoomIn className="w-4 h-4" />
         </button>
         <button
           onClick={handleZoomOut}
-          className="p-2 rounded-md text-white hover:bg-slate-800 transition-colors"
+          className="p-2 rounded-lg text-gray-700 hover:bg-gray-100 active:bg-gray-200 transition-colors"
           title="축소 (-)"
         >
           <ZoomOut className="w-4 h-4" />
         </button>
         <button
           onClick={handleResetZoom}
-          className="p-2 rounded-md text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+          className="p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 active:bg-gray-200 transition-colors"
           title="줌 초기화"
         >
           <RotateCcw className="w-3.5 h-3.5" />

@@ -82,7 +82,7 @@ export const FoodTruckGuide: React.FC = () => {
               )}
 
               {truck.location && (
-                <div className="flex items-center gap-1.5 text-xs text-slate-400 pt-1 border-t border-slate-800/60 font-semibold">
+                <div className="flex items-center gap-1.5 text-xs text-slate-400 pt-1 border-t border-slate-800/60 font-bold">
                   <MapPin className="w-4 h-4 text-rose-500 shrink-0" />
                   <span>위치: {truck.location}</span>
                 </div>

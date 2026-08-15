@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, Music, MapPin, Menu, LucideIcon } from 'lucide-react';
+import { Home, Music, MapPin, Menu, LucideIcon, Info } from 'lucide-react';
 
 interface BottomNavProps {
   onOpenMenu?: () => void;
@@ -39,11 +39,10 @@ export const BottomNav: React.FC<BottomNavProps> = ({ onOpenMenu }) => {
             <button
               key={item.label}
               onClick={() => navigate(item.path)}
-              className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all duration-150 touch-target ${
-                isActive
-                  ? 'text-postech font-black scale-105'
-                  : 'text-gray-500 hover:text-gray-900 font-medium'
-              }`}
+              className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all duration-150 touch-target ${isActive
+                ? 'text-postech font-bold scale-105'
+                : 'text-gray-500 hover:text-gray-900 font-medium'
+                }`}
             >
               <div className={`p-1 rounded-lg ${isActive ? 'bg-rose-50 text-postech' : ''}`}>
                 <Icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
@@ -53,22 +52,20 @@ export const BottomNav: React.FC<BottomNavProps> = ({ onOpenMenu }) => {
           );
         })}
 
-        {/* Menu / Guide Tab */}
+        {/* Guide Tab */}
         <button
           onClick={() => {
-            if (onOpenMenu) onOpenMenu();
-            else navigate('/contact');
+            navigate('/contact');
           }}
-          className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all duration-150 touch-target ${
-            ['/contact', '/booths', '/foodtrucks', '/sponsors', '/admin'].includes(currentPath)
-              ? 'text-postech font-black scale-105'
-              : 'text-gray-500 hover:text-gray-900 font-medium'
-          }`}
+          className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all duration-150 touch-target ${['/contact', '/booths', '/foodtrucks', '/sponsors', '/admin'].includes(currentPath)
+            ? 'text-postech font-bold scale-105'
+            : 'text-gray-500 hover:text-gray-900 font-medium'
+            }`}
         >
           <div className="p-1 rounded-lg">
-            <Menu className="w-5 h-5" strokeWidth={2} />
+            <Info className="w-5 h-5" strokeWidth={2} />
           </div>
-          <span className="text-[11px] leading-tight mt-0.5">전체메뉴</span>
+          <span className="text-[11px] leading-tight mt-0.5">안내/문의</span>
         </button>
       </div>
     </nav>

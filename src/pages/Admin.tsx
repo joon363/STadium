@@ -647,7 +647,7 @@ export const Admin: React.FC = () => {
             <button
               type="submit"
               disabled={isVerifying}
-              className="w-full py-3 bg-postech hover:bg-postech-dark text-white font-black rounded-lg text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full py-3 bg-postech hover:bg-postech-dark text-white font-bold rounded-lg text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
             >
               <span>{isVerifying ? '검증 중...' : '관리자 로그인'}</span>
             </button>
@@ -673,7 +673,7 @@ export const Admin: React.FC = () => {
       {/* Top Admin Header Bar */}
       <header className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between border-b border-slate-800 shadow-md">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-postech text-white flex items-center justify-center font-black">
+          <div className="w-9 h-9 rounded-lg bg-postech text-white flex items-center justify-center font-bold">
             <ShieldCheck className="w-5 h-5" />
           </div>
           <div>
@@ -707,8 +707,8 @@ export const Admin: React.FC = () => {
           <button
             onClick={() => setActiveTab('matches')}
             className={`px-4 py-2.5 rounded-t-lg font-bold text-xs flex items-center gap-2 transition-colors border-b-2 ${activeTab === 'matches'
-                ? 'bg-white text-postech border-postech shadow-2xs'
-                : 'text-gray-600 hover:bg-gray-100 border-transparent'
+              ? 'bg-white text-postech border-postech shadow-2xs'
+              : 'text-gray-600 hover:bg-gray-100 border-transparent'
               }`}
           >
             <Trophy className="w-4 h-4" />
@@ -718,19 +718,19 @@ export const Admin: React.FC = () => {
           <button
             onClick={() => setActiveTab('stage')}
             className={`px-4 py-2.5 rounded-t-lg font-bold text-xs flex items-center gap-2 transition-colors border-b-2 ${activeTab === 'stage'
-                ? 'bg-white text-postech border-postech shadow-2xs'
-                : 'text-gray-600 hover:bg-gray-100 border-transparent'
+              ? 'bg-white text-postech border-postech shadow-2xs'
+              : 'text-gray-600 hover:bg-gray-100 border-transparent'
               }`}
           >
             <Music className="w-4 h-4" />
-            <span>체육관 무대 공연</span>
+            <span>대강당 무대 공연</span>
           </button>
 
           <button
             onClick={() => setActiveTab('map')}
             className={`px-4 py-2.5 rounded-t-lg font-bold text-xs flex items-center gap-2 transition-colors border-b-2 ${activeTab === 'map'
-                ? 'bg-white text-postech border-postech shadow-2xs'
-                : 'text-gray-600 hover:bg-gray-100 border-transparent'
+              ? 'bg-white text-postech border-postech shadow-2xs'
+              : 'text-gray-600 hover:bg-gray-100 border-transparent'
               }`}
           >
             <MapPin className="w-4 h-4" />
@@ -740,8 +740,8 @@ export const Admin: React.FC = () => {
           <button
             onClick={() => setActiveTab('booths')}
             className={`px-4 py-2.5 rounded-t-lg font-bold text-xs flex items-center gap-2 transition-colors border-b-2 ${activeTab === 'booths'
-                ? 'bg-white text-postech border-postech shadow-2xs'
-                : 'text-gray-600 hover:bg-gray-100 border-transparent'
+              ? 'bg-white text-postech border-postech shadow-2xs'
+              : 'text-gray-600 hover:bg-gray-100 border-transparent'
               }`}
           >
             <Store className="w-4 h-4 text-amber-500" />
@@ -751,8 +751,8 @@ export const Admin: React.FC = () => {
           <button
             onClick={() => setActiveTab('foodtrucks')}
             className={`px-4 py-2.5 rounded-t-lg font-bold text-xs flex items-center gap-2 transition-colors border-b-2 ${activeTab === 'foodtrucks'
-                ? 'bg-white text-postech border-postech shadow-2xs'
-                : 'text-gray-600 hover:bg-gray-100 border-transparent'
+              ? 'bg-white text-postech border-postech shadow-2xs'
+              : 'text-gray-600 hover:bg-gray-100 border-transparent'
               }`}
           >
             <Truck className="w-4 h-4 text-orange-500" />
@@ -762,8 +762,8 @@ export const Admin: React.FC = () => {
           <button
             onClick={() => setActiveTab('sponsors')}
             className={`px-4 py-2.5 rounded-t-lg font-bold text-xs flex items-center gap-2 transition-colors border-b-2 ${activeTab === 'sponsors'
-                ? 'bg-white text-postech border-postech shadow-2xs'
-                : 'text-gray-600 hover:bg-gray-100 border-transparent'
+              ? 'bg-white text-postech border-postech shadow-2xs'
+              : 'text-gray-600 hover:bg-gray-100 border-transparent'
               }`}
           >
             <Building2 className="w-4 h-4 text-blue-500" />
@@ -773,8 +773,8 @@ export const Admin: React.FC = () => {
           <button
             onClick={() => setActiveTab('settings')}
             className={`px-4 py-2.5 rounded-t-lg font-bold text-xs flex items-center gap-2 transition-colors border-b-2 ${activeTab === 'settings'
-                ? 'bg-white text-postech border-postech shadow-2xs'
-                : 'text-gray-600 hover:bg-gray-100 border-transparent'
+              ? 'bg-white text-postech border-postech shadow-2xs'
+              : 'text-gray-600 hover:bg-gray-100 border-transparent'
               }`}
           >
             <KeyRound className="w-4 h-4" />
@@ -824,7 +824,7 @@ export const Admin: React.FC = () => {
                           type="text"
                           value={item.round}
                           onChange={(e) => handleMatchChange(idx, 'round', e.target.value)}
-                          className="bg-white border border-gray-300 rounded px-2 py-1 text-xs w-28 font-semibold"
+                          className="bg-white border border-gray-300 rounded px-2 py-1 text-xs w-28 font-bold"
                         />
                       </td>
 
@@ -1081,12 +1081,12 @@ export const Admin: React.FC = () => {
 
             {/* Mode Switcher Banner */}
             <div className="flex items-center gap-3 bg-slate-100 p-2 rounded-lg border border-slate-200">
-              <span className="text-xs font-black text-slate-700 ml-2">편집 모드 선택:</span>
+              <span className="text-xs font-bold text-slate-700 ml-2">편집 모드 선택:</span>
               <button
                 onClick={() => setMapEditorMode('node')}
-                className={`px-3 py-1.5 rounded-md text-xs font-black flex items-center gap-1.5 transition-colors ${mapEditorMode === 'node'
-                    ? 'bg-postech text-white shadow-2xs'
-                    : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50'
+                className={`px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1.5 transition-colors ${mapEditorMode === 'node'
+                  ? 'bg-postech text-white shadow-2xs'
+                  : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50'
                   }`}
               >
                 <MapPin className="w-3.5 h-3.5" />
@@ -1095,9 +1095,9 @@ export const Admin: React.FC = () => {
 
               <button
                 onClick={() => setMapEditorMode('edge')}
-                className={`px-3 py-1.5 rounded-md text-xs font-black flex items-center gap-1.5 transition-colors ${mapEditorMode === 'edge'
-                    ? 'bg-postech text-white shadow-2xs'
-                    : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50'
+                className={`px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1.5 transition-colors ${mapEditorMode === 'edge'
+                  ? 'bg-postech text-white shadow-2xs'
+                  : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50'
                   }`}
               >
                 <Waypoints className="w-3.5 h-3.5" />
@@ -1337,7 +1337,7 @@ export const Admin: React.FC = () => {
                             max={60}
                             value={edgeForm.weightMinutes || 1}
                             onChange={(e) => setEdgeForm({ ...edgeForm, weightMinutes: Number(e.target.value) })}
-                            className="bg-white border border-slate-300 rounded px-3 py-1.5 w-24 font-black text-sm text-center"
+                            className="bg-white border border-slate-300 rounded px-3 py-1.5 w-24 font-bold text-sm text-center"
                           />
                           <span className="font-bold text-slate-700">분 소요</span>
                         </div>
@@ -1372,7 +1372,7 @@ export const Admin: React.FC = () => {
                                   updatedWps.splice(wpIdx, 1);
                                   setEdgeForm({ ...edgeForm, waypoints: updatedWps });
                                 }}
-                                className="text-rose-500 font-black ml-0.5"
+                                className="text-rose-500 font-bold ml-0.5"
                               >
                                 ×
                               </button>
@@ -1421,7 +1421,7 @@ export const Admin: React.FC = () => {
                             setEdgeForm(edge);
                             setMapEditorMode('edge');
                           }}
-                          className={`p-1.5 rounded cursor-pointer flex items-center justify-between text-[11px] font-semibold transition-colors ${isSelected ? 'bg-rose-950 border border-rose-500 text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                          className={`p-1.5 rounded cursor-pointer flex items-center justify-between text-[11px] font-bold transition-colors ${isSelected ? 'bg-rose-950 border border-rose-500 text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
                             }`}
                         >
                           <span className="truncate">
@@ -1474,7 +1474,7 @@ export const Admin: React.FC = () => {
                       value={editingBooth.name || ''}
                       onChange={(e) => setEditingBooth({ ...editingBooth, name: e.target.value })}
                       placeholder="예: AI 로봇 체험 부스"
-                      className="w-full border border-gray-300 p-2 rounded text-xs font-semibold"
+                      className="w-full border border-gray-300 p-2 rounded text-xs font-bold"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-2">
@@ -1493,7 +1493,7 @@ export const Admin: React.FC = () => {
                       <select
                         value={editingBooth.category || 'experience'}
                         onChange={(e) => setEditingBooth({ ...editingBooth, category: e.target.value })}
-                        className="w-full border border-gray-300 p-2 rounded text-xs font-semibold"
+                        className="w-full border border-gray-300 p-2 rounded text-xs font-bold"
                       >
                         <option value="experience">체험 부스</option>
                         <option value="food">음식/식음</option>
@@ -1697,7 +1697,7 @@ export const Admin: React.FC = () => {
                       value={editingFoodTruck.name || ''}
                       onChange={(e) => setEditingFoodTruck({ ...editingFoodTruck, name: e.target.value })}
                       placeholder="예: 츄러스 & 스테이크 트럭"
-                      className="w-full border border-gray-300 p-2 rounded text-xs font-semibold"
+                      className="w-full border border-gray-300 p-2 rounded text-xs font-bold"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-2">
@@ -1858,7 +1858,7 @@ export const Admin: React.FC = () => {
                       value={editingSponsor.name || ''}
                       onChange={(e) => setEditingSponsor({ ...editingSponsor, name: e.target.value })}
                       placeholder="예: 포스코 (POSCO)"
-                      className="w-full border border-gray-300 p-2 rounded text-xs font-semibold"
+                      className="w-full border border-gray-300 p-2 rounded text-xs font-bold"
                     />
                   </div>
                   <div>
@@ -1866,7 +1866,7 @@ export const Admin: React.FC = () => {
                     <select
                       value={editingSponsor.tier || 'gold'}
                       onChange={(e) => setEditingSponsor({ ...editingSponsor, tier: e.target.value })}
-                      className="w-full border border-gray-300 p-2 rounded text-xs font-semibold"
+                      className="w-full border border-gray-300 p-2 rounded text-xs font-bold"
                     >
                       <option value="main">👑 메인 후원사 (Main)</option>
                       <option value="platinum">💎 플래티넘 (Platinum)</option>
@@ -2025,7 +2025,7 @@ export const Admin: React.FC = () => {
               </div>
               <div className="text-xs text-gray-600 space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className="font-semibold">연동 상태:</span>
+                  <span className="font-bold">연동 상태:</span>
                   {isSupabaseConfigured ? (
                     <span className="text-emerald-600 font-bold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
                       연동 활성화 (데이터베이스 동기화중)

@@ -31,14 +31,14 @@ export const SportsGridCard: React.FC<SportsGridCardProps> = ({ match, path, lay
         <div className="flex items-center justify-between text-xs text-gray-500 border-b border-gray-100 pb-1">
           <div className="flex items-center gap-1.5 font-bold text-gray-800">
             <span className="text-sm">{match.icon}</span>
-            <span className="font-black text-xs text-gray-900">{match.sportName}</span>
+            <span className="font-bold text-xs text-gray-900">{match.sportName}</span>
             <span className="text-gray-300">·</span>
             <span className="text-[11px] font-medium text-gray-500">{match.round}</span>
           </div>
 
           <div className="flex items-center gap-1.5">
             {match.isLive ? (
-              <span className="inline-flex items-center gap-1 text-[10px] font-black bg-rose-50 text-rose-600 border border-rose-200 px-2 py-0.2 rounded-full">
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-rose-50 text-rose-600 border border-rose-200 px-2 py-0.2 rounded-full">
                 <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
                 LIVE
               </span>
@@ -60,18 +60,18 @@ export const SportsGridCard: React.FC<SportsGridCardProps> = ({ match, path, lay
           <div className="flex items-center gap-2 flex-1 justify-start min-w-0">
             <div
               style={{ backgroundColor: team1School.color }}
-              className="w-6 h-6 rounded-full flex items-center justify-center font-black text-white text-[10px] shrink-0 border border-white/20"
+              className="w-6 h-6 rounded-full flex items-center justify-center font-bold text-white text-[10px] shrink-0 border border-white/20"
             >
               {team1School.logoText}
             </div>
-            <span className={`text-xs truncate ${isTeam1Winning ? 'font-black text-gray-900' : 'font-semibold text-gray-700'}`}>
+            <span className={`text-xs truncate ${isTeam1Winning ? 'font-bold text-gray-900' : 'font-bold text-gray-700'}`}>
               {match.team1}
             </span>
           </div>
 
           {/* Center Score & Match Status */}
           <div className="flex flex-col items-center justify-center px-2 min-w-[76px]">
-            <div className="flex items-center gap-1.5 text-base font-black tracking-tight leading-none">
+            <div className="flex items-center gap-1.5 text-base font-bold tracking-tight leading-none">
               <span style={isTeam1Winning ? { color: team1School.color } : { color: '#0f172a' }}>
                 {match.score1}
               </span>
@@ -87,12 +87,12 @@ export const SportsGridCard: React.FC<SportsGridCardProps> = ({ match, path, lay
 
           {/* Team 2 */}
           <div className="flex items-center gap-2 flex-1 justify-end min-w-0 text-right">
-            <span className={`text-xs truncate ${isTeam2Winning ? 'font-black text-gray-900' : 'font-semibold text-gray-700'}`}>
+            <span className={`text-xs truncate ${isTeam2Winning ? 'font-bold text-gray-900' : 'font-bold text-gray-700'}`}>
               {match.team2}
             </span>
             <div
               style={{ backgroundColor: team2School.color }}
-              className="w-6 h-6 rounded-full flex items-center justify-center font-black text-white text-[10px] shrink-0 border border-white/20"
+              className="w-6 h-6 rounded-full flex items-center justify-center font-bold text-white text-[10px] shrink-0 border border-white/20"
             >
               {team2School.logoText}
             </div>
@@ -126,11 +126,11 @@ export const SportsGridCard: React.FC<SportsGridCardProps> = ({ match, path, lay
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1 font-bold text-gray-900 text-xs">
           <span>{match.icon}</span>
-          <span className="truncate font-black">{match.sportName}</span>
+          <span className="truncate font-bold">{match.sportName}</span>
         </div>
 
         {match.isLive ? (
-          <span className="text-[9px] font-black bg-rose-50 text-rose-600 border border-rose-200 px-1.5 py-0.2 rounded-full">
+          <span className="text-[9px] font-bold bg-rose-50 text-rose-600 border border-rose-200 px-1.5 py-0.2 rounded-full">
             LIVE
           </span>
         ) : isFinished ? (
@@ -150,14 +150,14 @@ export const SportsGridCard: React.FC<SportsGridCardProps> = ({ match, path, lay
           <div className="flex flex-col items-center flex-1 min-w-0">
             <div
               style={{ backgroundColor: team1School.color }}
-              className="w-4 h-4 rounded-full flex items-center justify-center font-black text-white text-[8px] shrink-0 mb-0.5"
+              className="w-4 h-4 rounded-full flex items-center justify-center font-bold text-white text-[8px] shrink-0 mb-0.5"
             >
               {team1School.logoText}
             </div>
             <span className="text-[10px] text-gray-800 font-bold truncate w-full">{match.team1}</span>
           </div>
 
-          <div className="px-1.5 text-sm font-black flex items-center gap-1">
+          <div className="px-1.5 text-sm font-bold flex items-center gap-1">
             <span style={isTeam1Winning ? { color: team1School.color } : { color: '#111827' }}>
               {match.score1}
             </span>
@@ -170,7 +170,7 @@ export const SportsGridCard: React.FC<SportsGridCardProps> = ({ match, path, lay
           <div className="flex flex-col items-center flex-1 min-w-0">
             <div
               style={{ backgroundColor: team2School.color }}
-              className="w-4 h-4 rounded-full flex items-center justify-center font-black text-white text-[8px] shrink-0 mb-0.5"
+              className="w-4 h-4 rounded-full flex items-center justify-center font-bold text-white text-[8px] shrink-0 mb-0.5"
             >
               {team2School.logoText}
             </div>
@@ -181,7 +181,7 @@ export const SportsGridCard: React.FC<SportsGridCardProps> = ({ match, path, lay
 
       {/* Footer */}
       <div className="flex items-center justify-between text-[9px] text-gray-500 border-t border-gray-100 pt-1">
-        <span className="truncate font-semibold text-gray-700">{match.statusText}</span>
+        <span className="truncate font-bold text-gray-700">{match.statusText}</span>
         <span className="truncate text-gray-400">{match.venue}</span>
       </div>
     </div>

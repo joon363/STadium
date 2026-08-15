@@ -53,11 +53,10 @@ export const BoothGuide: React.FC = () => {
           <button
             key={cat.id}
             onClick={() => setActiveCategory(cat.id)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold shrink-0 transition-colors ${
-              activeCategory === cat.id
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold shrink-0 transition-colors ${activeCategory === cat.id
                 ? 'bg-amber-600 text-white shadow-md'
                 : 'bg-slate-900 text-slate-400 border border-slate-800 hover:bg-slate-800'
-            }`}
+              }`}
           >
             {cat.label}
           </button>
@@ -90,7 +89,7 @@ export const BoothGuide: React.FC = () => {
                   <div>
                     <h3 className="font-extrabold text-sm text-white">{booth.name}</h3>
                     {booth.operator && (
-                      <p className="text-xs text-amber-400 font-semibold">{booth.operator}</p>
+                      <p className="text-xs text-amber-400 font-bold">{booth.operator}</p>
                     )}
                   </div>
                 </div>

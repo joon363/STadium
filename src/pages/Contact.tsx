@@ -8,66 +8,42 @@ export const Contact: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      {/* Header Row */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => navigate('/')}
-          className="touch-target p-2 rounded-lg border border-gray-200 bg-white text-gray-800 hover:bg-gray-100 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-        </button>
-        <div>
-          <h1 className="font-extrabold text-lg text-gray-900">비상 및 운영 문의</h1>
-        </div>
-      </div>
 
-      {/* Quick External Links (Open Chat, Instagram, YouTube) */}
-      <section className="space-y-2">
-
-        <div className="grid grid-cols-1 gap-2">
+      {/* Quick External Links (Open Chat, Instagram, YouTube - 3 Columns) */}
+      <section>
+        <div className="grid grid-cols-3 gap-2">
           {/* Kakao Open Chat Button */}
           <a
             href={CONTACT_CONFIG.links.kakaoOpenChat}
             target="_blank"
             rel="noopener noreferrer"
-            className="bg-amber-400 hover:bg-amber-300 text-amber-950 rounded-xl p-3.5 flex items-center justify-between shadow-2xs transition-colors touch-target font-extrabold text-sm"
+            className="bg-amber-400 hover:bg-amber-300 text-amber-950 rounded-xl p-2.5 flex flex-col items-center justify-center text-center shadow-2xs transition-colors touch-target font-bold text-xs min-h-[58px]"
           >
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-amber-950/10 flex items-center justify-center">
-                <MessageCircle className="w-4 h-4 text-amber-950" />
-              </div>
-              <div>
-                <div>카카오톡 오픈채팅방</div>
-              </div>
-            </div>
+            <MessageCircle className="w-4 h-4 mb-1 text-amber-950 shrink-0" />
+            <span className="leading-tight">카카오톡</span>
           </a>
 
-          {/* Instagram & YouTube */}
-          <div className="grid grid-cols-2 gap-2">
-            <a
-              href={CONTACT_CONFIG.links.instagram}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="bg-rose-600 hover:bg-rose-700 text-white rounded-xl p-3 flex items-center justify-between shadow-2xs transition-colors touch-target font-bold text-xs"
-            >
-              <div className="flex items-center gap-2">
-                <Instagram className="w-4 h-4" />
-                <span>공식 인스타그램</span>
-              </div>
-            </a>
+          {/* Instagram Button */}
+          <a
+            href={CONTACT_CONFIG.links.instagram}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-rose-600 hover:bg-rose-700 text-white rounded-xl p-2.5 flex flex-col items-center justify-center text-center shadow-2xs transition-colors touch-target font-bold text-xs min-h-[58px]"
+          >
+            <Instagram className="w-4 h-4 mb-1 shrink-0" />
+            <span className="leading-tight">인스타그램</span>
+          </a>
 
-            <a
-              href={CONTACT_CONFIG.links.youtube}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="bg-red-700 hover:bg-red-800 text-white rounded-xl p-3 flex items-center justify-between shadow-2xs transition-colors touch-target font-bold text-xs"
-            >
-              <div className="flex items-center gap-2">
-                <Youtube className="w-4 h-4" />
-                <span>유튜브 중계</span>
-              </div>
-            </a>
-          </div>
+          {/* YouTube Button */}
+          <a
+            href={CONTACT_CONFIG.links.youtube}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-red-600 hover:bg-red-700 text-white rounded-xl p-2.5 flex flex-col items-center justify-center text-center shadow-2xs transition-colors touch-target font-bold text-xs min-h-[58px]"
+          >
+            <Youtube className="w-4 h-4 mb-1 shrink-0" />
+            <span className="leading-tight">유튜브 중계</span>
+          </a>
         </div>
       </section>
 
@@ -86,7 +62,7 @@ export const Contact: React.FC = () => {
             >
               <div>
                 <div className="text-xs font-bold text-rose-700">{leader.role}</div>
-                <div className="font-black text-sm text-gray-900">{leader.name}</div>
+                <div className="font-bold text-sm text-gray-900">{leader.name}</div>
               </div>
 
               <a
@@ -121,7 +97,7 @@ export const Contact: React.FC = () => {
 
               <a
                 href={`tel:${item.phone}`}
-                className="touch-target px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors"
+                className="touch-target px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors"
               >
                 <Phone className="w-3.5 h-3.5 text-blue-600" />
                 <span>{item.phone}</span>

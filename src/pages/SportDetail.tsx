@@ -25,7 +25,7 @@ export const SportDetail: React.FC = () => {
         <p className="text-gray-600 font-bold mb-4">존재하지 않는 종목입니다.</p>
         <button
           onClick={() => navigate('/')}
-          className="px-5 py-2.5 bg-postech text-white rounded-xl text-sm font-black shadow-xs"
+          className="px-5 py-2.5 bg-postech text-white rounded-xl text-sm font-bold shadow-xs"
         >
           홈으로 돌아가기
         </button>
@@ -43,7 +43,7 @@ export const SportDetail: React.FC = () => {
   return (
     <div className="flex flex-col min-h-full bg-slate-50 text-gray-900 pb-10">
       {/* 1. Top Detail Header Bar */}
-      <div className="sticky top-0 z-30 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between shadow-2xs relative">
+      <div className="sticky top-0 z-30 bg-white border-b border-gray-200 px-4 py-1 flex items-center justify-between shadow-2xs relative">
         <button
           onClick={() => navigate('/')}
           className="p-2 -ml-2 rounded-xl text-gray-700 hover:bg-gray-100 active:bg-gray-200 transition-colors touch-target z-10"
@@ -52,7 +52,7 @@ export const SportDetail: React.FC = () => {
           <ArrowLeft className="w-5 h-5" />
         </button>
 
-        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1.5 font-black text-base text-gray-900 pointer-events-none">
+        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1.5 font-bold text-base text-gray-900 pointer-events-none">
           <span>{config.icon}</span>
           <span>{config.name} 경기</span>
         </div>
@@ -69,11 +69,11 @@ export const SportDetail: React.FC = () => {
             <div className="flex flex-col items-center flex-1 min-w-0">
               <div
                 style={{ backgroundColor: team1School.color }}
-                className="w-14 h-14 rounded-2xl flex items-center justify-center font-black text-white text-xl shadow-md border-2 border-white mb-2"
+                className="w-14 h-14 rounded-2xl flex items-center justify-center font-bold text-white text-xl shadow-md border-2 border-white mb-2"
               >
                 {team1School.logoText}
               </div>
-              <span className={`text-sm text-center truncate w-full ${isTeam1Winning ? 'font-black text-gray-900' : 'font-bold text-gray-700'}`}>
+              <span className={`text-sm text-center truncate w-full ${isTeam1Winning ? 'font-bold text-gray-900' : 'font-bold text-gray-700'}`}>
                 {liveMatch.team1}
               </span>
             </div>
@@ -82,7 +82,7 @@ export const SportDetail: React.FC = () => {
             <div className="flex flex-col items-center justify-center px-4">
               <div className="mb-1">
                 {liveMatch.isLive ? (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-black bg-rose-50 text-rose-600 border border-rose-200 px-2.5 py-0.5 rounded-full">
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-rose-50 text-rose-600 border border-rose-200 px-2.5 py-0.5 rounded-full">
                     <Radio className="w-3 h-3" />
                     LIVE · {liveMatch.statusText}
                   </span>
@@ -93,7 +93,7 @@ export const SportDetail: React.FC = () => {
                 )}
               </div>
 
-              <div className="flex items-center gap-3 text-3xl font-black tracking-tight my-0.5">
+              <div className="flex items-center gap-3 text-3xl font-bold tracking-tight my-0.5">
                 <span style={isTeam1Winning ? { color: team1School.color } : { color: '#0f172a' }}>
                   {liveMatch.score1}
                 </span>
@@ -103,7 +103,7 @@ export const SportDetail: React.FC = () => {
                 </span>
               </div>
 
-              <div className="flex items-center gap-1 text-[11px] font-semibold text-gray-500 mt-1">
+              <div className="flex items-center gap-1 text-[11px] font-bold text-gray-500 mt-1">
                 <MapPin className="w-3 h-3 text-gray-400" />
                 <span>{liveMatch.venue}</span>
               </div>
@@ -113,11 +113,11 @@ export const SportDetail: React.FC = () => {
             <div className="flex flex-col items-center flex-1 min-w-0">
               <div
                 style={{ backgroundColor: team2School.color }}
-                className="w-14 h-14 rounded-2xl flex items-center justify-center font-black text-white text-xl shadow-md border-2 border-white mb-2"
+                className="w-14 h-14 rounded-2xl flex items-center justify-center font-bold text-white text-xl shadow-md border-2 border-white mb-2"
               >
                 {team2School.logoText}
               </div>
-              <span className={`text-sm text-center truncate w-full ${isTeam2Winning ? 'font-black text-gray-900' : 'font-bold text-gray-700'}`}>
+              <span className={`text-sm text-center truncate w-full ${isTeam2Winning ? 'font-bold text-gray-900' : 'font-bold text-gray-700'}`}>
                 {liveMatch.team2}
               </span>
             </div>
@@ -135,11 +135,10 @@ export const SportDetail: React.FC = () => {
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key as any)}
-                className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all text-center select-none ${
-                  isActive
-                    ? 'bg-postech text-white shadow-xs font-black'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
+                className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all text-center select-none ${isActive
+                  ? 'bg-postech text-white shadow-xs font-bold'
+                  : 'text-gray-600 hover:text-gray-900'
+                  }`}
               >
                 {tab.label}
               </button>
@@ -165,15 +164,14 @@ export const SportDetail: React.FC = () => {
                 return (
                   <div
                     key={item.id}
-                    className={`bg-white border rounded-2xl p-3.5 shadow-2xs transition-all ${
-                      item.isLive ? 'border-rose-400 ring-2 ring-rose-100' : 'border-gray-200'
-                    }`}
+                    className={`bg-white border rounded-2xl p-3.5 shadow-2xs transition-all ${item.isLive ? 'border-rose-400 ring-2 ring-rose-100' : 'border-gray-200'
+                      }`}
                   >
                     <div className="flex items-center justify-between text-xs text-gray-500 border-b border-gray-100 pb-2 mb-2">
                       <span className="font-extrabold text-gray-800">{item.round}</span>
                       <div className="flex items-center gap-2">
                         {item.isLive ? (
-                          <span className="text-[10px] font-black bg-rose-50 text-rose-600 border border-rose-200 px-2 py-0.5 rounded-full">
+                          <span className="text-[10px] font-bold bg-rose-50 text-rose-600 border border-rose-200 px-2 py-0.5 rounded-full">
                             LIVE
                           </span>
                         ) : item.startTimeObj.getTime() > Date.now() ? (
@@ -193,18 +191,18 @@ export const SportDetail: React.FC = () => {
                       <div className="flex items-center gap-2 flex-1 min-w-0">
                         <div
                           style={{ backgroundColor: t1.color }}
-                          className="w-7 h-7 rounded-full flex items-center justify-center font-black text-white text-[11px] shrink-0"
+                          className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-white text-[11px] shrink-0"
                         >
                           {t1.logoText}
                         </div>
-                        <span className={`text-xs truncate ${isT1Win ? 'font-black text-gray-900' : 'font-semibold text-gray-700'}`}>
+                        <span className={`text-xs truncate ${isT1Win ? 'font-bold text-gray-900' : 'font-bold text-gray-700'}`}>
                           {item.team1}
                         </span>
                       </div>
 
                       {/* Score */}
                       <div className="flex flex-col items-center px-3 min-w-[70px]">
-                        <div className="text-base font-black flex items-center gap-1.5">
+                        <div className="text-base font-bold flex items-center gap-1.5">
                           <span style={isT1Win ? { color: t1.color } : { color: '#0f172a' }}>{item.score1}</span>
                           <span className="text-gray-300">-</span>
                           <span style={isT2Win ? { color: t2.color } : { color: '#0f172a' }}>{item.score2}</span>
@@ -213,12 +211,12 @@ export const SportDetail: React.FC = () => {
 
                       {/* Team 2 */}
                       <div className="flex items-center gap-2 flex-1 justify-end min-w-0 text-right">
-                        <span className={`text-xs truncate ${isT2Win ? 'font-black text-gray-900' : 'font-semibold text-gray-700'}`}>
+                        <span className={`text-xs truncate ${isT2Win ? 'font-bold text-gray-900' : 'font-bold text-gray-700'}`}>
                           {item.team2}
                         </span>
                         <div
                           style={{ backgroundColor: t2.color }}
-                          className="w-7 h-7 rounded-full flex items-center justify-center font-black text-white text-[11px] shrink-0"
+                          className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-white text-[11px] shrink-0"
                         >
                           {t2.logoText}
                         </div>
