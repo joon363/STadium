@@ -89,7 +89,7 @@ export interface RawScheduledMatch {
   round: string;
   score1Final: number;
   score2Final: number;
-  winningTeamFinal: string | null;
+  winningTeamFinal?: string | null;
   subtitle?: string;
 }
 
@@ -457,7 +457,7 @@ export function evaluateMatchItem(raw: RawScheduledMatch, now: Date): MatchItem 
   if (isFinished) {
     score1 = raw.score1Final;
     score2 = raw.score2Final;
-    winningTeam = raw.winningTeamFinal;
+    winningTeam = raw.winningTeamFinal || null;
     statusText = '경기 종료';
   } else if (isLive) {
     const progressRatio = Math.min(1, Math.max(0.05, elapsedMin / totalDurationMin));

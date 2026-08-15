@@ -13,10 +13,11 @@ import {
   Sparkles,
   Disc,
   Info,
+  ChevronRight,
 } from 'lucide-react';
 
 export const StageDetail: React.FC = () => {
-  const { stageConfig, stageSchedule, now } = useRealtimeSchedule();
+  const { stageConfig, stageSchedule, now, youtubeLiveUrl } = useRealtimeSchedule();
   const { selectedSchool, setSelectedSchool } = useSchool();
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [selectedSetlist, setSelectedSetlist] = useState<StageItem | null>(null);
@@ -104,11 +105,22 @@ export const StageDetail: React.FC = () => {
       <section className="bg-white text-gray-900 rounded-xl p-3 border border-gray-200/90 shadow-2xs relative overflow-hidden">
         <div className="flex items-center justify-between border-b border-gray-100 pb-2 mb-2 text-xs">
           <div className="flex items-center gap-1.5">
-            <Radio className="w-3.5 h-3.5 text-rose-600" />
             {stageConfig.isLive ? (
-              <span className="font-bold text-rose-600 uppercase tracking-wider">LIVE NOW</span>
+              <a
+                href={youtubeLiveUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-[11px] font-extrabold bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-2.5 py-0.5 rounded-full uppercase active:scale-95 transition-all shadow-2xs cursor-pointer"
+              >
+                <Radio className="w-3.5 h-3.5 text-rose-500 animate-pulse" />
+                <span>STAGE LIVE</span>
+                <ChevronRight className="w-3.5 h-3.5 text-rose-500" />
+              </a>
             ) : (
-              <span className="font-bold text-gray-600">공연 대기중</span>
+              <div className="flex items-center gap-1.5 text-gray-600 font-bold text-xs">
+                <Radio className="w-3.5 h-3.5" />
+                <span>공연 대기중</span>
+              </div>
             )}
           </div>
           <span className="font-bold text-slate-800">{stageConfig.statusText}</span>
@@ -262,9 +274,16 @@ export const StageDetail: React.FC = () => {
 
                       <div className="flex items-center gap-1 shrink-0">
                         {isLive && (
-                          <span className="text-[10px] font-bold bg-rose-50 text-rose-600 border border-rose-200 px-1.5 py-0.2 rounded-full mr-0.5">
-                            LIVE
-                          </span>
+                          <a
+                            href={youtubeLiveUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-flex items-center gap-0.5 text-[10px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-1.5 py-0.2 rounded-full mr-0.5 active:scale-95 transition-all cursor-pointer shadow-2xs"
+                          >
+                            <span>LIVE</span>
+                            <ChevronRight className="w-2.5 h-2.5 text-rose-500" />
+                          </a>
                         )}
 
                         {/* Category Chip */}
@@ -328,11 +347,11 @@ export const StageDetail: React.FC = () => {
             {/* Badges */}
             <div className="flex items-center gap-1.5 text-xs">
               <span className="text-[10px] font-bold bg-slate-100 text-slate-800 border border-slate-200 px-2 py-0.5 rounded-md">
-                구분: {selectedSetlist.category}
+                {selectedSetlist.category}
               </span>
               {selectedSetlist.genre && (
                 <span className="text-[10px] font-bold bg-gray-50 text-gray-600 px-2 py-0.5 rounded-md border border-gray-200">
-                  장르: {selectedSetlist.genre}
+                  {selectedSetlist.genre}
                 </span>
               )}
             </div>
@@ -347,7 +366,7 @@ export const StageDetail: React.FC = () => {
                   key={songIdx}
                   className="text-xs text-gray-800 font-bold flex items-center gap-2 leading-relaxed"
                 >
-                  <span className="w-4 h-4 rounded-full bg-slate-200 text-slate-800 text-[10px] flex items-center justify-center font-black shrink-0">
+                  <span className="w-4 h-4 rounded-full bg-slate-200 text-slate-800 text-[10px] flex items-center justify-center font-extrabold shrink-0">
                     {songIdx + 1}
                   </span>
                   <span>{song}</span>

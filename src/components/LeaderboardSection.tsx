@@ -28,7 +28,7 @@ export const LeaderboardSection: React.FC<LeaderboardSectionProps> = ({ standing
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-1.5">
           <Award className="w-4 h-4 text-amber-500" />
-          <h2 className="font-black text-sm text-gray-900 tracking-tight">종합 순위표</h2>
+          <h2 className="font-extrabold text-sm text-gray-900 tracking-tight">종합 순위표</h2>
         </div>
         <button
           onClick={() => setIsExpanded(!isExpanded)}
@@ -70,16 +70,9 @@ export const LeaderboardSection: React.FC<LeaderboardSectionProps> = ({ standing
 
                   <div
                     style={{ backgroundColor: item.color }}
-                    className="w-6 h-6 rounded flex items-center justify-center font-bold text-white text-xs shrink-0 border border-white/20 shadow-2xs"
+                    className="h-6 rounded flex items-center justify-center px-2 font-bold text-white text-xs shrink-0 border border-white/20 shadow-2xs"
                   >
-                    {item.logoText}
-                  </div>
-
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-xs text-gray-900">{item.shortName}</span>
-                    <span className="text-[10px] text-gray-500 font-medium hidden sm:inline">
-                      {item.schoolName}
-                    </span>
+                    {item.shortName}
                   </div>
                 </div>
 

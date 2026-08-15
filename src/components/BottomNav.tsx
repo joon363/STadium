@@ -15,7 +15,7 @@ export const BottomNav: React.FC = () => {
 
   const navItems: NavItem[] = [
     { label: '홈', icon: Home, path: '/' },
-    { label: '무대공연', icon: Music, path: '/stages' },
+    { label: '문화공연', icon: Music, path: '/stages' },
     { label: '캠퍼스맵', icon: MapPin, path: '/map' },
     { label: '안내/문의', icon: Info, path: '/contact' },
     { label: '후원사', icon: Building2, path: '/sponsors' },
@@ -32,11 +32,10 @@ export const BottomNav: React.FC = () => {
             <button
               key={item.label}
               onClick={() => navigate(item.path)}
-              className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all duration-150 touch-target ${
-                isActive
+              className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all duration-150 touch-target ${isActive
                   ? 'text-postech font-bold scale-105'
                   : 'text-gray-500 hover:text-gray-900 font-medium'
-              }`}
+                }`}
             >
               <div className={`p-1 rounded-lg ${isActive ? 'bg-rose-50 text-postech' : ''}`}>
                 <Icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />

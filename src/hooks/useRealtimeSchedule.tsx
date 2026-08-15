@@ -13,6 +13,7 @@ import {
 import {
   getSupabaseMatches,
   getSupabaseStagePerformances,
+  getSupabaseYoutubeLiveUrl,
   subscribeToRealtimeTables,
 } from '../lib/supabase';
 import { useSchool } from '../context/SchoolContext';
@@ -23,6 +24,7 @@ export interface UseRealtimeScheduleResult {
   stageConfig: EvaluatedStagePerformance;
   stageSchedule: StageItem[];
   overallStandings: SchoolStanding[];
+  youtubeLiveUrl: string;
   timeString: string;
   isSupabaseLoaded: boolean;
   refreshFromSupabase: () => Promise<void>;
@@ -34,15 +36,19 @@ export const RealtimeScheduleProvider: React.FC<{ children: React.ReactNode }> =
   const [now, setNow] = useState<Date>(new Date());
   const [supabaseMatches, setSupabaseMatches] = useState<RawScheduledMatch[] | null>(null);
   const [supabaseStage, setSupabaseStage] = useState<StageItem[] | null>(null);
+  const [youtubeLiveUrl, setYoutubeLiveUrl] = useState<string>(
+    'https://www.youtube.com/@stadium_official'
+  );
   const [isSupabaseLoaded, setIsSupabaseLoaded] = useState<boolean>(false);
 
   const { selectedSchool } = useSchool();
 
   const loadSupabaseData = useCallback(async (forceRefresh = false) => {
     try {
-      const [matches, stage] = await Promise.all([
+      const [matches, stage, ytUrl] = await Promise.all([
         getSupabaseMatches(forceRefresh),
         getSupabaseStagePerformances(forceRefresh),
+        getSupabaseYoutubeLiveUrl(forceRefresh),
       ]);
 
       if (matches && matches.length > 0) {
@@ -50,6 +56,9 @@ export const RealtimeScheduleProvider: React.FC<{ children: React.ReactNode }> =
       }
       if (stage && stage.length > 0) {
         setSupabaseStage(stage);
+      }
+      if (ytUrl) {
+        setYoutubeLiveUrl(ytUrl);
       }
       setIsSupabaseLoaded(true);
     } catch (e) {
@@ -67,9 +76,12 @@ export const RealtimeScheduleProvider: React.FC<{ children: React.ReactNode }> =
     }, 1000);
 
     // 3. Supabase Realtime WebSocket Subscription (Zero Polling, Instant Push)
-    const unsubscribe = subscribeToRealtimeTables(['matches', 'stage_timetable'], () => {
-      loadSupabaseData(true);
-    });
+    const unsubscribe = subscribeToRealtimeTables(
+      ['matches', 'stage_timetable', 'admin_settings'],
+      () => {
+        loadSupabaseData(true);
+      }
+    );
 
     // 4. Fallback background sync (relaxed to 60s instead of 10s spam)
     const syncTimer = setInterval(() => {
@@ -106,6 +118,7 @@ export const RealtimeScheduleProvider: React.FC<{ children: React.ReactNode }> =
     stageConfig,
     stageSchedule,
     overallStandings,
+    youtubeLiveUrl,
     timeString,
     isSupabaseLoaded,
     refreshFromSupabase: () => loadSupabaseData(true),
@@ -130,6 +143,7 @@ export function useRealtimeSchedule(): UseRealtimeScheduleResult {
       stageConfig,
       stageSchedule: STAGE_TIMETABLE,
       overallStandings,
+      youtubeLiveUrl: 'https://www.youtube.com/@stadium_official',
       timeString: now.toTimeString().split(' ')[0],
       isSupabaseLoaded: false,
       refreshFromSupabase: async () => {},

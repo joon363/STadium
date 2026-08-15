@@ -30,9 +30,8 @@ export const Header: React.FC = () => {
         className="cursor-pointer flex items-center gap-2 select-none"
       >
         <span
-          className={`font-black text-xl tracking-tight ${
-            activeSchoolObj ? 'text-white' : 'text-postech'
-          }`}
+          className={`font-extrabold text-xl tracking-tight ${activeSchoolObj ? 'text-white' : 'text-postech'
+            }`}
         >
           STadium
         </span>
@@ -42,11 +41,10 @@ export const Header: React.FC = () => {
       <div className="flex items-center gap-2">
         {liveMatchCount > 0 && (
           <div
-            className={`hidden sm:flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full ${
-              activeSchoolObj
+            className={`hidden sm:flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full ${activeSchoolObj
                 ? 'bg-white/20 text-white border border-white/30'
                 : 'text-rose-600 bg-rose-50 border border-rose-200'
-            }`}
+              }`}
           >
             <Radio className="w-3 h-3" />
             <span>{liveMatchCount}경기 진행중</span>
@@ -57,11 +55,10 @@ export const Header: React.FC = () => {
           <select
             value={selectedSchool}
             onChange={(e) => setSelectedSchool(e.target.value)}
-            className={`appearance-none text-xs font-bold pl-3 pr-7 py-1 rounded-full border cursor-pointer focus:outline-none transition-all shadow-2xs ${
-              activeSchoolObj
+            className={`appearance-none text-xs font-bold pl-3 pr-7 py-1 rounded-full border cursor-pointer focus:outline-none transition-all shadow-2xs ${activeSchoolObj
                 ? 'bg-white/20 border-white/40 text-white font-bold hover:bg-white/30'
                 : 'bg-white border-gray-200 text-gray-800 hover:bg-gray-50'
-            }`}
+              }`}
           >
             <option value="ALL" className="text-gray-900 font-bold bg-white">
               전체 학교
@@ -73,9 +70,8 @@ export const Header: React.FC = () => {
             ))}
           </select>
           <Filter
-            className={`w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none ${
-              activeSchoolObj ? 'text-white' : 'text-gray-400'
-            }`}
+            className={`w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none ${activeSchoolObj ? 'text-white' : 'text-gray-400'
+              }`}
           />
         </div>
       </div>

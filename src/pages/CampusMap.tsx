@@ -183,11 +183,10 @@ export const CampusMap: React.FC = () => {
         <div className="pointer-events-auto flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
           <button
             onClick={() => setShowEatingZones((prev) => !prev)}
-            className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 shrink-0 transition-all shadow-md backdrop-blur-md ${
-              showEatingZones
-                ? 'bg-amber-600 text-white border border-amber-400 font-extrabold ring-2 ring-amber-300/50'
-                : 'bg-white/85 text-gray-800 border border-white/70 hover:bg-white/95'
-            }`}
+            className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 shrink-0 transition-all shadow-md backdrop-blur-md ${showEatingZones
+              ? 'bg-amber-600 text-white border border-amber-400 font-extrabold ring-2 ring-amber-300/50'
+              : 'bg-white/85 text-gray-800 border border-white/70 hover:bg-white/95'
+              }`}
           >
             <Utensils className="w-3.5 h-3.5" />
             <span>취식 공간</span>
@@ -195,11 +194,10 @@ export const CampusMap: React.FC = () => {
 
           <button
             onClick={() => setShowRestAreas((prev) => !prev)}
-            className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 shrink-0 transition-all shadow-md backdrop-blur-md ${
-              showRestAreas
-                ? 'bg-emerald-500 text-white border border-emerald-400 font-extrabold ring-2 ring-emerald-300/50'
-                : 'bg-white/85 text-gray-800 border border-white/70 hover:bg-white/95'
-            }`}
+            className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 shrink-0 transition-all shadow-md backdrop-blur-md ${showRestAreas
+              ? 'bg-emerald-500 text-white border border-emerald-400 font-extrabold ring-2 ring-emerald-300/50'
+              : 'bg-white/85 text-gray-800 border border-white/70 hover:bg-white/95'
+              }`}
           >
             <Coffee className="w-3.5 h-3.5" />
             <span>휴식 공간</span>
@@ -207,11 +205,10 @@ export const CampusMap: React.FC = () => {
 
           <button
             onClick={() => setShowVenueInfo((prev) => !prev)}
-            className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 shrink-0 transition-all shadow-md backdrop-blur-md ${
-              showVenueInfo
-                ? 'bg-blue-500 text-white border border-blue-400 font-extrabold ring-2 ring-blue-300/50'
-                : 'bg-white/85 text-gray-800 border border-white/70 hover:bg-white/95'
-            }`}
+            className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 shrink-0 transition-all shadow-md backdrop-blur-md ${showVenueInfo
+              ? 'bg-blue-500 text-white border border-blue-400 font-extrabold ring-2 ring-blue-300/50'
+              : 'bg-white/85 text-gray-800 border border-white/70 hover:bg-white/95'
+              }`}
           >
             <Info className="w-3.5 h-3.5" />
             <span>장소 정보</span>
@@ -219,11 +216,10 @@ export const CampusMap: React.FC = () => {
 
           <button
             onClick={() => setIsNavigating((prev) => !prev)}
-            className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 shrink-0 transition-all shadow-md backdrop-blur-md ${
-              isNavigating
-                ? 'bg-postech text-white border border-rose-400 font-extrabold ring-2 ring-rose-300/50'
-                : 'bg-white/85 text-gray-800 border border-white/70 hover:bg-white/95'
-            }`}
+            className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 shrink-0 transition-all shadow-md backdrop-blur-md ${isNavigating
+              ? 'bg-postech text-white border border-rose-400 font-extrabold ring-2 ring-rose-300/50'
+              : 'bg-white/85 text-gray-800 border border-white/70 hover:bg-white/95'
+              }`}
           >
             <Navigation className="w-3.5 h-3.5" />
             <span>길찾기</span>
@@ -309,9 +305,8 @@ export const CampusMap: React.FC = () => {
       {/* Interactive Resizable 3-Snap Point Bottom Sheet Drawer (Always visible above BottomNav at bottom-[54px]) */}
       <div
         style={{ height: `${getSheetHeight()}px` }}
-        className={`fixed bottom-[54px] inset-x-0 z-30 w-full bg-white border-t border-gray-200/90 rounded-t-3xl shadow-2xl flex flex-col text-gray-900 ${
-          isDragging ? '' : 'transition-all duration-200 ease-out'
-        }`}
+        className={`fixed bottom-[54px] inset-x-0 z-30 w-full bg-white border-t border-gray-200/90 rounded-t-3xl shadow-2xl flex flex-col text-gray-900 ${isDragging ? '' : 'transition-all duration-200 ease-out'
+          }`}
       >
         {/* Top Drag Handlebar & Touch Gesture Receiver */}
         <div
@@ -334,11 +329,10 @@ export const CampusMap: React.FC = () => {
                   setSheetTab('booth');
                   if (snapState === 'collapsed') setSnapState('mid');
                 }}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                  sheetTab === 'booth'
-                    ? 'bg-amber-500 text-white shadow-xs font-extrabold'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${sheetTab === 'booth'
+                  ? 'bg-amber-500 text-white shadow-xs font-extrabold'
+                  : 'text-gray-600 hover:text-gray-900'
+                  }`}
               >
                 부스 ({booths.length})
               </button>
@@ -348,11 +342,10 @@ export const CampusMap: React.FC = () => {
                   setSheetTab('foodtruck');
                   if (snapState === 'collapsed') setSnapState('mid');
                 }}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                  sheetTab === 'foodtruck'
-                    ? 'bg-orange-500 text-white shadow-xs font-extrabold'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${sheetTab === 'foodtruck'
+                  ? 'bg-orange-500 text-white shadow-xs font-extrabold'
+                  : 'text-gray-600 hover:text-gray-900'
+                  }`}
               >
                 푸드트럭 ({foodTrucks.length})
               </button>
@@ -362,11 +355,10 @@ export const CampusMap: React.FC = () => {
                   setSheetTab('venue');
                   if (snapState === 'collapsed') setSnapState('mid');
                 }}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                  sheetTab === 'venue'
-                    ? 'bg-blue-600 text-white shadow-xs font-extrabold'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${sheetTab === 'venue'
+                  ? 'bg-blue-600 text-white shadow-xs font-extrabold'
+                  : 'text-gray-600 hover:text-gray-900'
+                  }`}
               >
                 📍 행사 장소 ({nodes.length})
               </button>
@@ -469,51 +461,6 @@ export const CampusMap: React.FC = () => {
             {/* Event Venues Tab (행사 장소) with Flash Border Highlight Effect */}
             {sheetTab === 'venue' && (
               <div className="space-y-2.5">
-                {/* Prominently Highlighted Selected Venue Card */}
-                {selectedNode && (
-                  <div
-                    className={`rounded-2xl p-3 space-y-2 transition-all duration-500 ${
-                      highlightedNodeId === selectedNode.id
-                        ? 'bg-blue-50/95 border-2 border-blue-500 ring-4 ring-blue-300/70 shadow-lg scale-[1.01]'
-                        : 'bg-gray-50/80 border border-gray-200 shadow-2xs'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2.5">
-                        <span className="text-2xl">{selectedNode.icon}</span>
-                        <div>
-                          <div className="flex items-center gap-1.5">
-                            <h3 className="font-extrabold text-xs text-gray-900">
-                              {selectedNode.name}
-                            </h3>
-                            {highlightedNodeId === selectedNode.id && (
-                              <span className="text-[9px] font-black bg-blue-600 text-white px-1.5 py-0.2 rounded-md animate-pulse">
-                                지도에서 선택됨
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-[11px] text-gray-600 font-medium">
-                            {selectedNode.description}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-                      {selectedNode.isEatingZone && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-md">
-                          <Utensils className="w-3 h-3" />
-                          <span>취식 가능 구역</span>
-                        </span>
-                      )}
-                      {selectedNode.isRestArea && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-md">
-                          <Coffee className="w-3 h-3" />
-                          <span>휴식 공간</span>
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
 
                 {/* All Venues List */}
                 <div className="pt-1 space-y-1.5">
@@ -527,13 +474,12 @@ export const CampusMap: React.FC = () => {
                       <div
                         key={node.id}
                         onClick={() => handleSelectVenue(node)}
-                        className={`rounded-xl p-2.5 flex items-center justify-between cursor-pointer transition-all duration-300 ${
-                          isHighlighted
-                            ? 'bg-blue-50 border-2 border-blue-500 ring-2 ring-blue-200 shadow-sm'
-                            : isCurrentlySelected
-                              ? 'bg-blue-50/60 border border-blue-300'
-                              : 'bg-white border border-gray-200/90 hover:border-gray-300 shadow-2xs'
-                        }`}
+                        className={`rounded-xl p-2.5 flex items-center justify-between cursor-pointer transition-all duration-300 ${isHighlighted
+                          ? 'bg-blue-50 border-2 border-blue-500 ring-2 ring-blue-200 shadow-sm'
+                          : isCurrentlySelected
+                            ? 'bg-blue-50/60 border border-blue-300'
+                            : 'bg-white border border-gray-200/90 hover:border-gray-300 shadow-2xs'
+                          }`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
                           <span className="text-xl">{node.icon || '📍'}</span>

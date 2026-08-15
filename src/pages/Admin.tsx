@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   DEFAULT_RAW_SCHEDULE_FLAT,
@@ -11,12 +11,25 @@ import {
   MapWaypoint,
   VENUE_NODES,
   DEFAULT_MAP_EDGES,
+  evaluateMatchItem,
+  SportKey,
 } from '../config/stadiumConfig';
+import { TournamentBracket } from '../components/TournamentBracket';
+import { AdminTournamentBuilder } from '../components/AdminTournamentBuilder';
+import {
+  TournamentTreeData,
+  createPhoto1Preset,
+  createPhoto2Preset,
+  create4TeamPreset,
+  convertTreeToMatches,
+} from '../types/tournamentTree';
 import {
   verifyAdminPassword,
   updateAdminPasswordInSupabase,
   getSupabaseMatches,
   updateSupabaseMatch,
+  getSupabaseTournamentTree,
+  updateSupabaseTournamentTree,
   getSupabaseStagePerformances,
   updateSupabaseStagePerformance,
   getSupabaseMapData,
@@ -46,6 +59,8 @@ import {
   getSupabaseFAQs,
   upsertSupabaseFAQ,
   deleteSupabaseFAQ,
+  getSupabaseYoutubeLiveUrl,
+  updateSupabaseYoutubeLiveUrl,
   uploadImageToSupabase,
 } from '../lib/supabase';
 import { CampusMapView } from '../components/CampusMapView';
@@ -59,6 +74,7 @@ import {
   Database,
   ArrowLeft,
   CheckCircle2,
+  Layers,
   AlertCircle,
   Clock,
   RefreshCw,
@@ -75,6 +91,8 @@ import {
   Upload,
   Bell,
   HelpCircle,
+  Youtube,
+  ExternalLink,
 } from 'lucide-react';
 
 export const Admin: React.FC = () => {
@@ -186,11 +204,19 @@ export const Admin: React.FC = () => {
     waypoints: [],
   });
 
-  // Change Password State
+  // Change Password & YouTube Live URL State
   const [newPassword, setNewPassword] = useState<string>('');
   const [confirmPassword, setConfirmPassword] = useState<string>('');
+  const [youtubeLiveUrl, setYoutubeLiveUrl] = useState<string>(
+    'https://www.youtube.com/@stadium_official'
+  );
+  const [isSavingYoutube, setIsSavingYoutube] = useState<boolean>(false);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState<boolean>(false);
+
+  // Tournament Trees by Sport
+  const [tournamentTrees, setTournamentTrees] = useState<Record<string, TournamentTreeData>>({});
+  const [matchesSubView, setMatchesSubView] = useState<'builder' | 'table'>('builder');
 
   // Load Data on Login
   const loadAdminData = async () => {
@@ -204,6 +230,7 @@ export const Admin: React.FC = () => {
       const fetchedSponsors = await getSupabaseSponsors();
       const fetchedNotices = await getSupabaseNotices();
       const fetchedFaqs = await getSupabaseFAQs();
+      const fetchedYoutube = await getSupabaseYoutubeLiveUrl();
 
       if (fetchedMatches && fetchedMatches.length > 0) {
         setMatches(fetchedMatches);
@@ -224,11 +251,238 @@ export const Admin: React.FC = () => {
       setSponsors(fetchedSponsors);
       setNotices(fetchedNotices);
       setFaqs(fetchedFaqs);
+      if (fetchedYoutube) {
+        setYoutubeLiveUrl(fetchedYoutube);
+      }
+
+      // Load Tournament Trees
+      const sportsList: SportKey[] = ['soccer', 'baseball', 'lol', 'badminton', 'basketball'];
+      const loadedTrees: Record<string, TournamentTreeData> = {};
+      for (const sKey of sportsList) {
+        const tree = await getSupabaseTournamentTree(sKey);
+        if (tree && Object.keys(tree.nodes || {}).length > 0) {
+          loadedTrees[sKey] = tree;
+        } else {
+          loadedTrees[sKey] =
+            sKey === 'baseball' ? createPhoto1Preset(sKey) : createPhoto2Preset(sKey);
+        }
+      }
+      setTournamentTrees(loadedTrees);
     } catch (err) {
       console.error('Admin load error:', err);
     } finally {
       setIsSaving(false);
     }
+  };
+
+  // Match filter state
+  const [selectedSportFilter, setSelectedSportFilter] = useState<string>('soccer');
+
+  const handleSaveTournamentTree = async (sKey: SportKey) => {
+    setIsSaving(true);
+    const currentTree = tournamentTrees[sKey] || createPhoto2Preset(sKey);
+    const ok = await updateSupabaseTournamentTree(sKey, currentTree);
+
+    const sportNames: Record<string, { name: string; icon: string }> = {
+      soccer: { name: '축구', icon: '⚽' },
+      baseball: { name: '야구', icon: '⚾' },
+      lol: { name: 'LoL', icon: '🎮' },
+      badminton: { name: '배드민턴', icon: '🏸' },
+      basketball: { name: '농구', icon: '🏀' },
+    };
+    const sInfo = sportNames[sKey] || { name: '스포츠', icon: '🏆' };
+    const updatedSportMatches = convertTreeToMatches(currentTree, sInfo.name, sInfo.icon);
+
+    for (const m of updatedSportMatches) {
+      await updateSupabaseMatch(m);
+    }
+
+    setMatches((prev) => [...prev.filter((m) => m.sportKey !== sKey), ...updatedSportMatches]);
+    setIsSaving(false);
+    if (ok) {
+      setSaveStatus(`[${sInfo.name}] 토너먼트 대진표가 성공적으로 저장되었습니다.`);
+    } else {
+      setSaveStatus('대진표 저장 실패');
+    }
+    setTimeout(() => setSaveStatus(null), 3500);
+  };
+
+  const handleApplyTournamentPreset = (sportKey: string, type: '6team' | '4team' | 'final') => {
+    const sKey = sportKey as SportKey;
+    const sportNames: Record<string, { name: string; icon: string; venue: string }> = {
+      soccer: { name: '축구', icon: '⚽', venue: '대운동장' },
+      baseball: { name: '야구', icon: '⚾', venue: '포항야구장' },
+      lol: { name: 'LoL', icon: '🎮', venue: '콜로세움' },
+      badminton: { name: '배드민턴', icon: '🏸', venue: '체육관 B코트' },
+      basketball: { name: '농구', icon: '🏀', venue: '체육관 A코트' },
+    };
+    const sInfo = sportNames[sportKey] || { name: '스포츠', icon: '🏆', venue: '체육관' };
+
+    let newMatchesForSport: RawScheduledMatch[] = [];
+    if (type === '6team') {
+      newMatchesForSport = [
+        {
+          id: `${sportKey}-qf1-${Date.now()}`,
+          sportKey: sKey,
+          sportName: sInfo.name,
+          icon: sInfo.icon,
+          team1: 'GIST',
+          team2: 'UNIST',
+          startHour: 10,
+          startMinute: 0,
+          endHour: 11,
+          endMinute: 30,
+          venue: sInfo.venue,
+          round: '6강 1경기',
+          score1Final: 0,
+          score2Final: 0,
+        },
+        {
+          id: `${sportKey}-qf2-${Date.now()}`,
+          sportKey: sKey,
+          sportName: sInfo.name,
+          icon: sInfo.icon,
+          team1: 'DGIST',
+          team2: 'KENTECH',
+          startHour: 12,
+          startMinute: 0,
+          endHour: 13,
+          endMinute: 30,
+          venue: sInfo.venue,
+          round: '6강 2경기',
+          score1Final: 0,
+          score2Final: 0,
+        },
+        {
+          id: `${sportKey}-sf1-${Date.now()}`,
+          sportKey: sKey,
+          sportName: sInfo.name,
+          icon: sInfo.icon,
+          team1: 'POSTECH',
+          team2: '6강 1경기 승자',
+          startHour: 15,
+          startMinute: 0,
+          endHour: 16,
+          endMinute: 30,
+          venue: sInfo.venue,
+          round: '준결승 1경기',
+          score1Final: 0,
+          score2Final: 0,
+        },
+        {
+          id: `${sportKey}-sf2-${Date.now()}`,
+          sportKey: sKey,
+          sportName: sInfo.name,
+          icon: sInfo.icon,
+          team1: 'KAIST',
+          team2: '6강 2경기 승자',
+          startHour: 17,
+          startMinute: 0,
+          endHour: 18,
+          endMinute: 30,
+          venue: sInfo.venue,
+          round: '준결승 2경기',
+          score1Final: 0,
+          score2Final: 0,
+        },
+        {
+          id: `${sportKey}-final-${Date.now()}`,
+          sportKey: sKey,
+          sportName: sInfo.name,
+          icon: sInfo.icon,
+          team1: '준결승 1경기 승자',
+          team2: '준결승 2경기 승자',
+          startHour: 19,
+          startMinute: 0,
+          endHour: 20,
+          endMinute: 30,
+          venue: sInfo.venue,
+          round: '결승전',
+          score1Final: 0,
+          score2Final: 0,
+        },
+      ];
+    } else if (type === '4team') {
+      newMatchesForSport = [
+        {
+          id: `${sportKey}-sf1-${Date.now()}`,
+          sportKey: sKey,
+          sportName: sInfo.name,
+          icon: sInfo.icon,
+          team1: 'POSTECH',
+          team2: 'UNIST',
+          startHour: 14,
+          startMinute: 0,
+          endHour: 15,
+          endMinute: 30,
+          venue: sInfo.venue,
+          round: '준결승 1경기',
+          score1Final: 0,
+          score2Final: 0,
+        },
+        {
+          id: `${sportKey}-sf2-${Date.now()}`,
+          sportKey: sKey,
+          sportName: sInfo.name,
+          icon: sInfo.icon,
+          team1: 'KAIST',
+          team2: 'GIST',
+          startHour: 16,
+          startMinute: 0,
+          endHour: 17,
+          endMinute: 30,
+          venue: sInfo.venue,
+          round: '준결승 2경기',
+          score1Final: 0,
+          score2Final: 0,
+        },
+        {
+          id: `${sportKey}-final-${Date.now()}`,
+          sportKey: sKey,
+          sportName: sInfo.name,
+          icon: sInfo.icon,
+          team1: '준결승 1경기 승자',
+          team2: '준결승 2경기 승자',
+          startHour: 19,
+          startMinute: 0,
+          endHour: 20,
+          endMinute: 30,
+          venue: sInfo.venue,
+          round: '결승전',
+          score1Final: 0,
+          score2Final: 0,
+        },
+      ];
+    } else {
+      newMatchesForSport = [
+        {
+          id: `${sportKey}-final-${Date.now()}`,
+          sportKey: sKey,
+          sportName: sInfo.name,
+          icon: sInfo.icon,
+          team1: 'POSTECH',
+          team2: 'KAIST',
+          startHour: 16,
+          startMinute: 30,
+          endHour: 18,
+          endMinute: 30,
+          venue: sInfo.venue,
+          round: '결승전',
+          score1Final: 0,
+          score2Final: 0,
+        },
+      ];
+    }
+
+    if (
+      !confirm(
+        `[${sInfo.name}] 종목의 기존 일정을 대체하고 ${
+          type === '6team' ? '6개교' : type === '4team' ? '4개교' : '단판'
+        } 템플릿을 생성하시겠습니까?`
+      )
+    )
+      return;
+    setMatches((prev) => [...prev.filter((m) => m.sportKey !== sportKey), ...newMatchesForSport]);
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -898,7 +1152,7 @@ export const Admin: React.FC = () => {
             }`}
           >
             <Music className="w-4 h-4" />
-            <span>대강당 무대 공연</span>
+            <span>대강당 문화공연</span>
           </button>
 
           <button
@@ -986,155 +1240,353 @@ export const Admin: React.FC = () => {
           </button>
         </div>
 
-        {/* Tab 1: Sports Match Schedule Management */}
+        {/* Tab 1: Sports Match Schedule & Tournament Management */}
         {activeTab === 'matches' && (
-          <div className="p-6 bg-white border border-gray-200 rounded-b-xl shadow-2xs space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="font-extrabold text-base text-gray-900">
-                운동경기 스코어 & 시간 설정
-              </h2>
-              <button
-                onClick={handleSaveAllMatches}
-                disabled={isSaving}
-                className="px-4 py-2 bg-postech hover:bg-postech-dark text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-colors"
-              >
-                <Save className="w-4 h-4" />
-                <span>전체 경기 변경사항 저장</span>
-              </button>
+          <div className="p-6 bg-white border border-gray-200 rounded-b-xl shadow-2xs space-y-5">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <h2 className="font-extrabold text-base text-gray-900 flex items-center gap-2">
+                  <Trophy className="w-5 h-5 text-amber-500" />
+                  <span>운동경기 스코어 & 인터랙티브 토너먼트 대진표 관리</span>
+                </h2>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  1행 팀 노드를 추가하고 2개 노드를 선택하여 윗행 경기를 생성하면 실시간 꺾은선
+                  대진표가 완성됩니다.
+                </p>
+              </div>
+
+              {/* View Switcher Tabs: Builder vs Table */}
+              <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200">
+                <button
+                  onClick={() => setMatchesSubView('builder')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition-all ${
+                    matchesSubView === 'builder'
+                      ? 'bg-white text-postech shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>⚡ 노드 대진표 빌더</span>
+                </button>
+                <button
+                  onClick={() => setMatchesSubView('table')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition-all ${
+                    matchesSubView === 'table'
+                      ? 'bg-white text-postech shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>📋 경기 일정 테이블 목록</span>
+                </button>
+              </div>
             </div>
 
-            <div className="overflow-x-auto border border-gray-200 rounded-lg">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-gray-100 font-bold text-gray-700 border-b border-gray-200">
-                  <tr>
-                    <th className="p-3">종목</th>
-                    <th className="p-3">라운드</th>
-                    <th className="p-3">팀1 vs 팀2</th>
-                    <th className="p-3">최종/현재 스코어</th>
-                    <th className="p-3">시작~종료 시각</th>
-                    <th className="p-3">경기 장소</th>
-                    <th className="p-3 text-right">작업</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 font-medium">
-                  {matches.map((item, idx) => (
-                    <tr key={item.id} className="hover:bg-gray-50/80">
-                      <td className="p-3 font-bold text-gray-900">
-                        {item.icon} {item.sportName}
-                      </td>
-
-                      <td className="p-3">
-                        <input
-                          type="text"
-                          value={item.round}
-                          onChange={(e) => handleMatchChange(idx, 'round', e.target.value)}
-                          className="bg-white border border-gray-300 rounded px-2 py-1 text-xs w-28 font-bold"
-                        />
-                      </td>
-
-                      <td className="p-3">
-                        <div className="flex items-center gap-1">
-                          <input
-                            type="text"
-                            value={item.team1}
-                            onChange={(e) => handleMatchChange(idx, 'team1', e.target.value)}
-                            className="bg-white border border-gray-300 rounded px-2 py-1 text-xs w-20 font-bold"
-                          />
-                          <span>vs</span>
-                          <input
-                            type="text"
-                            value={item.team2}
-                            onChange={(e) => handleMatchChange(idx, 'team2', e.target.value)}
-                            className="bg-white border border-gray-300 rounded px-2 py-1 text-xs w-20 font-bold"
-                          />
-                        </div>
-                      </td>
-
-                      <td className="p-3">
-                        <div className="flex items-center gap-1">
-                          <input
-                            type="number"
-                            value={item.score1Final}
-                            onChange={(e) =>
-                              handleMatchChange(idx, 'score1Final', parseInt(e.target.value) || 0)
-                            }
-                            className="bg-white border border-gray-300 rounded px-2 py-1 text-xs w-12 text-center font-bold"
-                          />
-                          <span>:</span>
-                          <input
-                            type="number"
-                            value={item.score2Final}
-                            onChange={(e) =>
-                              handleMatchChange(idx, 'score2Final', parseInt(e.target.value) || 0)
-                            }
-                            className="bg-white border border-gray-300 rounded px-2 py-1 text-xs w-12 text-center font-bold"
-                          />
-                        </div>
-                      </td>
-
-                      <td className="p-3">
-                        <div className="flex items-center gap-1">
-                          <input
-                            type="number"
-                            value={item.startHour}
-                            onChange={(e) =>
-                              handleMatchChange(idx, 'startHour', parseInt(e.target.value) || 0)
-                            }
-                            className="bg-white border border-gray-300 rounded px-1.5 py-1 text-xs w-10 text-center font-bold"
-                          />
-                          <span>:</span>
-                          <input
-                            type="number"
-                            value={item.startMinute}
-                            onChange={(e) =>
-                              handleMatchChange(idx, 'startMinute', parseInt(e.target.value) || 0)
-                            }
-                            className="bg-white border border-gray-300 rounded px-1.5 py-1 text-xs w-10 text-center font-bold"
-                          />
-                          <span>~</span>
-                          <input
-                            type="number"
-                            value={item.endHour}
-                            onChange={(e) =>
-                              handleMatchChange(idx, 'endHour', parseInt(e.target.value) || 0)
-                            }
-                            className="bg-white border border-gray-300 rounded px-1.5 py-1 text-xs w-10 text-center font-bold"
-                          />
-                          <span>:</span>
-                          <input
-                            type="number"
-                            value={item.endMinute}
-                            onChange={(e) =>
-                              handleMatchChange(idx, 'endMinute', parseInt(e.target.value) || 0)
-                            }
-                            className="bg-white border border-gray-300 rounded px-1.5 py-1 text-xs w-10 text-center font-bold"
-                          />
-                        </div>
-                      </td>
-
-                      <td className="p-3">
-                        <input
-                          type="text"
-                          value={item.venue}
-                          onChange={(e) => handleMatchChange(idx, 'venue', e.target.value)}
-                          className="bg-white border border-gray-300 rounded px-2 py-1 text-xs w-28"
-                        />
-                      </td>
-
-                      <td className="p-3 text-right">
-                        <button
-                          onClick={() => handleSaveMatch(item)}
-                          disabled={isSaving}
-                          className="px-2.5 py-1 bg-slate-900 text-white rounded text-[11px] font-bold hover:bg-slate-800 transition-colors"
-                        >
-                          저장
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            {/* Sport Filter Chips */}
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-xs font-bold text-slate-700 mr-1">종목 선택:</span>
+                {[
+                  { key: 'soccer', label: '⚽ 축구' },
+                  { key: 'baseball', label: '⚾ 야구' },
+                  { key: 'lol', label: '🎮 LoL' },
+                  { key: 'badminton', label: '🏸 배드민턴' },
+                  { key: 'basketball', label: '🏀 농구' },
+                  ...(matchesSubView === 'table' ? [{ key: 'ALL', label: '전체보기' }] : []),
+                ].map((s) => (
+                  <button
+                    key={s.key}
+                    onClick={() => setSelectedSportFilter(s.key)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-2xs ${
+                      selectedSportFilter === s.key
+                        ? 'bg-postech text-white shadow-xs'
+                        : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
             </div>
+
+            {/* Mode 1: Interactive Node-Based Tournament Builder */}
+            {matchesSubView === 'builder' && (
+              <AdminTournamentBuilder
+                sportKey={
+                  selectedSportFilter === 'ALL' ? 'soccer' : (selectedSportFilter as SportKey)
+                }
+                treeData={
+                  tournamentTrees[selectedSportFilter === 'ALL' ? 'soccer' : selectedSportFilter] ||
+                  (selectedSportFilter === 'baseball'
+                    ? createPhoto1Preset('baseball')
+                    : createPhoto2Preset(
+                        (selectedSportFilter === 'ALL' ? 'soccer' : selectedSportFilter) as SportKey
+                      ))
+                }
+                onChange={(newTree) => {
+                  const targetKey = selectedSportFilter === 'ALL' ? 'soccer' : selectedSportFilter;
+                  setTournamentTrees((prev) => ({
+                    ...prev,
+                    [targetKey]: newTree,
+                  }));
+                }}
+                onSave={() =>
+                  handleSaveTournamentTree(
+                    (selectedSportFilter === 'ALL' ? 'soccer' : selectedSportFilter) as SportKey
+                  )
+                }
+                isSaving={isSaving}
+              />
+            )}
+
+            {/* Mode 2: Traditional Matches Table */}
+            {matchesSubView === 'table' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-500 font-bold">
+                    * 전체 경기 스코어 및 시작/종료 시간을 일괄 편집할 수 있습니다.
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        const newMatch: RawScheduledMatch = {
+                          id: `match-${Date.now()}`,
+                          sportKey: (selectedSportFilter === 'ALL'
+                            ? 'soccer'
+                            : selectedSportFilter) as SportKey,
+                          sportName:
+                            selectedSportFilter === 'soccer'
+                              ? '축구'
+                              : selectedSportFilter === 'baseball'
+                                ? '야구'
+                                : selectedSportFilter === 'lol'
+                                  ? 'LoL'
+                                  : selectedSportFilter === 'badminton'
+                                    ? '배드민턴'
+                                    : selectedSportFilter === 'basketball'
+                                      ? '농구'
+                                      : '축구',
+                          icon:
+                            selectedSportFilter === 'baseball'
+                              ? '⚾'
+                              : selectedSportFilter === 'lol'
+                                ? '🎮'
+                                : selectedSportFilter === 'badminton'
+                                  ? '🏸'
+                                  : selectedSportFilter === 'basketball'
+                                    ? '🏀'
+                                    : '⚽',
+                          team1: 'POSTECH',
+                          team2: 'KAIST',
+                          startHour: 14,
+                          startMinute: 0,
+                          endHour: 15,
+                          endMinute: 30,
+                          venue: '대운동장',
+                          round: '준결승 1경기',
+                          score1Final: 0,
+                          score2Final: 0,
+                        };
+                        setMatches((prev) => [...prev, newMatch]);
+                      }}
+                      className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow-2xs transition-colors"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>+ 경기 추가</span>
+                    </button>
+                    <button
+                      onClick={handleSaveAllMatches}
+                      disabled={isSaving}
+                      className="px-4 py-2 bg-postech hover:bg-postech-dark text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-colors"
+                    >
+                      <Save className="w-4 h-4" />
+                      <span>전체 경기 변경사항 저장</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto border border-gray-200 rounded-xl shadow-2xs">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-gray-100 font-bold text-gray-700 border-b border-gray-200">
+                      <tr>
+                        <th className="p-3">종목</th>
+                        <th className="p-3">라운드</th>
+                        <th className="p-3">팀1 vs 팀2</th>
+                        <th className="p-3">최종/현재 스코어</th>
+                        <th className="p-3">시작~종료 시각</th>
+                        <th className="p-3">경기 장소</th>
+                        <th className="p-3 text-right">작업</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 font-medium">
+                      {matches
+                        .filter(
+                          (m) => selectedSportFilter === 'ALL' || m.sportKey === selectedSportFilter
+                        )
+                        .map((item) => {
+                          const idx = matches.findIndex((m) => m.id === item.id);
+                          return (
+                            <tr key={item.id} className="hover:bg-gray-50/80">
+                              <td className="p-3 font-bold text-gray-900">
+                                {item.icon} {item.sportName}
+                              </td>
+
+                              <td className="p-3">
+                                <input
+                                  type="text"
+                                  value={item.round}
+                                  onChange={(e) => handleMatchChange(idx, 'round', e.target.value)}
+                                  className="bg-white border border-gray-300 rounded px-2 py-1 text-xs w-28 font-bold"
+                                />
+                              </td>
+
+                              <td className="p-3">
+                                <div className="flex items-center gap-1">
+                                  <input
+                                    type="text"
+                                    value={item.team1}
+                                    onChange={(e) =>
+                                      handleMatchChange(idx, 'team1', e.target.value)
+                                    }
+                                    className="bg-white border border-gray-300 rounded px-2 py-1 text-xs w-20 font-bold"
+                                  />
+                                  <span className="text-gray-400 font-bold">vs</span>
+                                  <input
+                                    type="text"
+                                    value={item.team2}
+                                    onChange={(e) =>
+                                      handleMatchChange(idx, 'team2', e.target.value)
+                                    }
+                                    className="bg-white border border-gray-300 rounded px-2 py-1 text-xs w-20 font-bold"
+                                  />
+                                </div>
+                              </td>
+
+                              <td className="p-3">
+                                <div className="flex items-center gap-1">
+                                  <input
+                                    type="number"
+                                    value={item.score1Final}
+                                    onChange={(e) =>
+                                      handleMatchChange(
+                                        idx,
+                                        'score1Final',
+                                        parseInt(e.target.value) || 0
+                                      )
+                                    }
+                                    className="bg-white border border-gray-300 rounded px-2 py-1 text-xs w-12 text-center font-bold"
+                                  />
+                                  <span className="text-gray-400 font-bold">:</span>
+                                  <input
+                                    type="number"
+                                    value={item.score2Final}
+                                    onChange={(e) =>
+                                      handleMatchChange(
+                                        idx,
+                                        'score2Final',
+                                        parseInt(e.target.value) || 0
+                                      )
+                                    }
+                                    className="bg-white border border-gray-300 rounded px-2 py-1 text-xs w-12 text-center font-bold"
+                                  />
+                                </div>
+                              </td>
+
+                              <td className="p-3">
+                                <div className="flex items-center gap-1">
+                                  <input
+                                    type="number"
+                                    value={item.startHour}
+                                    onChange={(e) =>
+                                      handleMatchChange(
+                                        idx,
+                                        'startHour',
+                                        parseInt(e.target.value) || 0
+                                      )
+                                    }
+                                    className="bg-white border border-gray-300 rounded px-1.5 py-1 text-xs w-10 text-center font-bold"
+                                  />
+                                  <span>:</span>
+                                  <input
+                                    type="number"
+                                    value={item.startMinute}
+                                    onChange={(e) =>
+                                      handleMatchChange(
+                                        idx,
+                                        'startMinute',
+                                        parseInt(e.target.value) || 0
+                                      )
+                                    }
+                                    className="bg-white border border-gray-300 rounded px-1.5 py-1 text-xs w-10 text-center font-bold"
+                                  />
+                                  <span>~</span>
+                                  <input
+                                    type="number"
+                                    value={item.endHour}
+                                    onChange={(e) =>
+                                      handleMatchChange(
+                                        idx,
+                                        'endHour',
+                                        parseInt(e.target.value) || 0
+                                      )
+                                    }
+                                    className="bg-white border border-gray-300 rounded px-1.5 py-1 text-xs w-10 text-center font-bold"
+                                  />
+                                  <span>:</span>
+                                  <input
+                                    type="number"
+                                    value={item.endMinute}
+                                    onChange={(e) =>
+                                      handleMatchChange(
+                                        idx,
+                                        'endMinute',
+                                        parseInt(e.target.value) || 0
+                                      )
+                                    }
+                                    className="bg-white border border-gray-300 rounded px-1.5 py-1 text-xs w-10 text-center font-bold"
+                                  />
+                                </div>
+                              </td>
+
+                              <td className="p-3">
+                                <input
+                                  type="text"
+                                  value={item.venue}
+                                  onChange={(e) => handleMatchChange(idx, 'venue', e.target.value)}
+                                  className="bg-white border border-gray-300 rounded px-2 py-1 text-xs w-28"
+                                />
+                              </td>
+
+                              <td className="p-3 text-right">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <button
+                                    onClick={() => handleSaveMatch(item)}
+                                    disabled={isSaving}
+                                    className="px-2.5 py-1 bg-slate-900 text-white rounded text-[11px] font-bold hover:bg-slate-800 transition-colors"
+                                  >
+                                    저장
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      if (confirm('정말 이 경기를 삭제하시겠습니까?')) {
+                                        setMatches((prev) => prev.filter((m) => m.id !== item.id));
+                                      }
+                                    }}
+                                    className="p-1 text-rose-600 hover:bg-rose-50 rounded"
+                                    title="경기 삭제"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -1142,7 +1594,7 @@ export const Admin: React.FC = () => {
         {activeTab === 'stage' && (
           <div className="p-6 bg-white border border-gray-200 rounded-b-xl shadow-2xs space-y-4">
             <h2 className="font-extrabold text-base text-gray-900">
-              체육관 메인 무대 공연 타임라인 설정
+              체육관 메인 문화공연 타임라인 설정
             </h2>
 
             <div className="overflow-x-auto border border-gray-200 rounded-lg">
@@ -2648,8 +3100,72 @@ export const Admin: React.FC = () => {
         {activeTab === 'settings' && (
           <div className="p-6 bg-white border border-gray-200 rounded-b-xl shadow-2xs space-y-6">
             <h2 className="font-extrabold text-base text-gray-900">
-              관리자 설정 및 Supabase 연동 상태
+              관리자 설정 및 실시간 중계 링크
             </h2>
+
+            {/* YouTube Live Stream URL Setting */}
+            <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-3 shadow-2xs">
+              <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                <div className="flex items-center gap-2 font-extrabold text-sm text-gray-900">
+                  <Youtube className="w-5 h-5 text-red-600" />
+                  <span>실시간 유튜브 중계 (LIVE) 링크 설정</span>
+                </div>
+                {youtubeLiveUrl && (
+                  <a
+                    href={youtubeLiveUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 bg-red-50 border border-red-200 px-2.5 py-1 rounded-lg transition-colors"
+                  >
+                    <span>새 탭에서 링크 확인</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                )}
+              </div>
+
+              <p className="text-xs text-gray-600 font-medium">
+                방문자가 경기 및 공연 카드의 <strong>LIVE &gt;</strong> 배지를 클릭했을 때 바로
+                이동할 유튜브 실시간 스트리밍 또는 채널 URL입니다.
+              </p>
+
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  setIsSavingYoutube(true);
+                  const ok = await updateSupabaseYoutubeLiveUrl(youtubeLiveUrl);
+                  setIsSavingYoutube(false);
+                  if (ok) {
+                    setSaveStatus('유튜브 실시간 중계 링크가 성공적으로 저장되었습니다.');
+                    setTimeout(() => setSaveStatus(null), 3000);
+                  } else {
+                    alert('유튜브 중계 링크 저장에 실패했습니다.');
+                  }
+                }}
+                className="space-y-3 max-w-xl pt-1"
+              >
+                <div>
+                  <label className="text-xs font-bold text-gray-700 block mb-1">
+                    유튜브 라이브 스트리밍 URL
+                  </label>
+                  <input
+                    type="url"
+                    value={youtubeLiveUrl}
+                    onChange={(e) => setYoutubeLiveUrl(e.target.value)}
+                    placeholder="예: https://youtube.com/live/... 또는 https://youtube.com/@stadium_official"
+                    className="w-full border border-gray-300 px-3 py-2 rounded-lg text-xs font-medium focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSavingYoutube}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors shadow-2xs"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{isSavingYoutube ? '저장 중...' : '유튜브 중계 링크 저장'}</span>
+                </button>
+              </form>
+            </div>
 
             {/* Supabase Status Banner */}
             <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-2">
@@ -2680,7 +3196,27 @@ export const Admin: React.FC = () => {
                 <span>관리자 비밀번호 변경</span>
               </div>
 
-              <form onSubmit={handleChangePassword} className="space-y-3 max-w-md">
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!newPassword || newPassword !== confirmPassword) {
+                    alert('비밀번호가 일치하지 않거나 비어 있습니다.');
+                    return;
+                  }
+                  setIsSaving(true);
+                  const ok = await updateAdminPasswordInSupabase(newPassword);
+                  setIsSaving(false);
+                  if (ok) {
+                    setSaveStatus('관리자 비밀번호가 성공적으로 변경되었습니다.');
+                    setTimeout(() => setSaveStatus(null), 3000);
+                    setNewPassword('');
+                    setConfirmPassword('');
+                  } else {
+                    alert('비밀번호 변경에 실패했습니다.');
+                  }
+                }}
+                className="space-y-3 max-w-md"
+              >
                 <div>
                   <label className="text-xs font-bold text-gray-700 block mb-1">
                     새 관리자 비밀번호

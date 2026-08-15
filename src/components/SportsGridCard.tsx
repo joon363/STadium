@@ -2,6 +2,7 @@ import React from 'react';
 import { MatchItem, SCHOOLS } from '../config/stadiumConfig';
 import { MapPin, Clock, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useRealtimeSchedule } from '../hooks/useRealtimeSchedule';
 
 interface SportsGridCardProps {
   match: MatchItem;
@@ -15,6 +16,7 @@ export const SportsGridCard: React.FC<SportsGridCardProps> = ({
   layout = 'horizontal',
 }) => {
   const navigate = useNavigate();
+  const { youtubeLiveUrl } = useRealtimeSchedule();
 
   const isUpcoming =
     !match.isLive &&
@@ -56,10 +58,17 @@ export const SportsGridCard: React.FC<SportsGridCardProps> = ({
 
           <div className="flex items-center gap-1.5">
             {match.isLive ? (
-              <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-rose-50 text-rose-600 border border-rose-200 px-2 py-0.2 rounded-full">
-                <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
-                LIVE
-              </span>
+              <a
+                href={youtubeLiveUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1 text-[10px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-2 py-0.5 rounded-full active:scale-95 transition-all shadow-2xs cursor-pointer"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
+                <span>LIVE</span>
+                <ChevronRight className="w-3 h-3 text-rose-500" />
+              </a>
             ) : isFinished ? (
               <span className="text-[10px] font-bold bg-gray-100 text-gray-600 px-2 py-0.2 rounded-full">
                 종료
@@ -72,40 +81,108 @@ export const SportsGridCard: React.FC<SportsGridCardProps> = ({
           </div>
         </div>
 
-        {/* Score & Teams Row: Clean Stand-Alone School Logos */}
-        <div className="flex items-center justify-between py-1">
-          {/* Team 1 Logo */}
-          <div className="flex items-center justify-start flex-1 min-w-0">
-            <img
-              src={team1School.logoUrl}
-              alt={match.team1}
-              className="h-6 w-auto max-w-[85px] object-contain shrink-0"
-            />
-          </div>
+        {/* Middle Score & Teams Row: Flush without inner rounding */}
+        <div className="relative overflow-hidden -mx-3 py-1 px-3">
+          {/* Left-side Winner Graphic (If Team 1 is winning) */}
+          {isTeam1Winning && (
+            <>
+              <div
+                className="absolute top-0 left-0 w-1 h-full pointer-events-none z-0"
+                style={{ backgroundColor: team1School.color }}
+              />
+              <svg
+                className="absolute top-0 left-0 h-full w-24 pointer-events-none z-0"
+                preserveAspectRatio="none"
+                viewBox="0 0 100 100"
+              >
+                <polygon
+                  points="0,0 48,0 60,100 0,100"
+                  fill={team1School.color}
+                  fillOpacity="0.22"
+                />
+                <polygon
+                  points="48,0 72,0 84,100 60,100"
+                  fill={team1School.color}
+                  fillOpacity="0.10"
+                />
+                <polygon
+                  points="72,0 86,0 98,100 84,100"
+                  fill={team1School.color}
+                  fillOpacity="0.03"
+                />
+              </svg>
+            </>
+          )}
 
-          {/* Center Score & Match Status */}
-          <div className="flex flex-col items-center justify-center px-2 min-w-[76px]">
-            <div className="flex items-center gap-1.5 text-base font-bold tracking-tight leading-none">
-              <span style={isTeam1Winning ? { color: team1School.color } : { color: '#0f172a' }}>
-                {match.score1}
-              </span>
-              <span className="text-gray-300 font-light">-</span>
-              <span style={isTeam2Winning ? { color: team2School.color } : { color: '#0f172a' }}>
-                {match.score2}
-              </span>
-            </div>
-            <div className="text-[10px] font-bold text-gray-500 mt-0.5 leading-none">
-              {match.statusText}
-            </div>
-          </div>
+          {/* Right-side Winner Graphic (If Team 2 is winning) */}
+          {isTeam2Winning && (
+            <>
+              <div
+                className="absolute top-0 right-0 w-1 h-full pointer-events-none z-0"
+                style={{ backgroundColor: team2School.color }}
+              />
+              <svg
+                className="absolute top-0 right-0 h-full w-24 pointer-events-none z-0"
+                preserveAspectRatio="none"
+                viewBox="0 0 100 100"
+              >
+                <polygon
+                  points="52,0 100,0 100,100 40,100"
+                  fill={team2School.color}
+                  fillOpacity="0.22"
+                />
+                <polygon
+                  points="28,0 52,0 40,100 16,100"
+                  fill={team2School.color}
+                  fillOpacity="0.10"
+                />
+                <polygon
+                  points="14,0 28,0 16,100 2,100"
+                  fill={team2School.color}
+                  fillOpacity="0.03"
+                />
+              </svg>
+            </>
+          )}
 
-          {/* Team 2 Logo */}
-          <div className="flex items-center justify-end flex-1 min-w-0">
-            <img
-              src={team2School.logoUrl}
-              alt={match.team2}
-              className="h-6 w-auto max-w-[85px] object-contain shrink-0"
-            />
+          <div className="relative z-10 flex items-center justify-between">
+            {/* Team 1 Logo */}
+            <div className="flex items-center justify-start flex-1 min-w-0">
+              <img
+                src={team1School.logoUrl}
+                alt={match.team1}
+                loading="eager"
+                decoding="async"
+                className="h-6 w-auto max-w-[85px] object-contain shrink-0"
+              />
+            </div>
+
+            {/* Center Score & Match Status */}
+            <div className="flex flex-col items-center justify-center px-2 min-w-[76px]">
+              <div className="flex items-center gap-1.5 text-base font-bold tracking-tight leading-none">
+                <span style={isTeam1Winning ? { color: team1School.color } : { color: '#0f172a' }}>
+                  {match.score1}
+                </span>
+                <span className="text-gray-300 font-light">-</span>
+                <span style={isTeam2Winning ? { color: team2School.color } : { color: '#0f172a' }}>
+                  {match.score2}
+                </span>
+              </div>
+              <div className="text-[10px] font-bold text-gray-500 mt-0.5 leading-none">
+                {match.statusText}
+              </div>
+            </div>
+
+            {/* Team 2 Logo */}
+            <div className="flex items-center justify-end flex-1 min-w-0">
+              <img
+                src={team2School.logoUrl}
+                alt={match.team2}
+                loading="eager"
+                decoding="async"
+                className="h-6 w-auto max-w-[85px] object-contain shrink-0"
+              />
+            </div>
           </div>
         </div>
 
@@ -126,13 +203,13 @@ export const SportsGridCard: React.FC<SportsGridCardProps> = ({
     );
   }
 
-  // Grid layout (Stand-alone School Logos)
+  // Grid layout (2x2 on Home)
   return (
     <div
       onClick={() => navigate(path)}
       className="bg-white border border-gray-200/90 hover:border-gray-300 rounded-xl p-2.5 flex flex-col justify-between shadow-2xs hover:shadow-xs transition-colors cursor-pointer active:scale-[0.99] select-none min-h-[110px]"
     >
-      {/* Top Bar */}
+      {/* Top Bar (Clean, no background graphic) */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1 font-bold text-gray-900 text-xs">
           <span>{match.icon}</span>
@@ -140,9 +217,17 @@ export const SportsGridCard: React.FC<SportsGridCardProps> = ({
         </div>
 
         {match.isLive ? (
-          <span className="text-[9px] font-bold bg-rose-50 text-rose-600 border border-rose-200 px-1.5 py-0.2 rounded-full">
-            LIVE
-          </span>
+          <a
+            href={youtubeLiveUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-0.5 text-[9px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-1.5 py-0.5 rounded-full active:scale-95 transition-all shadow-2xs cursor-pointer"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
+            <span>LIVE</span>
+            <ChevronRight className="w-2.5 h-2.5 text-rose-500" />
+          </a>
         ) : isFinished ? (
           <span className="text-[9px] font-bold bg-gray-100 text-gray-500 px-1.5 py-0.2 rounded">
             종료
@@ -154,11 +239,69 @@ export const SportsGridCard: React.FC<SportsGridCardProps> = ({
         )}
       </div>
 
-      {/* Teams & Score Row */}
-      <div className="my-1.5">
-        <div className="flex items-center justify-between text-center">
+      {/* Middle Teams & Score Row: Flush without inner rounding */}
+      <div className="relative overflow-hidden -mx-2.5 my-1 py-1 px-2.5">
+        {/* Left-side Winner Graphic (If Team 1 is winning) */}
+        {isTeam1Winning && (
+          <>
+            <div
+              className="absolute top-0 left-0 w-1 h-full pointer-events-none z-0"
+              style={{ backgroundColor: team1School.color }}
+            />
+            <svg
+              className="absolute top-0 left-0 h-full w-20 pointer-events-none z-0"
+              preserveAspectRatio="none"
+              viewBox="0 0 100 100"
+            >
+              <polygon points="0,0 48,0 60,100 0,100" fill={team1School.color} fillOpacity="0.22" />
+              <polygon
+                points="48,0 72,0 84,100 60,100"
+                fill={team1School.color}
+                fillOpacity="0.10"
+              />
+              <polygon
+                points="72,0 86,0 98,100 84,100"
+                fill={team1School.color}
+                fillOpacity="0.03"
+              />
+            </svg>
+          </>
+        )}
+
+        {/* Right-side Winner Graphic (If Team 2 is winning) */}
+        {isTeam2Winning && (
+          <>
+            <div
+              className="absolute top-0 right-0 w-1 h-full pointer-events-none z-0"
+              style={{ backgroundColor: team2School.color }}
+            />
+            <svg
+              className="absolute top-0 right-0 h-full w-20 pointer-events-none z-0"
+              preserveAspectRatio="none"
+              viewBox="0 0 100 100"
+            >
+              <polygon
+                points="52,0 100,0 100,100 40,100"
+                fill={team2School.color}
+                fillOpacity="0.22"
+              />
+              <polygon
+                points="28,0 52,0 40,100 16,100"
+                fill={team2School.color}
+                fillOpacity="0.10"
+              />
+              <polygon
+                points="14,0 28,0 16,100 2,100"
+                fill={team2School.color}
+                fillOpacity="0.03"
+              />
+            </svg>
+          </>
+        )}
+
+        <div className="relative z-10 flex items-center justify-between text-center">
           {/* Team 1 Logo */}
-          <div className="flex items-center justify-center flex-1 min-w-0 h-9">
+          <div className="flex items-center justify-center flex-1 min-w-0 h-8">
             <img
               src={team1School.logoUrl}
               alt={match.team1}
@@ -180,7 +323,7 @@ export const SportsGridCard: React.FC<SportsGridCardProps> = ({
           </div>
 
           {/* Team 2 Logo */}
-          <div className="flex items-center justify-center flex-1 min-w-0 h-9">
+          <div className="flex items-center justify-center flex-1 min-w-0 h-8">
             <img
               src={team2School.logoUrl}
               alt={match.team2}
@@ -192,7 +335,7 @@ export const SportsGridCard: React.FC<SportsGridCardProps> = ({
         </div>
       </div>
 
-      {/* Footer */}
+      {/* Footer (Clean, no background graphic) */}
       <div className="flex items-center justify-between text-[9px] text-gray-500 border-t border-gray-100 pt-1">
         <span className="truncate font-bold text-gray-700">{match.statusText}</span>
         <span className="truncate text-gray-400">{match.venue}</span>

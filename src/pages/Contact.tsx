@@ -72,11 +72,10 @@ export const Contact: React.FC = () => {
       <div className="flex items-center bg-gray-200/80 p-1 rounded-xl shadow-2xs">
         <button
           onClick={() => setActiveTab('notice')}
-          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 ${
-            activeTab === 'notice'
+          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 ${activeTab === 'notice'
               ? 'bg-white text-slate-900 shadow-xs font-extrabold'
               : 'text-gray-600 hover:text-gray-900'
-          }`}
+            }`}
         >
           <Bell className="w-3.5 h-3.5" />
           <span>공지사항</span>
@@ -84,11 +83,10 @@ export const Contact: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('contact')}
-          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 ${
-            activeTab === 'contact'
+          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 ${activeTab === 'contact'
               ? 'bg-white text-slate-900 shadow-xs font-extrabold'
               : 'text-gray-600 hover:text-gray-900'
-          }`}
+            }`}
         >
           <Phone className="w-3.5 h-3.5" />
           <span>연락처</span>
@@ -96,11 +94,10 @@ export const Contact: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('faq')}
-          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 ${
-            activeTab === 'faq'
+          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 ${activeTab === 'faq'
               ? 'bg-white text-slate-900 shadow-xs font-extrabold'
               : 'text-gray-600 hover:text-gray-900'
-          }`}
+            }`}
         >
           <HelpCircle className="w-3.5 h-3.5" />
           <span>FAQ</span>
@@ -125,27 +122,26 @@ export const Contact: React.FC = () => {
                 const isExpanded = expandedNoticeId === notice.id;
                 const formattedDate = notice.createdAt
                   ? new Date(notice.createdAt).toLocaleDateString('ko-KR', {
-                      month: 'long',
-                      day: 'numeric',
-                    })
+                    month: 'long',
+                    day: 'numeric',
+                  })
                   : '';
 
                 return (
                   <div
                     key={notice.id}
                     onClick={() => setExpandedNoticeId(isExpanded ? null : notice.id || null)}
-                    className={`bg-white border rounded-xl px-3 py-2.5 shadow-2xs cursor-pointer transition-all ${
-                      notice.isPinned
+                    className={`bg-white border rounded-xl px-3 py-2.5 shadow-2xs cursor-pointer transition-all ${notice.isPinned
                         ? 'border-rose-300 bg-gradient-to-r from-rose-50/40 via-white to-white'
                         : 'border-gray-200/90 hover:border-gray-300'
-                    }`}
+                      }`}
                   >
                     {/* Notice Card Header */}
                     <div className="flex items-start justify-between gap-2">
                       <div className="space-y-0.5 flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           {notice.isPinned && (
-                            <span className="inline-flex items-center gap-0.5 text-[9px] font-black bg-rose-600 text-white px-1.5 py-0.2 rounded-md">
+                            <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold bg-rose-600 text-white px-1.5 py-0.2 rounded-md">
                               <Pin className="w-2.5 h-2.5" />
                               <span>필독</span>
                             </span>
@@ -299,11 +295,10 @@ export const Contact: React.FC = () => {
             <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
               <button
                 onClick={() => setSelectedFaqCategory('ALL')}
-                className={`px-2.5 py-1 rounded-full text-xs font-bold shrink-0 transition-colors shadow-2xs ${
-                  selectedFaqCategory === 'ALL'
+                className={`px-2.5 py-1 rounded-full text-xs font-bold shrink-0 transition-colors shadow-2xs ${selectedFaqCategory === 'ALL'
                     ? 'bg-slate-900 text-white font-extrabold'
                     : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-                }`}
+                  }`}
               >
                 전체
               </button>
@@ -311,11 +306,10 @@ export const Contact: React.FC = () => {
                 <button
                   key={cat}
                   onClick={() => setSelectedFaqCategory(cat)}
-                  className={`px-2.5 py-1 rounded-full text-xs font-bold shrink-0 transition-colors shadow-2xs ${
-                    selectedFaqCategory === cat
+                  className={`px-2.5 py-1 rounded-full text-xs font-bold shrink-0 transition-colors shadow-2xs ${selectedFaqCategory === cat
                       ? 'bg-slate-900 text-white font-extrabold'
                       : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-                  }`}
+                    }`}
                 >
                   {cat}
                 </button>
@@ -339,7 +333,7 @@ export const Contact: React.FC = () => {
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-start gap-2 flex-1 min-w-0">
-                        <span className="font-black text-slate-800 text-sm shrink-0">Q.</span>
+                        <span className="font-extrabold text-slate-800 text-sm shrink-0">Q.</span>
                         <h4 className="font-bold text-xs text-gray-900 leading-snug pt-0.5">
                           {faq.question}
                         </h4>
@@ -356,7 +350,7 @@ export const Contact: React.FC = () => {
 
                     {isExpanded && (
                       <div className="mt-2 pt-2 border-t border-gray-100 text-xs text-gray-700 font-medium leading-relaxed flex items-start gap-2 animate-in fade-in duration-150">
-                        <span className="font-black text-postech text-sm shrink-0">A.</span>
+                        <span className="font-extrabold text-postech text-sm shrink-0">A.</span>
                         <p className="flex-1 whitespace-pre-wrap pt-0.5">{faq.answer}</p>
                       </div>
                     )}

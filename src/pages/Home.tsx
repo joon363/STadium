@@ -9,7 +9,7 @@ import { Music, ChevronRight, Filter, Radio } from 'lucide-react';
 
 export const Home: React.FC = () => {
   const navigate = useNavigate();
-  const { sportsConfig, stageConfig, overallStandings } = useRealtimeSchedule();
+  const { sportsConfig, stageConfig, overallStandings, youtubeLiveUrl } = useRealtimeSchedule();
   const { selectedSchool, setSelectedSchool } = useSchool();
 
   const stageSchool = SCHOOLS[stageConfig.school] || SCHOOLS.POSTECH;
@@ -72,15 +72,22 @@ export const Home: React.FC = () => {
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-1.5">
             <Music className="w-4 h-4 text-postech" />
-            <h2 className="font-black text-sm text-gray-900 tracking-tight">체육관 무대 공연</h2>
+            <h2 className="font-extrabold text-sm text-gray-900 tracking-tight">문화공연</h2>
           </div>
 
           <div>
             {stageConfig.isLive ? (
-              <span className="text-[10px] font-black bg-rose-50 text-rose-600 border border-rose-200 px-2 py-0.2 rounded-full uppercase flex items-center gap-1">
-                <Radio className="w-3 h-3 text-rose-500" />
-                STAGE LIVE
-              </span>
+              <a
+                href={youtubeLiveUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="text-[10px] font-extrabold bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-2 py-0.5 rounded-full uppercase flex items-center gap-1 active:scale-95 transition-all shadow-2xs cursor-pointer"
+              >
+                <Radio className="w-3 h-3 text-rose-500 animate-pulse" />
+                <span>STAGE LIVE</span>
+                <ChevronRight className="w-3 h-3 text-rose-500" />
+              </a>
             ) : (
               <span className="text-[10px] font-semibold bg-gray-100 text-gray-600 px-2 py-0.2 rounded-full">
                 공연 대기중
@@ -95,14 +102,6 @@ export const Home: React.FC = () => {
           className="bg-white text-gray-900 rounded-xl p-3 border border-gray-200/90 shadow-2xs relative overflow-hidden cursor-pointer hover:border-gray-300 transition-colors select-none active:scale-[0.99] flex items-center justify-between"
         >
           <div className="flex items-center gap-2.5 min-w-0">
-            {/* School Emblem Box (Text/Color badge) */}
-            <div
-              style={{ backgroundColor: stageSchool.color }}
-              className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-white text-sm shrink-0 shadow-2xs border border-white/20"
-            >
-              {stageSchool.logoText}
-            </div>
-
             <div className="min-w-0">
               <div className="flex items-center gap-1">
                 <span style={{ color: stageSchool.color }} className="font-bold text-xs shrink-0">
@@ -120,11 +119,6 @@ export const Home: React.FC = () => {
                   </span>
                 )}
               </div>
-
-              <p className="text-[11px] text-gray-600 font-medium truncate mt-0.5 flex items-center gap-1">
-                <span className="text-postech font-bold">곡:</span>
-                <span className="truncate">{stageConfig.songTitle}</span>
-              </p>
             </div>
           </div>
 

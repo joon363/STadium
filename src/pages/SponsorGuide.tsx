@@ -106,7 +106,7 @@ export const SponsorGuide: React.FC = () => {
                               className="w-10 h-10 object-contain rounded-xl bg-gray-50 border border-gray-200 p-1 shrink-0 shadow-2xs"
                             />
                           ) : (
-                            <div className="w-10 h-10 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center text-base font-black text-gray-700 shrink-0">
+                            <div className="w-10 h-10 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center text-base font-extrabold text-gray-700 shrink-0">
                               {sponsor.name.charAt(0)}
                             </div>
                           )}
