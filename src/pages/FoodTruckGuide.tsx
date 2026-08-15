@@ -38,7 +38,7 @@ export const FoodTruckGuide: React.FC = () => {
 
       {/* Content Area */}
       {loading ? (
-        <div className="py-12 text-center text-slate-400 text-xs animate-pulse">
+        <div className="py-12 text-center text-slate-400 text-xs">
           Supabase 데이터 불러오는 중...
         </div>
       ) : activeTrucks.length === 0 ? (

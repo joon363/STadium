@@ -188,7 +188,7 @@ export const DEFAULT_RAW_SCHEDULE_FLAT: RawScheduledMatch[] = [
     endHour: 18,
     endMinute: 30,
     venue: '대운동장',
-    round: '준결승 2경기 (라이벌전)',
+    round: '준결승 2경기',
     score1Final: 2,
     score2Final: 1,
     winningTeamFinal: 'POSTECH',

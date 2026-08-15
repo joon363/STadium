@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SCHOOLS } from '../config/stadiumConfig';
 import { useRealtimeSchedule } from '../hooks/useRealtimeSchedule';
-import { ArrowLeft, Clock, MapPin, Music, Radio, Calendar } from 'lucide-react';
+import { ArrowLeft, Clock, MapPin, Music, Radio, Calendar, Sparkles } from 'lucide-react';
 
 export const StageDetail: React.FC = () => {
   const navigate = useNavigate();
@@ -23,44 +23,44 @@ export const StageDetail: React.FC = () => {
   const liveSongList = parseSongList(stageConfig.songTitle);
 
   return (
-    <div className="flex flex-col gap-4 p-4">
+    <div className="flex flex-col gap-3 p-3 text-gray-900 pb-10">
       {/* Top Header Row */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate('/')}
-            className="touch-target p-2 rounded-lg border border-gray-200 bg-white text-gray-800 hover:bg-gray-100 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </button>
-          <div className="flex items-center gap-2">
-            <span className="text-xl">🎤</span>
-            <h1 className="font-extrabold text-lg text-gray-900">체육관 무대 공연 일정</h1>
-          </div>
+      <div className="sticky top-0 z-30 bg-white border-b border-gray-200 -mx-3 -mt-3 px-4 py-3 flex items-center justify-between shadow-2xs">
+        <button
+          onClick={() => navigate('/')}
+          className="p-2 -ml-2 rounded-xl text-gray-700 hover:bg-gray-100 active:bg-gray-200 transition-colors touch-target"
+          aria-label="뒤로가기"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+
+        <div className="flex items-center gap-1.5 font-black text-base text-gray-900">
+          <span>🎤</span>
+          <span>체육관 무대 공연 일정</span>
         </div>
 
-        <div className="flex items-center gap-1 text-[11px] font-bold text-gray-600 bg-gray-100 border border-gray-200 px-2.5 py-1 rounded-md">
+        <div className="flex items-center gap-1 text-[11px] font-bold text-gray-600 bg-gray-100 px-2.5 py-1 rounded-full">
           <Clock className="w-3 h-3 text-postech" />
           <span>{timeString}</span>
         </div>
       </div>
 
       {/* Main Live / Featured Stage Banner */}
-      <section className="bg-slate-900 text-white rounded-xl p-4 border border-slate-800 shadow-sm relative overflow-hidden">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
-          <div className="flex items-center gap-2">
-            <Radio className="w-4 h-4 text-rose-500 animate-pulse" />
-            <h2 className="font-extrabold text-sm tracking-wide text-gray-100">
-              Now Live
+      <section className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white rounded-2xl p-4 border border-slate-700/80 shadow-md relative overflow-hidden mt-1">
+        <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-3">
+          <div className="flex items-center gap-1.5">
+            <Radio className="w-4 h-4 text-rose-400" />
+            <h2 className="font-extrabold text-xs uppercase tracking-wider text-rose-300">
+              Now On Stage
             </h2>
           </div>
           {stageConfig.isLive ? (
-            <span className="text-[10px] font-bold bg-postech text-white px-2.5 py-0.5 rounded-md uppercase tracking-wider">
+            <span className="text-[10px] font-black bg-rose-600 text-white px-2.5 py-0.5 rounded-full uppercase tracking-wider">
               STAGE LIVE
             </span>
           ) : (
-            <span className="text-[10px] font-semibold bg-slate-800 text-slate-300 px-2.5 py-0.5 rounded-md">
-              공연 대기
+            <span className="text-[10px] font-semibold bg-slate-700 text-slate-300 px-2.5 py-0.5 rounded-full">
+              공연 대기중
             </span>
           )}
         </div>
@@ -69,7 +69,7 @@ export const StageDetail: React.FC = () => {
         <div className="flex items-start gap-3">
           <div
             style={{ backgroundColor: currentSchool.color }}
-            className="w-10 h-10 rounded-lg flex items-center justify-center font-black text-white text-base shrink-0 border border-white/20 shadow-xs"
+            className="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-white text-lg shrink-0 border-2 border-white/20 shadow-md"
           >
             {currentSchool.logoText}
           </div>
@@ -79,50 +79,53 @@ export const StageDetail: React.FC = () => {
               <span className="font-black text-base text-white truncate">
                 {stageConfig.clubName}
               </span>
-              <span className="text-[10px] font-semibold bg-slate-800 text-slate-300 border border-slate-700 px-2 py-0.5 rounded-md shrink-0">
+              <span className="text-[10px] font-semibold bg-slate-700 text-slate-300 border border-slate-600 px-2 py-0.5 rounded-md shrink-0">
                 {stageConfig.genre}
               </span>
             </div>
 
             {/* Multiline Song List Rows */}
-            <div className="space-y-1 mt-1.5">
+            <div className="space-y-1 mt-2">
               {liveSongList.length > 0 ? (
                 liveSongList.map((song, songIdx) => (
-                  <p key={songIdx} className="text-xs text-slate-300 font-medium truncate flex items-center gap-1.5">
+                  <p key={songIdx} className="text-xs text-slate-200 font-medium truncate flex items-center gap-1.5">
                     <Music className="w-3.5 h-3.5 text-rose-400 shrink-0" />
                     <span>{song}</span>
                   </p>
                 ))
               ) : (
-                <p className="text-xs text-slate-400 font-medium flex items-center gap-1">
+                <p className="text-xs text-slate-200 font-medium flex items-center gap-1">
                   <Music className="w-3.5 h-3.5 text-rose-400 shrink-0" />
                   <span>{stageConfig.songTitle}</span>
                 </p>
               )}
             </div>
 
-            <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-800/80 text-[11px]">
-              <span className="font-bold text-rose-400">⏱ {stageConfig.statusText}</span>
-              <span className="font-semibold text-slate-400">{stageConfig.nextRemainingText}</span>
+            <div className="flex items-center justify-between mt-3 pt-2 border-t border-white/10 text-xs">
+              <span className="font-extrabold text-rose-400 flex items-center gap-1">
+                <Sparkles className="w-3 h-3" />
+                {stageConfig.statusText}
+              </span>
+              <span className="font-semibold text-slate-300">{stageConfig.nextRemainingText}</span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Full Stage Timetable List (Fetched from Supabase / Dynamic) */}
-      <section className="space-y-3 pt-1">
-        <div className="flex items-center justify-between font-bold text-gray-900 text-sm px-1">
-          <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-postech" />
+      {/* Full Stage Timetable List */}
+      <section className="space-y-2.5 pt-1">
+        <div className="flex items-center justify-between font-bold text-gray-900 text-xs px-1">
+          <div className="flex items-center gap-1.5">
+            <Calendar className="w-3.5 h-3.5 text-postech" />
             <h2>전체 공연 타임라인</h2>
           </div>
-          <div className="flex items-center gap-1 text-xs text-gray-500 font-medium">
+          <div className="flex items-center gap-1 text-[11px] text-gray-500 font-medium">
             <MapPin className="w-3 h-3 text-postech" />
             <span>POSTECH 체육관 실내무대</span>
           </div>
         </div>
 
-        <div className="space-y-2.5">
+        <div className="space-y-2">
           {stageSchedule.map((item, idx) => {
             const schoolObj = SCHOOLS[item.school] || SCHOOLS.POSTECH;
 
@@ -141,61 +144,69 @@ export const StageDetail: React.FC = () => {
               item.endMinute
             ).padStart(2, '0')}`;
 
-            const itemBgStyle: React.CSSProperties = isUpcoming
-              ? { background: 'linear-gradient(135deg, #f9fafb 0%, #e5e7eb 100%)', borderColor: '#d1d5db' }
-              : isLive
-              ? { backgroundColor: schoolObj.bgLight, borderColor: schoolObj.color }
-              : { backgroundColor: '#FFFFFF', borderColor: '#E5E7EB' };
-
             const itemSongList = parseSongList(item.songTitle);
 
             return (
               <div
                 key={idx}
-                style={itemBgStyle}
-                className={`border rounded-xl p-3.5 flex flex-col gap-2 transition-colors shadow-2xs ${
-                  isLive ? 'ring-1 ring-postech/30' : ''
+                className={`bg-white border rounded-2xl p-3.5 flex flex-col gap-2 shadow-2xs transition-all ${
+                  isLive ? 'border-purple-400 ring-2 ring-purple-100' : 'border-gray-200'
                 }`}
               >
                 {/* Time & Badge Row */}
-                <div className="flex items-center justify-between border-b border-black/10 pb-1.5 text-xs">
+                <div className="flex items-center justify-between border-b border-gray-100 pb-2 text-xs">
                   <div className="flex items-center gap-2">
                     <span
                       style={{ backgroundColor: schoolObj.color }}
-                      className="text-white text-[10px] font-bold px-1.5 py-0.5 rounded"
+                      className="text-white text-[10px] font-black px-2 py-0.5 rounded-full"
                     >
                       {schoolObj.shortName}
                     </span>
 
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-black text-base text-gray-900">{item.clubName}</h3>
-                    </div>
-                    <span className="font-extrabold text-gray-900">{timeRangeText}</span>
+                    <h3 className="font-black text-sm text-gray-900">{item.clubName}</h3>
                   </div>
 
-                  <span className="text-[10px] font-semibold bg-white border border-gray-200 text-gray-700 px-2 py-0.5 rounded-md">
-                    {item.genre}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {isLive && (
+                      <span className="text-[10px] font-black bg-rose-50 text-rose-600 border border-rose-200 px-2 py-0.5 rounded-full">
+                        LIVE
+                      </span>
+                    )}
+                    <span className="text-[10px] font-semibold bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md">
+                      {item.genre}
+                    </span>
+                  </div>
                 </div>
 
-                {/* Multiline Song List: Dynamic Row Generation per Song */}
-                <div className="space-y-1.5 pt-0.5">
+                {/* Song List */}
+                <div className="space-y-1 pt-0.5">
                   {itemSongList.length > 0 ? (
                     itemSongList.map((song, songIdx) => (
                       <p
                         key={songIdx}
-                        className="text-xs text-gray-800 font-semibold flex items-center gap-1.5 leading-snug"
+                        className="text-xs text-gray-700 font-medium flex items-center gap-1.5 leading-snug"
                       >
                         <Music className="w-3.5 h-3.5 text-postech shrink-0" />
                         <span>{song}</span>
                       </p>
                     ))
                   ) : (
-                    <p className="text-xs text-gray-800 font-semibold flex items-center gap-1.5">
+                    <p className="text-xs text-gray-700 font-medium flex items-center gap-1">
                       <Music className="w-3.5 h-3.5 text-postech shrink-0" />
                       <span>{item.songTitle}</span>
                     </p>
                   )}
+                </div>
+
+                {/* Footer Time */}
+                <div className="flex items-center justify-between text-[11px] text-gray-500 pt-1.5 border-t border-gray-50 font-semibold">
+                  <div className="flex items-center gap-1">
+                    <Clock className="w-3 h-3 text-gray-400" />
+                    <span>{timeRangeText}</span>
+                  </div>
+                  <span className="text-gray-400 text-[10px]">
+                    {isFinished ? '공연 종료' : isLive ? '진행중' : '공연 예정'}
+                  </span>
                 </div>
               </div>
             );

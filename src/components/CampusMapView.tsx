@@ -210,7 +210,6 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
                   stroke={strokeColor}
                   strokeWidth={strokeWidth}
                   strokeDasharray={strokeDash}
-                  className={isOnPath ? 'animate-pulse' : ''}
                 />
 
                 {/* Intermediate Waypoints (shown in admin mode or when selected) */}
@@ -288,7 +287,6 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
                 stroke="#C80036"
                 strokeWidth={2.5 / scale}
                 strokeDasharray={`${2 / scale},${2 / scale}`}
-                className="animate-pulse"
               />
               {navResult.pathWaypoints.map((p, idx) => (
                 <circle
