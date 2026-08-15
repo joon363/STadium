@@ -48,14 +48,14 @@ export const AdminTournamentBuilder: React.FC<AdminTournamentBuilderProps> = ({
   // Compute Layout & SVG Orthogonal Connecting Lines
   const { nodesWithPos, svgLines, totalWidth, totalHeight } = useMemo(() => {
     return computeTournamentTreeLayout(treeData, {
-      cardWidth: 170,
-      cardHeight: 60,
-      teamPillWidth: 104,
-      teamPillHeight: 34,
-      colGap: 36,
-      levelHeight: 96,
-      paddingX: 32,
-      paddingY: 36,
+      cardWidth: 90,
+      cardHeight: 42,
+      teamPillWidth: 90,
+      teamPillHeight: 24,
+      colGap: 4,
+      levelHeight: 62,
+      paddingX: 6,
+      paddingY: 20,
     });
   }, [treeData]);
 
@@ -330,7 +330,7 @@ export const AdminTournamentBuilder: React.FC<AdminTournamentBuilderProps> = ({
                         key={node.id}
                         onClick={() => handleNodeClick(node.id)}
                         style={{ left: x, top: y, width, height }}
-                        className={`absolute z-10 rounded-lg flex items-center justify-between px-2.5 shadow-xs cursor-pointer transition-all border ${
+                        className={`absolute z-10 rounded-md flex items-center justify-between px-1.5 shadow-2xs cursor-pointer transition-all border ${
                           isSelected
                             ? 'ring-2 ring-postech border-postech bg-rose-50'
                             : isInspected
@@ -338,16 +338,16 @@ export const AdminTournamentBuilder: React.FC<AdminTournamentBuilderProps> = ({
                               : 'border-slate-300 bg-white hover:border-slate-400'
                         }`}
                       >
-                        <div className="flex items-center gap-1.5 min-w-0">
+                        <div className="flex items-center gap-1 min-w-0">
                           <div
                             style={{ backgroundColor: school.color }}
-                            className="w-2 h-4 rounded-xs shrink-0"
+                            className="w-1.5 h-3 rounded-xs shrink-0"
                           />
-                          <span className="text-xs font-black text-slate-900 truncate">
+                          <span className="text-[10px] font-black text-slate-900 truncate">
                             {school.shortName || node.teamName}
                           </span>
                         </div>
-                        <span className="text-[10px] font-bold text-slate-400">1행</span>
+                        <span className="text-[8px] font-bold text-slate-400">1행</span>
                       </div>
                     );
                   }
@@ -364,7 +364,7 @@ export const AdminTournamentBuilder: React.FC<AdminTournamentBuilderProps> = ({
                       key={game.id}
                       onClick={() => handleNodeClick(game.id)}
                       style={{ left: x, top: y, width, height }}
-                      className={`absolute z-10 rounded-lg flex flex-col justify-between overflow-hidden shadow-xs cursor-pointer transition-all border ${
+                      className={`absolute z-10 rounded-md flex flex-col justify-between overflow-hidden shadow-2xs cursor-pointer transition-all border ${
                         isSelected
                           ? 'ring-2 ring-postech border-postech bg-rose-50'
                           : isInspected
@@ -375,45 +375,49 @@ export const AdminTournamentBuilder: React.FC<AdminTournamentBuilderProps> = ({
                       }`}
                     >
                       {/* Top Header Label in Card */}
-                      <div className="bg-slate-100/90 border-b border-slate-200/80 px-2 py-0.5 flex items-center justify-between text-[9px] font-bold text-slate-600">
-                        <span>{game.roundName}</span>
+                      <div className="bg-slate-100/90 border-b border-slate-200/80 px-1 py-0 flex items-center justify-between text-[8px] font-bold text-slate-600 leading-tight">
+                        <span className="truncate">{game.roundName}</span>
                         {game.isLive && (
-                          <span className="text-rose-600 flex items-center gap-0.5">
-                            <Radio className="w-2 h-2 animate-pulse" /> LIVE
+                          <span className="text-rose-600 flex items-center gap-0.5 text-[7.5px]">
+                            <Radio className="w-1.5 h-1.5 animate-pulse" /> LIVE
                           </span>
                         )}
                       </div>
 
                       {/* Team 1 Row */}
                       <div
-                        className={`flex items-center justify-between px-2 py-0.5 h-1/2 border-b border-slate-100 ${
-                          isT1Win ? 'font-bold text-slate-900' : 'text-slate-600'
+                        className={`flex items-center justify-between px-1 py-0 h-1/2 border-b border-slate-100 ${
+                          isT1Win ? 'font-bold text-slate-900 bg-slate-50/60' : 'text-slate-600'
                         }`}
                       >
                         <div className="flex items-center gap-1 min-w-0">
                           <div
                             style={{ backgroundColor: t1.color }}
-                            className="w-1.5 h-3 rounded-xs shrink-0"
+                            className="w-1 h-2.5 rounded-xs shrink-0"
                           />
-                          <span className="text-[11px] truncate">{t1.shortName || game.team1}</span>
+                          <span className="text-[10px] truncate">{t1.shortName || game.team1}</span>
                         </div>
-                        <span className="text-[11px] font-black text-slate-800">{game.score1}</span>
+                        <span className="text-[10px] font-black text-slate-800 shrink-0">
+                          {game.score1}
+                        </span>
                       </div>
 
                       {/* Team 2 Row */}
                       <div
-                        className={`flex items-center justify-between px-2 py-0.5 h-1/2 ${
-                          isT2Win ? 'font-bold text-slate-900' : 'text-slate-600'
+                        className={`flex items-center justify-between px-1 py-0 h-1/2 ${
+                          isT2Win ? 'font-bold text-slate-900 bg-slate-50/60' : 'text-slate-600'
                         }`}
                       >
                         <div className="flex items-center gap-1 min-w-0">
                           <div
                             style={{ backgroundColor: t2.color }}
-                            className="w-1.5 h-3 rounded-xs shrink-0"
+                            className="w-1 h-2.5 rounded-xs shrink-0"
                           />
-                          <span className="text-[11px] truncate">{t2.shortName || game.team2}</span>
+                          <span className="text-[10px] truncate">{t2.shortName || game.team2}</span>
                         </div>
-                        <span className="text-[11px] font-black text-slate-800">{game.score2}</span>
+                        <span className="text-[10px] font-black text-slate-800 shrink-0">
+                          {game.score2}
+                        </span>
                       </div>
                     </div>
                   );

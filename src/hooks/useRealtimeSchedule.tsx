@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import {
   getRealtimeSportsConfig,
   getRealtimeStageConfig,
@@ -33,7 +33,7 @@ export interface UseRealtimeScheduleResult {
 const RealtimeScheduleContext = createContext<UseRealtimeScheduleResult | null>(null);
 
 export const RealtimeScheduleProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [now, setNow] = useState<Date>(new Date());
+  const [now, setNow] = useState<Date>(() => new Date());
   const [supabaseMatches, setSupabaseMatches] = useState<RawScheduledMatch[] | null>(null);
   const [supabaseStage, setSupabaseStage] = useState<StageItem[] | null>(null);
   const [youtubeLiveUrl, setYoutubeLiveUrl] = useState<string>(
@@ -70,10 +70,10 @@ export const RealtimeScheduleProvider: React.FC<{ children: React.ReactNode }> =
     // 1. Initial cached load (0ms from memory/localStorage)
     loadSupabaseData(false);
 
-    // 2. Single Global 1-second ticker for clock
+    // 2. Global ticker (relaxed to 5-second interval to throttle re-render overhead while maintaining responsiveness)
     const timer = setInterval(() => {
       setNow(new Date());
-    }, 1000);
+    }, 5000);
 
     // 3. Supabase Realtime WebSocket Subscription (Zero Polling, Instant Push)
     const unsubscribe = subscribeToRealtimeTables(
@@ -83,7 +83,7 @@ export const RealtimeScheduleProvider: React.FC<{ children: React.ReactNode }> =
       }
     );
 
-    // 4. Fallback background sync (relaxed to 60s instead of 10s spam)
+    // 4. Fallback background sync (relaxed to 60s)
     const syncTimer = setInterval(() => {
       loadSupabaseData(false);
     }, 60000);
@@ -102,27 +102,56 @@ export const RealtimeScheduleProvider: React.FC<{ children: React.ReactNode }> =
     };
   }, [loadSupabaseData]);
 
-  const sportsConfig = getRealtimeSportsConfig(now, supabaseMatches, selectedSchool);
-  const stageConfig = getRealtimeStageConfig(now, supabaseStage);
-  const stageSchedule = supabaseStage || STAGE_TIMETABLE;
-  const overallStandings = calculateOverallStandings(supabaseMatches, now);
+  // Derive schedule data with memoization
+  const sportsConfig = useMemo(
+    () => getRealtimeSportsConfig(now, supabaseMatches, selectedSchool),
+    [now, supabaseMatches, selectedSchool]
+  );
+
+  const stageConfig = useMemo(
+    () => getRealtimeStageConfig(now, supabaseStage),
+    [now, supabaseStage]
+  );
+
+  const stageSchedule = useMemo(
+    () => supabaseStage || STAGE_TIMETABLE,
+    [supabaseStage]
+  );
+
+  const overallStandings = useMemo(
+    () => calculateOverallStandings(supabaseMatches, now),
+    [supabaseMatches, now]
+  );
 
   const hours = String(now.getHours()).padStart(2, '0');
   const minutes = String(now.getMinutes()).padStart(2, '0');
   const seconds = String(now.getSeconds()).padStart(2, '0');
   const timeString = `${hours}:${minutes}:${seconds}`;
 
-  const value: UseRealtimeScheduleResult = {
-    now,
-    sportsConfig,
-    stageConfig,
-    stageSchedule,
-    overallStandings,
-    youtubeLiveUrl,
-    timeString,
-    isSupabaseLoaded,
-    refreshFromSupabase: () => loadSupabaseData(true),
-  };
+  const value: UseRealtimeScheduleResult = useMemo(
+    () => ({
+      now,
+      sportsConfig,
+      stageConfig,
+      stageSchedule,
+      overallStandings,
+      youtubeLiveUrl,
+      timeString,
+      isSupabaseLoaded,
+      refreshFromSupabase: () => loadSupabaseData(true),
+    }),
+    [
+      now,
+      sportsConfig,
+      stageConfig,
+      stageSchedule,
+      overallStandings,
+      youtubeLiveUrl,
+      timeString,
+      isSupabaseLoaded,
+      loadSupabaseData,
+    ]
+  );
 
   return (
     <RealtimeScheduleContext.Provider value={value}>{children}</RealtimeScheduleContext.Provider>
@@ -132,7 +161,6 @@ export const RealtimeScheduleProvider: React.FC<{ children: React.ReactNode }> =
 export function useRealtimeSchedule(): UseRealtimeScheduleResult {
   const context = useContext(RealtimeScheduleContext);
   if (!context) {
-    // Fallback if rendered outside provider
     const now = new Date();
     const sportsConfig = getRealtimeSportsConfig(now, null, 'ALL');
     const stageConfig = getRealtimeStageConfig(now, null);
