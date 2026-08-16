@@ -8,10 +8,12 @@ export interface TournamentLeafNode {
   level: 0; // always 0 for baseline leaf teams
 }
 
+export type MatchStatus = 'before' | 'live' | 'after';
+
 export interface TournamentGameNode {
   id: string; // e.g. "game-1", "match-123"
   type: 'game';
-  roundName: string; // e.g. "예선 1경기", "준결승 1경기", "결승전"
+  roundName: string; // e.g. "예선 1경기", "본선1", "결선"
   child1Id: string; // left child node id (can be team or game)
   child2Id: string; // right child node id (can be team or game)
   team1: string; // display team1 or "[Child 1 승자]"
@@ -24,6 +26,7 @@ export interface TournamentGameNode {
   endMinute: number;
   venue: string;
   isLive?: boolean;
+  status?: MatchStatus; // 'before' (경기 전) | 'live' (경기 중) | 'after' (경기 후)
   level: number; // max(child1.level, child2.level) + 1
 }
 
@@ -52,7 +55,10 @@ export interface ComputedSvgLine {
 }
 
 // Re-export layout & presets from their dedicated utility modules for backward compatibility
-export { computeTournamentTreeLayout } from '../utils/tournamentLayout';
+export {
+  computeTournamentTreeLayout,
+  propagateTournamentTreeWinners,
+} from '../utils/tournamentLayout';
 export {
   createPhoto1Preset,
   createPhoto2Preset,

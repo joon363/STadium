@@ -11,14 +11,13 @@ import { VenueNode, MapEdge, NavigationResult, findShortestPath } from '../confi
 import {
   Utensils,
   Coffee,
-  Info,
   Navigation,
   Clock,
-  Store,
-  Truck,
   MapPin,
   ChevronUp,
   ChevronDown,
+  Trophy,
+  Building,
 } from 'lucide-react';
 
 export const CampusMap: React.FC = () => {
@@ -31,7 +30,7 @@ export const CampusMap: React.FC = () => {
   const [foodTrucks, setFoodTrucks] = useState<FoodTruckItem[]>([]);
 
   // Bottom Sheet Drawer State (Always visible, starts in collapsed state at very bottom)
-  const [sheetTab, setSheetTab] = useState<'booth' | 'foodtruck' | 'venue'>('booth');
+  const [sheetTab, setSheetTab] = useState<'booth' | 'foodtruck' | 'sports_venue' | 'general_venue'>('booth');
   const [snapState, setSnapState] = useState<'collapsed' | 'mid' | 'expanded'>('collapsed');
 
   // Highlight State for Selected Venue Node
@@ -43,10 +42,15 @@ export const CampusMap: React.FC = () => {
   const [dragOffsetY, setDragOffsetY] = useState<number>(0);
   const touchStartRef = useRef<{ y: number; time: number }>({ y: 0, time: 0 });
 
-  // Overlay toggles
+  // Top Chips overlay toggles (Mutually exclusive: Eating vs Rest)
   const [showEatingZones, setShowEatingZones] = useState<boolean>(false);
   const [showRestAreas, setShowRestAreas] = useState<boolean>(false);
-  const [showVenueInfo, setShowVenueInfo] = useState<boolean>(true);
+
+  // Right-bottom Layer Checkbox toggles
+  const [showVenueNames, setShowVenueNames] = useState<boolean>(true);
+  const [showSportsVenues, setShowSportsVenues] = useState<boolean>(true);
+  const [showGeneralVenues, setShowGeneralVenues] = useState<boolean>(true);
+  const [showPaths, setShowPaths] = useState<boolean>(true);
 
   // User location / GPS
   const [userCoords] = useState<{ x: number; y: number } | null>(null);
@@ -58,6 +62,10 @@ export const CampusMap: React.FC = () => {
   const [destVenue, setDestVenue] = useState<string>('');
 
   const [selectedNode, setSelectedNode] = useState<VenueNode | null>(null);
+
+  // Derived Sports vs General Nodes
+  const sportsNodes = useMemo(() => nodes.filter((n) => n.category === 'sports'), [nodes]);
+  const generalNodes = useMemo(() => nodes.filter((n) => n.category !== 'sports'), [nodes]);
 
   // Fetch all map nodes, edges, booths, and food trucks from Supabase (Cached 0ms)
   useEffect(() => {
@@ -106,7 +114,7 @@ export const CampusMap: React.FC = () => {
   // Handle Selecting a Venue from Map or Sheet
   const handleSelectVenue = (node: VenueNode) => {
     setSelectedNode(node);
-    setSheetTab('venue');
+    setSheetTab(node.category === 'sports' ? 'sports_venue' : 'general_venue');
     setSnapState('mid');
     setHighlightedNodeId(node.id);
 
@@ -177,14 +185,20 @@ export const CampusMap: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full w-full bg-slate-900 text-gray-900 relative overflow-hidden select-none overscroll-none touch-none">
-      {/* Top Controls Overlay (Transparent Floating Chips directly on Map) */}
-      <div className="absolute top-3 left-3 right-3 z-30 flex flex-col gap-2 pointer-events-none">
-        {/* Filter Toggle Chips */}
+      {/* 1. Top Controls Overlay (Transparent Floating Chips directly on Map) */}
+      <div className="absolute top-3 left-3 right-3 z-30 flex flex-col gap-1.5 pointer-events-none">
+        {/* Row 1: Filter Toggle Chips: 취식 공간, 휴식 공간, 길찾기 */}
         <div className="pointer-events-auto flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
           <button
-            onClick={() => setShowEatingZones((prev) => !prev)}
+            onClick={() => {
+              setShowEatingZones((prev) => {
+                const next = !prev;
+                if (next) setShowRestAreas(false);
+                return next;
+              });
+            }}
             className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 shrink-0 transition-all shadow-md backdrop-blur-md ${showEatingZones
-              ? 'bg-amber-600 text-white border border-amber-400 font-extrabold ring-2 ring-amber-300/50'
+              ? 'bg-amber-500 text-white border border-amber-400 font-extrabold ring-2 ring-amber-300/50 shadow-amber-500/20'
               : 'bg-white/85 text-gray-800 border border-white/70 hover:bg-white/95'
               }`}
           >
@@ -193,9 +207,15 @@ export const CampusMap: React.FC = () => {
           </button>
 
           <button
-            onClick={() => setShowRestAreas((prev) => !prev)}
+            onClick={() => {
+              setShowRestAreas((prev) => {
+                const next = !prev;
+                if (next) setShowEatingZones(false);
+                return next;
+              });
+            }}
             className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 shrink-0 transition-all shadow-md backdrop-blur-md ${showRestAreas
-              ? 'bg-emerald-500 text-white border border-emerald-400 font-extrabold ring-2 ring-emerald-300/50'
+              ? 'bg-emerald-500 text-white border border-emerald-400 font-extrabold ring-2 ring-emerald-300/50 shadow-emerald-500/20'
               : 'bg-white/85 text-gray-800 border border-white/70 hover:bg-white/95'
               }`}
           >
@@ -204,26 +224,38 @@ export const CampusMap: React.FC = () => {
           </button>
 
           <button
-            onClick={() => setShowVenueInfo((prev) => !prev)}
-            className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 shrink-0 transition-all shadow-md backdrop-blur-md ${showVenueInfo
-              ? 'bg-blue-500 text-white border border-blue-400 font-extrabold ring-2 ring-blue-300/50'
-              : 'bg-white/85 text-gray-800 border border-white/70 hover:bg-white/95'
-              }`}
-          >
-            <Info className="w-3.5 h-3.5" />
-            <span>장소 정보</span>
-          </button>
-
-          <button
             onClick={() => setIsNavigating((prev) => !prev)}
             className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 shrink-0 transition-all shadow-md backdrop-blur-md ${isNavigating
-              ? 'bg-postech text-white border border-rose-400 font-extrabold ring-2 ring-rose-300/50'
+              ? 'bg-postech text-white border border-rose-400 font-extrabold ring-2 ring-rose-300/50 shadow-rose-500/20'
               : 'bg-white/85 text-gray-800 border border-white/70 hover:bg-white/95'
               }`}
           >
             <Navigation className="w-3.5 h-3.5" />
             <span>길찾기</span>
           </button>
+        </div>
+
+        {/* Row 2: Layer Checkbox Chips (Top-left, rounded white chips, black text) */}
+        <div className="pointer-events-auto flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+          {[
+            { id: 'names', label: '장소 이름', checked: showVenueNames, onChange: () => setShowVenueNames((v) => !v) },
+            { id: 'sports', label: '경기 장소', checked: showSportsVenues, onChange: () => setShowSportsVenues((v) => !v) },
+            { id: 'general', label: '일반 장소', checked: showGeneralVenues, onChange: () => setShowGeneralVenues((v) => !v) },
+            { id: 'paths', label: '경로', checked: showPaths, onChange: () => setShowPaths((v) => !v) },
+          ].map((item) => (
+            <label
+              key={item.id}
+              className="px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 shrink-0 cursor-pointer transition-all shadow-md backdrop-blur-md select-none bg-white/90 border border-white/80 text-gray-900 hover:bg-white active:scale-95"
+            >
+              <input
+                type="checkbox"
+                checked={item.checked}
+                onChange={item.onChange}
+                className="w-3.5 h-3.5 rounded accent-postech cursor-pointer shadow-xs"
+              />
+              <span>{item.label}</span>
+            </label>
+          ))}
         </div>
 
         {gpsError && (
@@ -283,7 +315,7 @@ export const CampusMap: React.FC = () => {
         )}
       </div>
 
-      {/* Main Map Interactive Canvas */}
+      {/* 2. Main Map Interactive Canvas */}
       <div className="flex-1 w-full h-full relative overflow-hidden bg-slate-900 overscroll-none touch-none">
         <CampusMapView
           nodes={nodes}
@@ -292,7 +324,10 @@ export const CampusMap: React.FC = () => {
           mode="user"
           showEatingZones={showEatingZones}
           showRestAreas={showRestAreas}
-          showVenueInfo={showVenueInfo}
+          showVenueNames={showVenueNames}
+          showSportsVenues={showSportsVenues}
+          showGeneralVenues={showGeneralVenues}
+          showPaths={showPaths}
           userCoords={userCoords}
           isNavigating={isNavigating}
           startVenue={startVenue}
@@ -302,7 +337,7 @@ export const CampusMap: React.FC = () => {
         />
       </div>
 
-      {/* Interactive Resizable 3-Snap Point Bottom Sheet Drawer (Always visible above BottomNav at bottom-[54px]) */}
+      {/* 4. Interactive Resizable 3-Snap Point Bottom Sheet Drawer (Above BottomNav) */}
       <div
         style={{ height: `${getSheetHeight()}px` }}
         className={`fixed bottom-[54px] inset-x-0 z-30 w-full bg-white border-t border-gray-200/90 rounded-t-3xl shadow-2xl flex flex-col text-gray-900 ${isDragging ? '' : 'transition-all duration-200 ease-out'
@@ -321,15 +356,15 @@ export const CampusMap: React.FC = () => {
             className="w-12 h-1.5 bg-gray-300 hover:bg-gray-400 rounded-full cursor-pointer mb-1.5 transition-colors"
           />
 
-          {/* Tab Switcher Header */}
+          {/* 4-Tab Switcher Header: 부스, 푸드트럭, 경기 장소, 일반 장소 */}
           <div className="flex items-center justify-between w-full">
-            <div className="flex items-center gap-1 bg-gray-100 p-0.5 rounded-xl">
+            <div className="flex items-center gap-1 bg-gray-100 p-0.5 rounded-xl overflow-x-auto no-scrollbar">
               <button
                 onClick={() => {
                   setSheetTab('booth');
                   if (snapState === 'collapsed') setSnapState('mid');
                 }}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${sheetTab === 'booth'
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all shrink-0 ${sheetTab === 'booth'
                   ? 'bg-amber-500 text-white shadow-xs font-extrabold'
                   : 'text-gray-600 hover:text-gray-900'
                   }`}
@@ -342,7 +377,7 @@ export const CampusMap: React.FC = () => {
                   setSheetTab('foodtruck');
                   if (snapState === 'collapsed') setSnapState('mid');
                 }}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${sheetTab === 'foodtruck'
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all shrink-0 ${sheetTab === 'foodtruck'
                   ? 'bg-orange-500 text-white shadow-xs font-extrabold'
                   : 'text-gray-600 hover:text-gray-900'
                   }`}
@@ -352,21 +387,34 @@ export const CampusMap: React.FC = () => {
 
               <button
                 onClick={() => {
-                  setSheetTab('venue');
+                  setSheetTab('sports_venue');
                   if (snapState === 'collapsed') setSnapState('mid');
                 }}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${sheetTab === 'venue'
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all shrink-0 flex items-center gap-1 ${sheetTab === 'sports_venue'
+                  ? 'bg-postech text-white shadow-xs font-extrabold'
+                  : 'text-gray-600 hover:text-gray-900'
+                  }`}
+              >
+                <span>경기 장소 ({sportsNodes.length})</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setSheetTab('general_venue');
+                  if (snapState === 'collapsed') setSnapState('mid');
+                }}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all shrink-0 flex items-center gap-1 ${sheetTab === 'general_venue'
                   ? 'bg-blue-600 text-white shadow-xs font-extrabold'
                   : 'text-gray-600 hover:text-gray-900'
                   }`}
               >
-                📍 행사 장소 ({nodes.length})
+                <span>일반 장소 ({generalNodes.length})</span>
               </button>
             </div>
 
             <button
               onClick={cycleSnapState}
-              className="p-1 text-gray-500 hover:text-gray-900 rounded-lg hover:bg-gray-100"
+              className="p-1 text-gray-500 hover:text-gray-900 rounded-lg hover:bg-gray-100 ml-1 shrink-0"
               title="크기 조절"
             >
               {snapState === 'expanded' ? (
@@ -381,7 +429,7 @@ export const CampusMap: React.FC = () => {
         {/* Sheet Body Content List (Visible when expanded or mid) */}
         {snapState !== 'collapsed' && (
           <div className="flex-1 overflow-y-auto p-3 space-y-2 no-scrollbar">
-            {/* Booths Tab */}
+            {/* 1. Booths Tab */}
             {sheetTab === 'booth' &&
               (booths.length === 0 ? (
                 <div className="p-8 text-center text-xs font-bold text-gray-400">
@@ -424,7 +472,7 @@ export const CampusMap: React.FC = () => {
                 ))
               ))}
 
-            {/* Food Trucks Tab */}
+            {/* 2. Food Trucks Tab */}
             {sheetTab === 'foodtruck' &&
               (foodTrucks.length === 0 ? (
                 <div className="p-8 text-center text-xs font-bold text-gray-400">
@@ -458,16 +506,64 @@ export const CampusMap: React.FC = () => {
                 ))
               ))}
 
-            {/* Event Venues Tab (행사 장소) with Flash Border Highlight Effect */}
-            {sheetTab === 'venue' && (
-              <div className="space-y-2.5">
-
-                {/* All Venues List */}
-                <div className="pt-1 space-y-1.5">
-                  <div className="text-[11px] font-bold text-gray-500 px-1">
-                    전체 행사 장소 ({nodes.length})
+            {/* 3. Sports Venues Tab (경기 장소: category === 'sports') */}
+            {sheetTab === 'sports_venue' && (
+              <div className="space-y-1.5">
+                <div className="text-[11px] font-bold text-gray-500 px-1">
+                  경기 장소 목록 ({sportsNodes.length})
+                </div>
+                {sportsNodes.length === 0 ? (
+                  <div className="p-8 text-center text-xs font-bold text-gray-400">
+                    등록된 경기 장소가 없습니다.
                   </div>
-                  {nodes.map((node) => {
+                ) : (
+                  sportsNodes.map((node) => {
+                    const isCurrentlySelected = selectedNode?.id === node.id;
+                    const isHighlighted = highlightedNodeId === node.id;
+                    return (
+                      <div
+                        key={node.id}
+                        onClick={() => handleSelectVenue(node)}
+                        className={`rounded-xl p-2.5 flex items-center justify-between cursor-pointer transition-all duration-300 ${isHighlighted
+                          ? 'bg-rose-50 border-2 border-rose-500 ring-2 ring-rose-200 shadow-sm'
+                          : isCurrentlySelected
+                            ? 'bg-rose-50/60 border border-rose-300'
+                            : 'bg-white border border-gray-200/90 hover:border-gray-300 shadow-2xs'
+                          }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="text-xl">{node.icon || '🏆'}</span>
+                          <div className="min-w-0">
+                            <h4 className="font-extrabold text-xs text-gray-900 truncate">
+                              {node.name}
+                            </h4>
+                            <p className="text-[10px] text-gray-500 truncate">{node.description}</p>
+                          </div>
+                        </div>
+                        {isCurrentlySelected && (
+                          <span className="text-[10px] font-bold text-rose-600 bg-rose-100/70 px-1.5 py-0.2 rounded">
+                            선택됨
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
+
+            {/* 4. General Venues Tab (일반 장소: category !== 'sports') */}
+            {sheetTab === 'general_venue' && (
+              <div className="space-y-1.5">
+                <div className="text-[11px] font-bold text-gray-500 px-1">
+                  일반 장소 목록 ({generalNodes.length})
+                </div>
+                {generalNodes.length === 0 ? (
+                  <div className="p-8 text-center text-xs font-bold text-gray-400">
+                    등록된 일반 장소가 없습니다.
+                  </div>
+                ) : (
+                  generalNodes.map((node) => {
                     const isCurrentlySelected = selectedNode?.id === node.id;
                     const isHighlighted = highlightedNodeId === node.id;
                     return (
@@ -484,7 +580,7 @@ export const CampusMap: React.FC = () => {
                         <div className="flex items-center gap-2.5 min-w-0">
                           <span className="text-xl">{node.icon || '📍'}</span>
                           <div className="min-w-0">
-                            <h4 className="font-bold text-xs text-gray-900 truncate">
+                            <h4 className="font-extrabold text-xs text-gray-900 truncate">
                               {node.name}
                             </h4>
                             <p className="text-[10px] text-gray-500 truncate">{node.description}</p>
@@ -497,8 +593,8 @@ export const CampusMap: React.FC = () => {
                         )}
                       </div>
                     );
-                  })}
-                </div>
+                  })
+                )}
               </div>
             )}
           </div>

@@ -47,36 +47,54 @@ export async function getSupabaseStagePerformances(
 }
 
 /**
- * Update Stage Performance in Supabase
+ * Save all Stage Performances to Supabase (Sync whole list)
  */
-export async function updateSupabaseStagePerformance(
-  index: number,
-  item: StageItem
+export async function saveAllSupabaseStagePerformances(
+  items: StageItem[]
 ): Promise<boolean> {
   if (!supabase) return false;
 
   try {
-    const { error } = await supabase.from('stage_performances').upsert({
-      id: index + 1,
-      school: item.school,
-      club_name: item.clubName,
-      category: item.category || '기타',
-      genre: item.genre || '',
-      song_title: item.songTitle,
-      start_hour: item.startHour,
-      start_minute: item.startMinute,
-      end_hour: item.endHour,
-      end_minute: item.endMinute,
-    });
+    // 1. Delete all existing rows
+    const { error: delError } = await supabase
+      .from('stage_performances')
+      .delete()
+      .neq('id', 0);
 
-    if (error) {
-      console.error('Failed to update stage performance in Supabase:', error);
-      return false;
+    if (delError) {
+      console.warn('Supabase stage delete warning before bulk insert:', delError);
     }
+
+    // 2. Insert all items with ordered IDs
+    if (items.length > 0) {
+      const rows = items.map((item, idx) => ({
+        id: idx + 1,
+        school: item.school,
+        club_name: item.clubName,
+        category: item.category || '기타',
+        genre: item.genre || '',
+        song_title: item.songTitle || '',
+        start_hour: item.startHour,
+        start_minute: item.startMinute,
+        end_hour: item.endHour,
+        end_minute: item.endMinute,
+      }));
+
+      const { error: insertError } = await supabase
+        .from('stage_performances')
+        .insert(rows);
+
+      if (insertError) {
+        console.error('Failed to bulk insert stage performances in Supabase:', insertError);
+        return false;
+      }
+    }
+
     invalidateAppCache('stage_performances');
     return true;
   } catch (err) {
-    console.error('Supabase stage update error:', err);
+    console.error('Supabase stage save all error:', err);
     return false;
   }
 }
+

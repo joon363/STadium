@@ -17,6 +17,10 @@ export interface CampusMapViewProps {
 
   showEatingZones?: boolean;
   showRestAreas?: boolean;
+  showVenueNames?: boolean;
+  showSportsVenues?: boolean;
+  showGeneralVenues?: boolean;
+  showPaths?: boolean;
   showVenueInfo?: boolean;
   userCoords?: { x: number; y: number } | null;
   isNavigating?: boolean;
@@ -41,6 +45,10 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
   onMapClick,
   showEatingZones = false,
   showRestAreas = false,
+  showVenueNames,
+  showSportsVenues = true,
+  showGeneralVenues = true,
+  showPaths = true,
   showVenueInfo = true,
   userCoords = null,
   isNavigating = false,
@@ -49,6 +57,7 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
   navResult = null,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const showNames = showVenueNames !== undefined ? showVenueNames : showVenueInfo;
 
   // Zoom & Pan Internal State
   const [scale, setScale] = useState<number>(1.8);
@@ -247,6 +256,9 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
             const isOnPath = isPathActive && pathEdgeSet.has(edge.id);
             const isNonPathInNavMode = isPathActive && !isOnPath;
 
+            // If showPaths is false, hide edges unless it is on active navigation path
+            if (!showPaths && !isOnPath) return null;
+
             const pts = [fromNode, ...(edge.waypoints || []), toNode];
             const pointsStr = pts.map((p) => `${p.x},${p.y}`).join(' ');
 
@@ -330,8 +342,14 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
           const isNavStart = isNavigating && startVenue === node.id;
           const isNavDest = isNavigating && destVenue === node.id;
 
-          const isHighlighted =
-            (showEatingZones && node.isEatingZone) || (showRestAreas && node.isRestArea);
+          const isSports = node.category === 'sports';
+          const isCategoryVisible = isSports ? showSportsVenues : showGeneralVenues;
+          const isMustShow = isSelected || isNavStart || isNavDest;
+
+          if (!isCategoryVisible && !isMustShow) return null;
+
+          const isEatingHighlighted = showEatingZones && node.isEatingZone;
+          const isRestHighlighted = showRestAreas && node.isRestArea;
 
           return (
             <div
@@ -352,21 +370,23 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
               <div
                 className={`w-7 h-7 rounded-full flex items-center justify-center shadow-lg transition-transform ${
                   isNavDest
-                    ? 'bg-rose-600 ring-4 ring-rose-300 scale-125'
+                    ? 'bg-rose-600 ring-4 ring-rose-300 scale-125 text-white'
                     : isNavStart
-                      ? 'bg-blue-600 ring-4 ring-blue-300 scale-125'
+                      ? 'bg-blue-600 ring-4 ring-blue-300 scale-125 text-white'
                       : isSelected
-                        ? 'bg-amber-500 ring-4 ring-amber-200 scale-125'
-                        : isHighlighted
-                          ? 'bg-emerald-500 ring-4 ring-emerald-200 scale-115'
-                          : 'bg-white/95 border border-gray-300 hover:scale-110'
+                        ? 'bg-blue-600 ring-4 ring-blue-300 scale-125 text-white'
+                        : isEatingHighlighted
+                          ? 'bg-amber-500 ring-4 ring-amber-300 scale-115 text-white'
+                          : isRestHighlighted
+                            ? 'bg-emerald-500 ring-4 ring-emerald-300 scale-115 text-white'
+                            : 'bg-white/95 border border-gray-300 hover:scale-110 text-gray-800'
                 }`}
               >
                 <span className="text-xs">{node.icon || '📍'}</span>
               </div>
 
               {/* Venue Name Label */}
-              {showVenueInfo && (
+              {showNames && (
                 <div className="absolute top-8 left-1/2 -translate-x-1/2 bg-white/95 text-gray-900 text-[10px] font-extrabold px-2 py-0.5 rounded-md whitespace-nowrap border border-gray-200 shadow-md">
                   {node.name}
                 </div>

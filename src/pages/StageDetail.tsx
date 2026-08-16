@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
-import { SCHOOLS, STAGE_CATEGORIES, StageItem } from '../config/stadiumConfig';
+import { SCHOOLS, StageItem } from '../config/stadiumConfig';
+
+const STAGE_CATEGORIES = ['ALL', '밴드', '댄스', '보컬', '어쿠스틱', '힙합', '기타'] as const;
 import { useRealtimeSchedule } from '../hooks/useRealtimeSchedule';
 import { useSchool } from '../context/SchoolContext';
+import { getDelayedTime } from '../utils/matchEvaluator';
 import {
   Clock,
   MapPin,
@@ -17,7 +20,7 @@ import {
 } from 'lucide-react';
 
 export const StageDetail: React.FC = () => {
-  const { stageConfig, stageSchedule, now, youtubeLiveUrl } = useRealtimeSchedule();
+  const { stageConfig, stageSchedule, stageDelayMinutes, now, getYoutubeLiveUrl } = useRealtimeSchedule();
   const { selectedSchool, setSelectedSchool } = useSchool();
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [selectedSetlist, setSelectedSetlist] = useState<StageItem | null>(null);
@@ -56,23 +59,21 @@ export const StageDetail: React.FC = () => {
         </div>
         <button
           onClick={() => setSelectedCategory('ALL')}
-          className={`px-2.5 py-1 rounded-full text-xs font-bold shrink-0 transition-colors shadow-2xs ${
-            selectedCategory === 'ALL'
-              ? 'bg-slate-900 text-white'
-              : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-          }`}
+          className={`px-2.5 py-1 rounded-full text-xs font-bold shrink-0 transition-colors shadow-2xs ${selectedCategory === 'ALL'
+            ? 'bg-slate-900 text-white'
+            : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+            }`}
         >
           전체
         </button>
-        {STAGE_CATEGORIES.map((cat) => (
+        {STAGE_CATEGORIES.filter((c) => c !== 'ALL').map((cat: string) => (
           <button
             key={cat}
             onClick={() => setSelectedCategory(cat)}
-            className={`px-2.5 py-1 rounded-full text-xs font-bold shrink-0 transition-colors shadow-2xs ${
-              selectedCategory === cat
-                ? 'bg-slate-900 text-white font-extrabold'
-                : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-            }`}
+            className={`px-2.5 py-1 rounded-full text-xs font-bold shrink-0 transition-colors shadow-2xs ${selectedCategory === cat
+              ? 'bg-slate-900 text-white font-extrabold'
+              : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+              }`}
           >
             {cat}
           </button>
@@ -107,12 +108,12 @@ export const StageDetail: React.FC = () => {
           <div className="flex items-center gap-1.5">
             {stageConfig.isLive ? (
               <a
-                href={youtubeLiveUrl}
+                href={getYoutubeLiveUrl('stage')}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-[11px] font-extrabold bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-2.5 py-0.5 rounded-full uppercase active:scale-95 transition-all shadow-2xs cursor-pointer"
               >
-                <Radio className="w-3.5 h-3.5 text-rose-500 animate-pulse" />
+                <Radio className="w-3.5 h-3.5 text-rose-500" />
                 <span>STAGE LIVE</span>
                 <ChevronRight className="w-3.5 h-3.5 text-rose-500" />
               </a>
@@ -160,7 +161,7 @@ export const StageDetail: React.FC = () => {
           </div>
           <div className="flex items-center gap-1 text-[11px] text-gray-500 font-medium">
             <MapPin className="w-3 h-3 text-slate-600" />
-            <span>POSTECH 체육관 실내무대</span>
+            <span>POSTECH 대강당</span>
           </div>
         </div>
 
@@ -185,19 +186,18 @@ export const StageDetail: React.FC = () => {
             {filteredSchedule.map((item, idx) => {
               const schoolObj = SCHOOLS[item.school] || SCHOOLS.POSTECH;
 
+              const sTime = getDelayedTime(item.startHour, item.startMinute, stageDelayMinutes);
+              const eTime = getDelayedTime(item.endHour, item.endMinute, stageDelayMinutes);
+
               const start = new Date(now);
-              start.setHours(item.startHour, item.startMinute, 0, 0);
+              start.setHours(sTime.hour, sTime.minute, 0, 0);
               const end = new Date(now);
-              end.setHours(item.endHour, item.endMinute, 0, 0);
+              end.setHours(eTime.hour, eTime.minute, 0, 0);
 
               const isLive = nowMs >= start.getTime() && nowMs <= end.getTime();
               const isFinished = nowMs > end.getTime();
 
-              const timeRangeText = `${String(item.startHour).padStart(2, '0')}:${String(
-                item.startMinute
-              ).padStart(2, '0')} - ${String(item.endHour).padStart(2, '0')}:${String(
-                item.endMinute
-              ).padStart(2, '0')}`;
+              const timeRangeText = `${sTime.timeText} - ${eTime.timeText}`;
 
               return (
                 <div key={idx} className="relative">
@@ -214,13 +214,12 @@ export const StageDetail: React.FC = () => {
 
                   {/* Card Container with Modern Angled Sliced Fade Accent */}
                   <div
-                    className={`relative overflow-hidden bg-white border rounded-xl p-3 flex flex-col gap-1.5 transition-all ${
-                      isFinished
-                        ? 'opacity-60 grayscale border-gray-200 bg-slate-50/70'
-                        : isLive
-                          ? 'border-rose-300 shadow-xs ring-1 ring-rose-200/50'
-                          : 'border-gray-200/90 shadow-2xs hover:border-gray-300'
-                    }`}
+                    className={`relative overflow-hidden bg-white border rounded-xl p-3 flex flex-col gap-1.5 transition-all ${isFinished
+                      ? 'opacity-60 grayscale border-gray-200 bg-slate-50/70'
+                      : isLive
+                        ? 'border-rose-300 shadow-xs ring-1 ring-rose-200/50'
+                        : 'border-gray-200/90 shadow-2xs hover:border-gray-300'
+                      }`}
                   >
                     {/* Left Vertical School Solid Edge Accent */}
                     <div
@@ -266,7 +265,7 @@ export const StageDetail: React.FC = () => {
                             style={{ color: isFinished ? '#64748b' : schoolObj.color }}
                             className="mr-1"
                           >
-                            [{schoolObj.shortName}]
+                            {schoolObj.shortName}
                           </strong>
                           {item.clubName}
                         </span>
@@ -275,7 +274,7 @@ export const StageDetail: React.FC = () => {
                       <div className="flex items-center gap-1 shrink-0">
                         {isLive && (
                           <a
-                            href={youtubeLiveUrl}
+                            href={getYoutubeLiveUrl('stage')}
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={(e) => e.stopPropagation()}

@@ -11,8 +11,9 @@ export function subscribeToRealtimeTables(
   if (!supabase) return () => {};
 
   const client = supabase;
+  const channelId = `rt-${tables.join('_')}-${Math.random().toString(36).substring(2, 9)}`;
   const channel = client
-    .channel('public-schedule-realtime')
+    .channel(channelId)
     .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
       if (tables.includes(payload.table)) {
         invalidateAppCache(payload.table);
@@ -22,6 +23,10 @@ export function subscribeToRealtimeTables(
     .subscribe();
 
   return () => {
-    client.removeChannel(channel);
+    try {
+      client.removeChannel(channel);
+    } catch (e) {
+      console.warn('Error removing realtime channel:', e);
+    }
   };
 }

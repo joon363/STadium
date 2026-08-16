@@ -5,6 +5,7 @@ import {
   TournamentLeafNode,
   TournamentGameNode,
   computeTournamentTreeLayout,
+  propagateTournamentTreeWinners,
   createPhoto1Preset,
   createPhoto2Preset,
   create4TeamPreset,
@@ -28,6 +29,8 @@ interface AdminTournamentCanvasProps {
   isSaving?: boolean;
   selectedMatchRound?: string | null;
   onSelectGame?: (game: TournamentGameNode | null) => void;
+  selectedNodeId?: string | null;
+  onSelectNode?: (nodeId: string | null) => void;
 }
 
 export const AdminTournamentBuilder: React.FC<AdminTournamentCanvasProps> = ({
@@ -38,18 +41,29 @@ export const AdminTournamentBuilder: React.FC<AdminTournamentCanvasProps> = ({
   isSaving,
   selectedMatchRound,
   onSelectGame,
+  selectedNodeId,
+  onSelectNode,
 }) => {
   // Selected nodes for pairing (up to 2 nodes selected)
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
   // Node currently highlighted
-  const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
+  const [localActiveNodeId, setLocalActiveNodeId] = useState<string | null>(null);
+  const activeNodeId = selectedNodeId !== undefined ? selectedNodeId : localActiveNodeId;
+  const setActiveNodeId = (id: string | null) => {
+    setLocalActiveNodeId(id);
+    if (onSelectNode) onSelectNode(id);
+  };
 
-  const nodes = treeData.nodes || {};
+  const effectiveTree = useMemo(() => {
+    return propagateTournamentTreeWinners(treeData);
+  }, [treeData]);
+
+  const nodes = effectiveTree.nodes || {};
   const allNodeList = Object.values(nodes);
 
   // Compute Layout & SVG Orthogonal Connecting Lines
   const { nodesWithPos, svgLines, totalWidth, totalHeight } = useMemo(() => {
-    return computeTournamentTreeLayout(treeData, {
+    return computeTournamentTreeLayout(effectiveTree, {
       cardWidth: 90,
       cardHeight: 42,
       teamPillWidth: 90,
@@ -59,7 +73,7 @@ export const AdminTournamentBuilder: React.FC<AdminTournamentCanvasProps> = ({
       paddingX: 6,
       paddingY: 18,
     });
-  }, [treeData]);
+  }, [effectiveTree]);
 
   // Leaf teams sorted by column index
   const leafTeams = useMemo(() => {
@@ -94,7 +108,7 @@ export const AdminTournamentBuilder: React.FC<AdminTournamentCanvasProps> = ({
     const defaultSchools = ['POSTECH', 'KAIST', 'GIST', 'UNIST', 'DGIST', 'KENTECH'];
     const assignedSchool = defaultSchools[nextCol % defaultSchools.length] || `팀 ${nextCol + 1}`;
 
-    const newId = `team-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+    const newId = `${sportKey}-team-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
     const newTeamNode: TournamentLeafNode = {
       id: newId,
       type: 'team',
@@ -125,9 +139,9 @@ export const AdminTournamentBuilder: React.FC<AdminTournamentCanvasProps> = ({
 
     const gameCount = allNodeList.filter((n) => n.type === 'game').length + 1;
     const roundNameDefault =
-      newLevel >= 3 ? '결승전' : newLevel === 2 ? `본선 ${gameCount}경기` : `예선 ${gameCount}경기`;
+      newLevel >= 3 ? '결선' : newLevel === 2 ? `본선 ${gameCount}경기` : `예선 ${gameCount}경기`;
 
-    const newGameId = `game-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+    const newGameId = `${sportKey}-game-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
     const newGameNode: TournamentGameNode = {
       id: newGameId,
       type: 'game',
@@ -312,13 +326,12 @@ export const AdminTournamentBuilder: React.FC<AdminTournamentCanvasProps> = ({
                     key={node.id}
                     onClick={() => handleNodeClick(node.id)}
                     style={{ left: x, top: y, width, height }}
-                    className={`absolute z-10 rounded-md flex items-center justify-between px-1.5 shadow-2xs cursor-pointer transition-all border ${
-                      isSelected
-                        ? 'ring-2 ring-postech border-postech bg-rose-50'
-                        : isActive
-                          ? 'ring-2 ring-slate-500 border-slate-700 bg-white'
-                          : 'border-slate-300 bg-white hover:border-slate-400'
-                    }`}
+                    className={`absolute z-10 rounded-md flex items-center justify-between px-1.5 shadow-2xs cursor-pointer transition-all border ${isSelected
+                      ? 'ring-2 ring-postech border-postech bg-rose-50'
+                      : isActive
+                        ? 'ring-2 ring-slate-500 border-slate-700 bg-white'
+                        : 'border-slate-300 bg-white hover:border-slate-400'
+                      }`}
                   >
                     <div className="flex items-center gap-1 min-w-0">
                       <div
@@ -340,30 +353,37 @@ export const AdminTournamentBuilder: React.FC<AdminTournamentCanvasProps> = ({
               const t2 = SCHOOLS[game.team2] || { color: '#64748b', shortName: game.team2 };
               const isT1Win = game.score1 > game.score2;
               const isT2Win = game.score2 > game.score1;
+              const isLive = game.status === 'live' || (game.status === undefined && game.isLive);
+              const isAfter = game.status === 'after';
 
               return (
                 <div
                   key={game.id}
                   onClick={() => handleNodeClick(game.id)}
                   style={{ left: x, top: y, width, height }}
-                  className={`absolute z-10 rounded-md flex flex-col justify-between overflow-hidden shadow-2xs cursor-pointer transition-all border ${
-                    isMatchHighlighted
+                  className={`absolute z-10 rounded-md flex flex-col justify-between overflow-hidden shadow-2xs cursor-pointer transition-all border ${isMatchHighlighted
                       ? 'ring-2 ring-amber-500 border-amber-500 bg-amber-50/40'
                       : isSelected
                         ? 'ring-2 ring-postech border-postech bg-rose-50'
                         : isActive
                           ? 'ring-2 ring-slate-600 border-slate-800 bg-white'
-                          : game.isLive
+                          : isLive
                             ? 'border-rose-500 ring-1 ring-rose-200 bg-white'
-                            : 'border-slate-300 bg-white hover:border-slate-400'
-                  }`}
+                            : isAfter
+                              ? 'border-slate-300 bg-slate-50/70'
+                              : 'border-slate-300 bg-white hover:border-slate-400'
+                    }`}
                 >
                   {/* Top Header Label in Card */}
                   <div className="bg-slate-100/90 border-b border-slate-200/80 px-1 py-0 flex items-center justify-between text-[8px] font-bold text-slate-600 leading-tight">
                     <span className="truncate">{game.roundName}</span>
-                    {game.isLive ? (
-                      <span className="text-rose-600 flex items-center gap-0.5 text-[7.5px]">
-                        <Radio className="w-1.5 h-1.5 animate-pulse" /> LIVE
+                    {isLive ? (
+                      <span className="text-rose-600 flex items-center gap-0.5 text-[7.5px] font-black">
+                        <Radio className="w-1.5 h-1.5" /> LIVE
+                      </span>
+                    ) : isAfter ? (
+                      <span className="text-emerald-700 text-[7.5px] font-bold">
+                        종료
                       </span>
                     ) : (
                       <span className="text-slate-400 text-[7.5px]">
@@ -375,9 +395,8 @@ export const AdminTournamentBuilder: React.FC<AdminTournamentCanvasProps> = ({
 
                   {/* Team 1 Row */}
                   <div
-                    className={`flex items-center justify-between px-1 py-0 h-1/2 border-b border-slate-100 ${
-                      isT1Win ? 'font-bold text-slate-900 bg-slate-50/60' : 'text-slate-600'
-                    }`}
+                    className={`flex items-center justify-between px-1 py-0 h-1/2 border-b border-slate-100 ${isAfter && isT1Win ? 'font-bold text-slate-900 bg-slate-100/80' : isAfter && isT2Win ? 'text-slate-400 opacity-60' : 'text-slate-700'
+                      }`}
                   >
                     <div className="flex items-center gap-1 min-w-0">
                       <div
@@ -393,9 +412,8 @@ export const AdminTournamentBuilder: React.FC<AdminTournamentCanvasProps> = ({
 
                   {/* Team 2 Row */}
                   <div
-                    className={`flex items-center justify-between px-1 py-0 h-1/2 ${
-                      isT2Win ? 'font-bold text-slate-900 bg-slate-50/60' : 'text-slate-600'
-                    }`}
+                    className={`flex items-center justify-between px-1 py-0 h-1/2 ${isAfter && isT2Win ? 'font-bold text-slate-900 bg-slate-100/80' : isAfter && isT1Win ? 'text-slate-400 opacity-60' : 'text-slate-700'
+                      }`}
                   >
                     <div className="flex items-center gap-1 min-w-0">
                       <div
@@ -423,7 +441,7 @@ export const AdminTournamentBuilder: React.FC<AdminTournamentCanvasProps> = ({
             className="px-2.5 py-1.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 rounded-lg text-xs font-bold flex items-center gap-1 shadow-2xs transition-colors"
           >
             <Plus className="w-3.5 h-3.5 text-postech" />
-            <span>+ 팀 노드 추가 (1행)</span>
+            <span>팀 노드 추가 (1행)</span>
           </button>
 
           {activeNodeId && (

@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  DEFAULT_RAW_SCHEDULE_FLAT,
   RawScheduledMatch,
-  STAGE_TIMETABLE,
   StageItem,
   VenueNode,
   MapEdge,
@@ -10,8 +8,6 @@ import {
 } from '../../config/stadiumConfig';
 import {
   TournamentTreeData,
-  createPhoto1Preset,
-  createPhoto2Preset,
 } from '../../types/tournamentTree';
 import {
   getSupabaseMatches,
@@ -41,6 +37,7 @@ import { FoodTrucksTab } from './tabs/FoodTrucksTab';
 import { SponsorsTab } from './tabs/SponsorsTab';
 import { NoticesTab } from './tabs/NoticesTab';
 import { FaqsTab } from './tabs/FaqsTab';
+import { ContactTab } from './tabs/ContactTab';
 import { SettingsTab } from './tabs/SettingsTab';
 
 export const Admin: React.FC = () => {
@@ -55,8 +52,8 @@ export const Admin: React.FC = () => {
   const [isSaving, setIsSaving] = useState<boolean>(false);
 
   // Domain Entity States
-  const [matches, setMatches] = useState<RawScheduledMatch[]>(DEFAULT_RAW_SCHEDULE_FLAT);
-  const [stageItems, setStageItems] = useState<StageItem[]>(STAGE_TIMETABLE);
+  const [matches, setMatches] = useState<RawScheduledMatch[]>([]);
+  const [stageItems, setStageItems] = useState<StageItem[]>([]);
   const [mapNodes, setMapNodes] = useState<VenueNode[]>([]);
   const [mapEdges, setMapEdges] = useState<MapEdge[]>([]);
   const [booths, setBooths] = useState<BoothItem[]>([]);
@@ -80,15 +77,22 @@ export const Admin: React.FC = () => {
         setMatches(fetchedMatches);
       }
 
-      const sportsList: SportKey[] = ['soccer', 'baseball', 'lol', 'badminton', 'basketball'];
+      const sportsList: SportKey[] = [
+        'soccer',
+        'baseball',
+        'lol',
+        'badminton_men',
+        'badminton_women',
+        'badminton_mixed',
+        'basketball',
+      ];
       const loadedTrees: Record<string, TournamentTreeData> = {};
       for (const sKey of sportsList) {
         const tree = await getSupabaseTournamentTree(sKey, force);
         if (tree && Object.keys(tree.nodes || {}).length > 0) {
           loadedTrees[sKey] = tree;
         } else {
-          loadedTrees[sKey] =
-            sKey === 'baseball' ? createPhoto1Preset(sKey) : createPhoto2Preset(sKey);
+          loadedTrees[sKey] = { sportKey: sKey, nodes: {} };
         }
       }
       setTournamentTrees(loadedTrees);
@@ -196,7 +200,7 @@ export const Admin: React.FC = () => {
       />
 
       {/* Main 16:9 Desktop Workspace Layout */}
-      <div className="flex-1 max-w-7xl w-full mx-auto p-6 flex flex-col space-y-4">
+      <div className="flex-1 w-full p-4 sm:p-6 flex flex-col space-y-4">
         {activeTab === 'matches' && (
           <MatchesTab
             matches={matches}
@@ -277,6 +281,10 @@ export const Admin: React.FC = () => {
             setIsSaving={setIsSaving}
             setSaveStatus={setSaveStatus}
           />
+        )}
+
+        {activeTab === 'contact' && (
+          <ContactTab setSaveStatus={setSaveStatus} />
         )}
 
         {activeTab === 'settings' && (

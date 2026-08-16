@@ -9,7 +9,10 @@ interface LeaderboardSectionProps {
 export const LeaderboardSection: React.FC<LeaderboardSectionProps> = ({ standings }) => {
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
 
-  const getRankBadge = (rank: number) => {
+  const getRankBadge = (rank: number, totalPoints: number) => {
+    if (totalPoints === 0) {
+      return <span className="text-xs font-bold text-gray-400 w-4 text-center">-</span>;
+    }
     switch (rank) {
       case 1:
         return <span className="text-sm">🥇</span>;
@@ -47,11 +50,11 @@ export const LeaderboardSection: React.FC<LeaderboardSectionProps> = ({ standing
       <div className="space-y-1.5">
         {standings.map((item) => {
           const maxPoints = 30; // 5 sports * 6pt max
-          const percent = Math.min(100, Math.round((item.totalPoints / maxPoints) * 100));
+          const percent = item.totalPoints > 0 ? Math.min(100, Math.round((item.totalPoints / maxPoints) * 100)) : 0;
 
           // Linear gradient to fill the block background proportionally based on points!
           const itemStyle: React.CSSProperties = {
-            background: `linear-gradient(to right, ${item.bgLight} ${percent}%, #ffffff ${percent}%)`,
+            background: percent > 0 ? `linear-gradient(to right, ${item.bgLight} ${percent}%, #ffffff ${percent}%)` : '#ffffff',
             borderColor: item.color,
           };
 
@@ -65,7 +68,7 @@ export const LeaderboardSection: React.FC<LeaderboardSectionProps> = ({ standing
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-4 flex items-center justify-center shrink-0">
-                    {getRankBadge(item.rank)}
+                    {getRankBadge(item.rank, item.totalPoints)}
                   </div>
 
                   <div
@@ -95,7 +98,7 @@ export const LeaderboardSection: React.FC<LeaderboardSectionProps> = ({ standing
                         {sp.sportName}
                       </span>
                       <span className="text-gray-900 font-bold text-[10px] leading-tight">
-                        {sp.rank}위 ({sp.points}p)
+                        {sp.rank > 0 ? `${sp.rank}위 (${sp.points}p)` : `- (${sp.points}p)`}
                       </span>
                     </div>
                   ))}

@@ -1,6 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { CONTACT_CONFIG } from '../config/stadiumConfig';
-import { getSupabaseNotices, getSupabaseFAQs, NoticeItem, FAQItem } from '../lib/supabase';
+import {
+  getSupabaseNotices,
+  getSupabaseFAQs,
+  getSupabaseContactConfig,
+  NoticeItem,
+  FAQItem,
+  ContactConfig,
+} from '../lib/supabase';
 import {
   Bell,
   Phone,
@@ -23,6 +29,11 @@ export const Contact: React.FC = () => {
   // Dynamic DB States
   const [notices, setNotices] = useState<NoticeItem[]>([]);
   const [faqs, setFaqs] = useState<FAQItem[]>([]);
+  const [contactConfig, setContactConfig] = useState<ContactConfig>({
+    generalLeaders: [],
+    deptLeads: [],
+    links: { kakaoOpenChat: '', instagram: '', youtube: '' },
+  });
   const [loading, setLoading] = useState<boolean>(true);
 
   // FAQ Category Filter State
@@ -35,13 +46,15 @@ export const Contact: React.FC = () => {
   useEffect(() => {
     let isMounted = true;
     const fetchData = async () => {
-      const [fetchedNotices, fetchedFaqs] = await Promise.all([
+      const [fetchedNotices, fetchedFaqs, fetchedContact] = await Promise.all([
         getSupabaseNotices(),
         getSupabaseFAQs(),
+        getSupabaseContactConfig(),
       ]);
       if (isMounted) {
         setNotices(fetchedNotices);
         setFaqs(fetchedFaqs);
+        setContactConfig(fetchedContact);
         setLoading(false);
       }
     };
@@ -189,7 +202,7 @@ export const Contact: React.FC = () => {
           <section>
             <div className="grid grid-cols-3 gap-2">
               <a
-                href={CONTACT_CONFIG.links.kakaoOpenChat}
+                href={contactConfig.links.kakaoOpenChat}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="bg-amber-400 hover:bg-amber-300 text-amber-950 rounded-xl px-2 py-2 flex flex-col items-center justify-center text-center shadow-2xs transition-colors touch-target font-bold text-xs min-h-[52px]"
@@ -199,7 +212,7 @@ export const Contact: React.FC = () => {
               </a>
 
               <a
-                href={CONTACT_CONFIG.links.instagram}
+                href={contactConfig.links.instagram}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="bg-rose-600 hover:bg-rose-700 text-white rounded-xl px-2 py-2 flex flex-col items-center justify-center text-center shadow-2xs transition-colors touch-target font-bold text-xs min-h-[52px]"
@@ -209,7 +222,7 @@ export const Contact: React.FC = () => {
               </a>
 
               <a
-                href={CONTACT_CONFIG.links.youtube}
+                href={contactConfig.links.youtube}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="bg-red-600 hover:bg-red-700 text-white rounded-xl px-2 py-2 flex flex-col items-center justify-center text-center shadow-2xs transition-colors touch-target font-bold text-xs min-h-[52px]"
@@ -228,7 +241,7 @@ export const Contact: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 gap-1.5">
-              {CONTACT_CONFIG.generalLeaders.map((leader, i) => (
+              {contactConfig.generalLeaders.map((leader, i) => (
                 <div
                   key={i}
                   className="bg-white border border-gray-200 rounded-xl px-3 py-2 flex items-center justify-between shadow-2xs"
@@ -258,7 +271,7 @@ export const Contact: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 gap-1.5">
-              {CONTACT_CONFIG.deptLeads.map((item, i) => (
+              {contactConfig.deptLeads.map((item, i) => (
                 <div
                   key={i}
                   className="bg-white border border-gray-200 rounded-xl px-3 py-2 flex items-center justify-between shadow-2xs"

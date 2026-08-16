@@ -6,8 +6,6 @@ import {
   StageItem,
   EvaluatedStagePerformance,
 } from '../types/stadium';
-import { DEFAULT_RAW_SCHEDULE_FLAT } from '../constants/defaultSchedule';
-import { STAGE_TIMETABLE } from '../constants/defaultStage';
 
 export function formatTime(date: Date): string {
   const h = String(date.getHours()).padStart(2, '0');
@@ -16,12 +14,14 @@ export function formatTime(date: Date): string {
 }
 
 export function formatCountdown(ms: number): string {
-  if (ms <= 0) return '00:00:00';
-  const totalSec = Math.floor(ms / 1000);
-  const hours = Math.floor(totalSec / 3600);
-  const minutes = Math.floor((totalSec % 3600) / 60);
-  const seconds = totalSec % 60;
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  if (ms <= 60000) return '곧 시작';
+  const totalMin = Math.floor(ms / 60000);
+  const hours = Math.floor(totalMin / 60);
+  const minutes = totalMin % 60;
+  if (hours > 0) {
+    return minutes > 0 ? `${hours}시간 ${minutes}분` : `${hours}시간`;
+  }
+  return `${minutes}분`;
 }
 
 export function evaluateMatchItem(raw: RawScheduledMatch, now: Date = new Date()): MatchItem {
@@ -55,12 +55,16 @@ export function evaluateMatchItem(raw: RawScheduledMatch, now: Date = new Date()
     countdownText = undefined;
   } else {
     const remainingMs = start.getTime() - nowMs;
-    countdownText = formatCountdown(remainingMs);
-
-    if (remainingMs < 7200000) {
+    if (remainingMs <= 60000) {
+      statusText = '곧 시작';
+      countdownText = '곧 시작';
+    } else if (remainingMs < 7200000) {
+      // 2시간 이내
       statusText = `시작까지 ${formatCountdown(remainingMs)}`;
+      countdownText = formatCountdown(remainingMs);
     } else {
       statusText = `${formatTime(start)} 예정`;
+      countdownText = formatCountdown(remainingMs);
     }
   }
 
@@ -92,14 +96,25 @@ export function getRealtimeSportsConfig(
   selectedSchool: string = 'ALL'
 ): Record<string, SportConfig> {
   const result: Record<string, SportConfig> = {};
-  const allRawMatches = customMatches || DEFAULT_RAW_SCHEDULE_FLAT;
-  const sportKeys: SportKey[] = ['soccer', 'baseball', 'lol', 'badminton', 'basketball'];
+  const allRawMatches = customMatches || [];
+  const sportKeys: SportKey[] = [
+    'soccer',
+    'baseball',
+    'lol',
+    'badminton_men',
+    'badminton_women',
+    'badminton_mixed',
+    'basketball',
+  ];
 
   const names: Record<SportKey, string> = {
     soccer: '축구',
     baseball: '야구',
     lol: 'LoL',
     badminton: '배드민턴',
+    badminton_men: '배드민턴 (남복)',
+    badminton_women: '배드민턴 (여복)',
+    badminton_mixed: '배드민턴 (혼복)',
     basketball: '농구',
   };
 
@@ -108,6 +123,9 @@ export function getRealtimeSportsConfig(
     baseball: '⚾',
     lol: '🎮',
     badminton: '🏸',
+    badminton_men: '🏸',
+    badminton_women: '🏸',
+    badminton_mixed: '🏸',
     basketball: '🏀',
   };
 
@@ -115,33 +133,54 @@ export function getRealtimeSportsConfig(
     const rawMatches = allRawMatches.filter((m: RawScheduledMatch) => m.sportKey === key);
     const evaluatedSchedule = rawMatches.map((m: RawScheduledMatch) => evaluateMatchItem(m, now));
 
-    let liveMatch: MatchItem;
+    const defaultEmptyMatch: MatchItem = {
+      id: `${key}-empty`,
+      sportKey: key,
+      sportName: names[key],
+      icon: icons[key],
+      team1: 'POSTECH',
+      team2: 'KAIST',
+      score1: 0,
+      score2: 0,
+      isLive: false,
+      statusText: '일정 준비중',
+      venue: '경기장',
+      winningTeam: null,
+      startTimeObj: new Date(now),
+      endTimeObj: new Date(now),
+      timeRangeText: '',
+      round: '경기 일정 준비중',
+    };
 
-    if (selectedSchool && selectedSchool !== 'ALL') {
-      const schoolMatches = evaluatedSchedule.filter(
-        (m: MatchItem) => m.team1 === selectedSchool || m.team2 === selectedSchool
-      );
+    let liveMatch: MatchItem = defaultEmptyMatch;
 
-      if (schoolMatches.length > 0) {
-        const live = schoolMatches.find((m: MatchItem) => m.isLive);
-        const upcoming = schoolMatches.find(
-          (m: MatchItem) => m.startTimeObj.getTime() > now.getTime()
+    if (evaluatedSchedule.length > 0) {
+      if (selectedSchool && selectedSchool !== 'ALL') {
+        const schoolMatches = evaluatedSchedule.filter(
+          (m: MatchItem) => m.team1 === selectedSchool || m.team2 === selectedSchool
         );
-        const finished = schoolMatches[schoolMatches.length - 1];
-        liveMatch = live || upcoming || finished;
+
+        if (schoolMatches.length > 0) {
+          const live = schoolMatches.find((m: MatchItem) => m.isLive);
+          const upcoming = schoolMatches.find(
+            (m: MatchItem) => m.startTimeObj.getTime() > now.getTime()
+          );
+          const finished = schoolMatches[schoolMatches.length - 1];
+          liveMatch = live || upcoming || finished;
+        } else {
+          liveMatch =
+            evaluatedSchedule.find((m: MatchItem) => m.isLive) ||
+            evaluatedSchedule.find((m: MatchItem) => m.startTimeObj.getTime() > now.getTime()) ||
+            evaluatedSchedule[evaluatedSchedule.length - 1] ||
+            defaultEmptyMatch;
+        }
       } else {
         liveMatch =
           evaluatedSchedule.find((m: MatchItem) => m.isLive) ||
           evaluatedSchedule.find((m: MatchItem) => m.startTimeObj.getTime() > now.getTime()) ||
           evaluatedSchedule[evaluatedSchedule.length - 1] ||
-          evaluateMatchItem(DEFAULT_RAW_SCHEDULE_FLAT[0], now);
+          defaultEmptyMatch;
       }
-    } else {
-      liveMatch =
-        evaluatedSchedule.find((m: MatchItem) => m.isLive) ||
-        evaluatedSchedule.find((m: MatchItem) => m.startTimeObj.getTime() > now.getTime()) ||
-        evaluatedSchedule[evaluatedSchedule.length - 1] ||
-        evaluateMatchItem(DEFAULT_RAW_SCHEDULE_FLAT[0], now);
     }
 
     result[key] = {
@@ -154,23 +193,92 @@ export function getRealtimeSportsConfig(
     };
   }
 
+  // Synthesize aggregate 'badminton' container for /badminton page and Gym home card
+  const allBadmintonMatches = [
+    ...(result['badminton_men']?.schedule || []),
+    ...(result['badminton_women']?.schedule || []),
+    ...(result['badminton_mixed']?.schedule || []),
+  ].sort((a, b) => a.startTimeObj.getTime() - b.startTimeObj.getTime());
+
+  const liveBadmintonMatch =
+    allBadmintonMatches.find((m) => m.isLive) ||
+    allBadmintonMatches.find((m) => m.startTimeObj.getTime() > now.getTime()) ||
+    allBadmintonMatches[allBadmintonMatches.length - 1] || {
+      id: 'badminton-empty',
+      sportKey: 'badminton',
+      sportName: '배드민턴',
+      icon: '🏸',
+      team1: 'POSTECH',
+      team2: 'KAIST',
+      score1: 0,
+      score2: 0,
+      isLive: false,
+      statusText: '일정 준비중',
+      venue: '체육관',
+      winningTeam: null,
+      startTimeObj: new Date(now),
+      endTimeObj: new Date(now),
+      timeRangeText: '',
+      round: '경기 일정 준비중',
+    };
+
+  result['badminton'] = {
+    key: 'badminton',
+    name: '배드민턴',
+    icon: '🏸',
+    path: '/badminton',
+    liveMatch: liveBadmintonMatch,
+    schedule: allBadmintonMatches,
+  };
+
   return result;
+}
+
+export function getDelayedTime(
+  hour: number,
+  minute: number,
+  delayMinutes: number = 0
+): { hour: number; minute: number; timeText: string } {
+  const totalMinutes = hour * 60 + minute + delayMinutes;
+  const normalized = ((totalMinutes % (24 * 60)) + 24 * 60) % (24 * 60);
+  const newHour = Math.floor(normalized / 60);
+  const newMinute = normalized % 60;
+  const timeText = `${String(newHour).padStart(2, '0')}:${String(newMinute).padStart(2, '0')}`;
+  return { hour: newHour, minute: newMinute, timeText };
 }
 
 export function getRealtimeStageConfig(
   now: Date = new Date(),
-  customStage?: StageItem[] | null
+  customStage?: StageItem[] | null,
+  stageDelayMinutes: number = 0
 ): EvaluatedStagePerformance {
-  const timetable = customStage || STAGE_TIMETABLE;
+  const timetable = customStage || [];
   const nowMs = now.getTime();
+
+  if (!timetable || timetable.length === 0) {
+    return {
+      school: 'POSTECH',
+      clubName: '공연 준비중',
+      category: '문화공연',
+      genre: '',
+      songTitle: '등록된 공연 정보가 없습니다',
+      statusText: '공연 대기중',
+      nextClubName: '',
+      nextRemainingText: '',
+      isLive: false,
+    };
+  }
 
   let currentIndex = -1;
   for (let i = 0; i < timetable.length; i++) {
     const item = timetable[i];
+    const sTime = getDelayedTime(item.startHour, item.startMinute, stageDelayMinutes);
+    const eTime = getDelayedTime(item.endHour, item.endMinute, stageDelayMinutes);
+
     const s = new Date(now);
-    s.setHours(item.startHour, item.startMinute, 0, 0);
+    s.setHours(sTime.hour, sTime.minute, 0, 0);
     const e = new Date(now);
-    e.setHours(item.endHour, item.endMinute, 0, 0);
+    e.setHours(eTime.hour, eTime.minute, 0, 0);
 
     if (nowMs >= s.getTime() && nowMs <= e.getTime()) {
       currentIndex = i;
@@ -181,8 +289,9 @@ export function getRealtimeStageConfig(
   if (currentIndex === -1) {
     for (let i = 0; i < timetable.length; i++) {
       const item = timetable[i];
+      const sTime = getDelayedTime(item.startHour, item.startMinute, stageDelayMinutes);
       const s = new Date(now);
-      s.setHours(item.startHour, item.startMinute, 0, 0);
+      s.setHours(sTime.hour, sTime.minute, 0, 0);
       if (s.getTime() > nowMs) {
         currentIndex = i;
         break;
@@ -191,18 +300,22 @@ export function getRealtimeStageConfig(
     if (currentIndex === -1) currentIndex = timetable.length - 1;
   }
 
-  const currentItem = timetable[currentIndex] || STAGE_TIMETABLE[0];
+  const currentItem = timetable[currentIndex] || timetable[0];
+  const currSTime = getDelayedTime(currentItem.startHour, currentItem.startMinute, stageDelayMinutes);
+  const currETime = getDelayedTime(currentItem.endHour, currentItem.endMinute, stageDelayMinutes);
+
   const start = new Date(now);
-  start.setHours(currentItem.startHour, currentItem.startMinute, 0, 0);
+  start.setHours(currSTime.hour, currSTime.minute, 0, 0);
   const end = new Date(now);
-  end.setHours(currentItem.endHour, currentItem.endMinute, 0, 0);
+  end.setHours(currETime.hour, currETime.minute, 0, 0);
 
   const isLive = nowMs >= start.getTime() && nowMs <= end.getTime();
   const elapsedMin = Math.max(0, Math.floor((nowMs - start.getTime()) / 60000));
 
   const nextItem = timetable[currentIndex + 1] || timetable[0];
+  const nextSTime = getDelayedTime(nextItem.startHour, nextItem.startMinute, stageDelayMinutes);
   const nextStart = new Date(now);
-  nextStart.setHours(nextItem.startHour, nextItem.startMinute, 0, 0);
+  nextStart.setHours(nextSTime.hour, nextSTime.minute, 0, 0);
   if (nextStart.getTime() <= nowMs) {
     nextStart.setDate(nextStart.getDate() + 1);
   }

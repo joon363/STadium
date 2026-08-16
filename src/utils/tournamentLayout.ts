@@ -176,3 +176,119 @@ export function computeTournamentTreeLayout(
     totalHeight: Math.max(totalHeight, 260),
   };
 }
+
+/**
+ * Universally evaluates winners and propagates them upward to parent game nodes
+ * based on children match outcomes (scores, live status, final state).
+ */
+export function propagateTournamentTreeWinners(
+  tree: TournamentTreeData
+): TournamentTreeData {
+  if (!tree || !tree.nodes || Object.keys(tree.nodes).length === 0) {
+    return tree;
+  }
+
+  const updatedNodes = { ...tree.nodes };
+  const allNodes = Object.values(updatedNodes);
+
+  // Helper to determine if a game node has completed and who won
+  const getGameWinner = (game: TournamentGameNode): string | null => {
+    // 1. Explicitly marked as after (finished)
+    const isAfter = game.status === 'after';
+    // 2. Or has final scores and not live
+    const hasScores = !game.isLive && (game.score1 > 0 || game.score2 > 0);
+
+    if ((isAfter || hasScores) && game.score1 !== game.score2) {
+      return game.score1 > game.score2 ? game.team1 : game.team2;
+    }
+    return null;
+  };
+
+  // Sort game nodes by level ascending (Level 1 -> Level 2 -> Level 3 ...)
+  const gameNodes = allNodes
+    .filter((n): n is TournamentGameNode => n.type === 'game')
+    .sort((a, b) => (a.level || 1) - (b.level || 1));
+
+  let changed = true;
+  let iterations = 0;
+
+  while (changed && iterations < 10) {
+    changed = false;
+    iterations++;
+
+    for (const game of gameNodes) {
+      const c1 = updatedNodes[game.child1Id];
+      const c2 = updatedNodes[game.child2Id];
+
+      let nextTeam1 = game.team1;
+      let nextTeam2 = game.team2;
+
+      // 1. Resolve Team 1 from Child 1
+      if (c1) {
+        if (c1.type === 'team') {
+          if (c1.teamName && nextTeam1 !== c1.teamName) {
+            nextTeam1 = c1.teamName;
+          }
+        } else if (c1.type === 'game') {
+          const winner = getGameWinner(c1);
+          if (winner && !winner.includes('승자')) {
+            if (nextTeam1 !== winner) {
+              nextTeam1 = winner;
+            }
+          } else {
+            const placeholder = `${c1.roundName} 승자`;
+            // If child hasn't ended and current team is either a placeholder or outdated winner
+            if (c1.status !== 'after' && (!c1.score1 && !c1.score2)) {
+              if (nextTeam1 !== placeholder) {
+                nextTeam1 = placeholder;
+              }
+            }
+          }
+        }
+      }
+
+      // 2. Resolve Team 2 from Child 2
+      if (c2) {
+        if (c2.type === 'team') {
+          if (c2.teamName && nextTeam2 !== c2.teamName) {
+            nextTeam2 = c2.teamName;
+          }
+        } else if (c2.type === 'game') {
+          const winner = getGameWinner(c2);
+          if (winner && !winner.includes('승자')) {
+            if (nextTeam2 !== winner) {
+              nextTeam2 = winner;
+            }
+          } else {
+            const placeholder = `${c2.roundName} 승자`;
+            if (c2.status !== 'after' && (!c2.score1 && !c2.score2)) {
+              if (nextTeam2 !== placeholder) {
+                nextTeam2 = placeholder;
+              }
+            }
+          }
+        }
+      }
+
+      if (nextTeam1 !== game.team1 || nextTeam2 !== game.team2) {
+        const updatedGame: TournamentGameNode = {
+          ...game,
+          team1: nextTeam1,
+          team2: nextTeam2,
+        };
+        updatedNodes[game.id] = updatedGame;
+        const idx = gameNodes.findIndex((g) => g.id === game.id);
+        if (idx !== -1) {
+          gameNodes[idx] = updatedGame;
+        }
+        changed = true;
+      }
+    }
+  }
+
+  return {
+    ...tree,
+    nodes: updatedNodes,
+  };
+}
+
