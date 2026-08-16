@@ -11,7 +11,15 @@ export interface School {
 
 export { SCHOOLS } from '../constants/schools';
 
-export type SportKey = 'soccer' | 'baseball' | 'lol' | 'badminton' | 'basketball';
+export type SportKey =
+  | 'soccer'
+  | 'baseball'
+  | 'lol'
+  | 'badminton'
+  | 'badminton_men'
+  | 'badminton_women'
+  | 'badminton_mixed'
+  | 'basketball';
 
 export interface RawScheduledMatch {
   id: string;
@@ -194,6 +202,28 @@ export interface FAQItem {
   displayOrder: number;
 }
 
+export interface ContactItem {
+  id?: number;
+  category: 'general' | 'dept' | 'emergency';
+  role: string;
+  name: string;
+  phone: string;
+  dept: string;
+  displayOrder: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ContactLinkItem {
+  id: string; // 'kakao' | 'instagram' | 'youtube' | custom
+  title: string;
+  url: string;
+  icon?: string;
+  displayOrder: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface ContactLeader {
   role: string;
   name: string;
@@ -210,3 +240,26 @@ export interface ContactConfig {
     youtube: string;
   };
 }
+
+export type LiveStreamKey =
+  | 'soccer'
+  | 'baseball'
+  | 'lol'
+  | 'badminton'
+  | 'badminton_men'
+  | 'badminton_women'
+  | 'badminton_mixed'
+  | 'basketball'
+  | 'stage'
+  | 'main';
+
+export interface YouTubeLiveItem {
+  sportKey: LiveStreamKey | string;
+  name: string;
+  icon: string;
+  url: string;
+  isActive: boolean;
+  updatedAt?: string;
+}
+
+

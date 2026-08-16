@@ -16,7 +16,7 @@ export const SportsGridCard: React.FC<SportsGridCardProps> = ({
   layout = 'horizontal',
 }) => {
   const navigate = useNavigate();
-  const { youtubeLiveUrl } = useRealtimeSchedule();
+  const { getYoutubeLiveUrl } = useRealtimeSchedule();
 
   const isUpcoming =
     !match.isLive &&
@@ -59,13 +59,13 @@ export const SportsGridCard: React.FC<SportsGridCardProps> = ({
           <div className="flex items-center gap-1.5">
             {match.isLive ? (
               <a
-                href={youtubeLiveUrl}
+                href={getYoutubeLiveUrl(match.sportKey)}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
                 className="inline-flex items-center gap-1 text-[10px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-2 py-0.5 rounded-full active:scale-95 transition-all shadow-2xs cursor-pointer"
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
                 <span>LIVE</span>
                 <ChevronRight className="w-3 h-3 text-rose-500" />
               </a>
@@ -218,13 +218,13 @@ export const SportsGridCard: React.FC<SportsGridCardProps> = ({
 
         {match.isLive ? (
           <a
-            href={youtubeLiveUrl}
+            href={getYoutubeLiveUrl(match.sportKey)}
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
             className="inline-flex items-center gap-0.5 text-[9px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-1.5 py-0.5 rounded-full active:scale-95 transition-all shadow-2xs cursor-pointer"
           >
-            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
             <span>LIVE</span>
             <ChevronRight className="w-2.5 h-2.5 text-rose-500" />
           </a>

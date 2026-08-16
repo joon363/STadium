@@ -13,6 +13,11 @@ export type {
   MapEdge,
   RawScheduledMatch,
   StageItem,
+  YouTubeLiveItem,
+  ContactItem,
+  ContactLinkItem,
+  ContactConfig,
+  ContactLeader,
 } from '../types/stadium';
 
 // Re-export Domain Services
@@ -23,7 +28,7 @@ export {
 } from '../services/matchesService';
 export {
   getSupabaseStagePerformances,
-  updateSupabaseStagePerformance,
+  saveAllSupabaseStagePerformances,
 } from '../services/stageService';
 export {
   getSupabaseMapVenues,
@@ -67,8 +72,22 @@ export {
   updateAdminPasswordInSupabase,
   getSupabaseYoutubeLiveUrl,
   updateSupabaseYoutubeLiveUrl,
+  getSupabaseYoutubeLiveList,
+  getSupabaseYoutubeLiveByKey,
+  upsertSupabaseYoutubeLive,
+  deleteSupabaseYoutubeLive,
   getSupabaseTournamentTree,
   updateSupabaseTournamentTree,
+  getSupabaseStageDelay,
+  updateSupabaseStageDelay,
 } from '../services/settingsService';
+export {
+  getSupabaseContacts,
+  upsertSupabaseContact,
+  deleteSupabaseContact,
+  getSupabaseContactLinks,
+  upsertSupabaseContactLink,
+  getSupabaseContactConfig,
+} from '../services/contactService';
 export { uploadImageToSupabase } from '../services/storageService';
 export { subscribeToRealtimeTables } from '../services/realtimeService';

@@ -7,13 +7,14 @@ function rawString(val: any): string {
 }
 
 /**
- * Fetch all scheduled matches (Cached)
+ * Fetch all scheduled matches
+ * By default, returns memory/local cache instantly while kicking off a background refresh, or forces refresh
  */
 export async function getSupabaseMatches(
   forceRefresh: boolean = false
 ): Promise<RawScheduledMatch[] | null> {
   if (!forceRefresh) {
-    const cached = getFromCache<RawScheduledMatch[]>('matches');
+    const cached = getFromCache<RawScheduledMatch[]>('matches', 10000); // 10s short TTL
     if (cached) return cached;
   }
 
@@ -26,7 +27,7 @@ export async function getSupabaseMatches(
       .order('id', { ascending: true });
 
     if (error || !data || data.length === 0) {
-      console.warn('Supabase matches query warning/error:', error);
+      if (error) console.warn('Supabase matches query error:', error);
       return null;
     }
 

@@ -1,7 +1,7 @@
 import pg from 'pg';
 
 const { Client } = pg;
-const connectionString = 'postgresql://postgres.rfqaufojzfgviggogyop:postechstudent26@aws-0-ap-northeast-2.pooler.supabase.com:6543/postgres';
+const connectionString = 'postgresql://postgres.rfqaufojzfgviggogyop:postechstudent26@aws-0-ap-southeast-2.pooler.supabase.com:6543/postgres';
 
 const client = new Client({
   connectionString,

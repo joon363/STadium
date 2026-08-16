@@ -13,6 +13,7 @@ import {
   HelpCircle,
   KeyRound,
   CheckCircle2,
+  Phone,
 } from 'lucide-react';
 import { AdminTab } from '../types';
 
@@ -42,6 +43,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
     { id: 'sponsors', label: '🏢 후원 기업 관리', icon: <Building2 className="w-4 h-4 text-blue-500" /> },
     { id: 'notices', label: '📢 공지사항 관리', icon: <Bell className="w-4 h-4 text-rose-600" /> },
     { id: 'faqs', label: '❓ FAQ 관리', icon: <HelpCircle className="w-4 h-4 text-purple-600" /> },
+    { id: 'contact', label: '📞 비상연락망 관리', icon: <Phone className="w-4 h-4 text-emerald-500" /> },
     { id: 'settings', label: '관리자 설정 & Supabase', icon: <KeyRound className="w-4 h-4" /> },
   ];
 

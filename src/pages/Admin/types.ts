@@ -7,4 +7,6 @@ export type AdminTab =
   | 'sponsors'
   | 'notices'
   | 'faqs'
+  | 'contact'
   | 'settings';
+

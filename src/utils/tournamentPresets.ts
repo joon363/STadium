@@ -8,18 +8,18 @@ export function createPhoto1Preset(sportKey: SportKey): TournamentTreeData {
   return {
     sportKey,
     nodes: {
-      'team-1': { id: 'team-1', type: 'team', teamName: 'KAIST', colIndex: 0, level: 0 },
-      'team-2': { id: 'team-2', type: 'team', teamName: 'POSTECH', colIndex: 1, level: 0 },
-      'team-3': { id: 'team-3', type: 'team', teamName: 'GIST', colIndex: 2, level: 0 },
-      'team-4': { id: 'team-4', type: 'team', teamName: 'DGIST', colIndex: 3, level: 0 },
-      'team-5': { id: 'team-5', type: 'team', teamName: 'UNIST', colIndex: 4, level: 0 },
+      [`${sportKey}-team-1`]: { id: `${sportKey}-team-1`, type: 'team', teamName: 'KAIST', colIndex: 0, level: 0 },
+      [`${sportKey}-team-2`]: { id: `${sportKey}-team-2`, type: 'team', teamName: 'POSTECH', colIndex: 1, level: 0 },
+      [`${sportKey}-team-3`]: { id: `${sportKey}-team-3`, type: 'team', teamName: 'GIST', colIndex: 2, level: 0 },
+      [`${sportKey}-team-4`]: { id: `${sportKey}-team-4`, type: 'team', teamName: 'DGIST', colIndex: 3, level: 0 },
+      [`${sportKey}-team-5`]: { id: `${sportKey}-team-5`, type: 'team', teamName: 'UNIST', colIndex: 4, level: 0 },
 
-      'game-1': {
-        id: 'game-1',
+      [`${sportKey}-game-1`]: {
+        id: `${sportKey}-game-1`,
         type: 'game',
         roundName: '예선 1경기',
-        child1Id: 'team-1',
-        child2Id: 'team-2',
+        child1Id: `${sportKey}-team-1`,
+        child2Id: `${sportKey}-team-2`,
         team1: 'KAIST',
         team2: 'POSTECH',
         score1: 0,
@@ -31,12 +31,12 @@ export function createPhoto1Preset(sportKey: SportKey): TournamentTreeData {
         venue: '대운동장',
         level: 1,
       },
-      'game-2': {
-        id: 'game-2',
+      [`${sportKey}-game-2`]: {
+        id: `${sportKey}-game-2`,
         type: 'game',
         roundName: '예선 2경기',
-        child1Id: 'team-3',
-        child2Id: 'team-4',
+        child1Id: `${sportKey}-team-3`,
+        child2Id: `${sportKey}-team-4`,
         team1: 'GIST',
         team2: 'DGIST',
         score1: 0,
@@ -48,12 +48,12 @@ export function createPhoto1Preset(sportKey: SportKey): TournamentTreeData {
         venue: '대운동장',
         level: 1,
       },
-      'game-3': {
-        id: 'game-3',
+      [`${sportKey}-game-3`]: {
+        id: `${sportKey}-game-3`,
         type: 'game',
-        roundName: '준결승전',
-        child1Id: 'game-2',
-        child2Id: 'team-5',
+        roundName: '준결선',
+        child1Id: `${sportKey}-game-2`,
+        child2Id: `${sportKey}-team-5`,
         team1: '예선2 승자',
         team2: 'UNIST',
         score1: 0,
@@ -65,12 +65,12 @@ export function createPhoto1Preset(sportKey: SportKey): TournamentTreeData {
         venue: '대운동장',
         level: 2,
       },
-      'game-4': {
-        id: 'game-4',
+      [`${sportKey}-game-4`]: {
+        id: `${sportKey}-game-4`,
         type: 'game',
-        roundName: '결승전',
-        child1Id: 'game-1',
-        child2Id: 'game-3',
+        roundName: '결선',
+        child1Id: `${sportKey}-game-1`,
+        child2Id: `${sportKey}-game-3`,
         team1: '예선1 승자',
         team2: '준결승 승자',
         score1: 0,
@@ -93,19 +93,19 @@ export function createPhoto2Preset(sportKey: SportKey): TournamentTreeData {
   return {
     sportKey,
     nodes: {
-      'team-1': { id: 'team-1', type: 'team', teamName: 'KENTECH', colIndex: 0, level: 0 },
-      'team-2': { id: 'team-2', type: 'team', teamName: 'GIST', colIndex: 1, level: 0 },
-      'team-3': { id: 'team-3', type: 'team', teamName: 'POSTECH', colIndex: 2, level: 0 },
-      'team-4': { id: 'team-4', type: 'team', teamName: 'UNIST', colIndex: 3, level: 0 },
-      'team-5': { id: 'team-5', type: 'team', teamName: 'KAIST', colIndex: 4, level: 0 },
-      'team-6': { id: 'team-6', type: 'team', teamName: 'DGIST', colIndex: 5, level: 0 },
+      [`${sportKey}-team-1`]: { id: `${sportKey}-team-1`, type: 'team', teamName: 'KENTECH', colIndex: 0, level: 0 },
+      [`${sportKey}-team-2`]: { id: `${sportKey}-team-2`, type: 'team', teamName: 'GIST', colIndex: 1, level: 0 },
+      [`${sportKey}-team-3`]: { id: `${sportKey}-team-3`, type: 'team', teamName: 'POSTECH', colIndex: 2, level: 0 },
+      [`${sportKey}-team-4`]: { id: `${sportKey}-team-4`, type: 'team', teamName: 'UNIST', colIndex: 3, level: 0 },
+      [`${sportKey}-team-5`]: { id: `${sportKey}-team-5`, type: 'team', teamName: 'KAIST', colIndex: 4, level: 0 },
+      [`${sportKey}-team-6`]: { id: `${sportKey}-team-6`, type: 'team', teamName: 'DGIST', colIndex: 5, level: 0 },
 
-      'game-1': {
-        id: 'game-1',
+      [`${sportKey}-game-1`]: {
+        id: `${sportKey}-game-1`,
         type: 'game',
-        roundName: '6강 1경기',
-        child1Id: 'team-1',
-        child2Id: 'team-2',
+        roundName: '예선1',
+        child1Id: `${sportKey}-team-1`,
+        child2Id: `${sportKey}-team-2`,
         team1: 'KENTECH',
         team2: 'GIST',
         score1: 0,
@@ -117,12 +117,12 @@ export function createPhoto2Preset(sportKey: SportKey): TournamentTreeData {
         venue: '체육관',
         level: 1,
       },
-      'game-2': {
-        id: 'game-2',
+      [`${sportKey}-game-2`]: {
+        id: `${sportKey}-game-2`,
         type: 'game',
-        roundName: '6강 2경기',
-        child1Id: 'team-4',
-        child2Id: 'team-5',
+        roundName: '예선2',
+        child1Id: `${sportKey}-team-4`,
+        child2Id: `${sportKey}-team-5`,
         team1: 'UNIST',
         team2: 'KAIST',
         score1: 0,
@@ -134,12 +134,12 @@ export function createPhoto2Preset(sportKey: SportKey): TournamentTreeData {
         venue: '체육관',
         level: 1,
       },
-      'game-3': {
-        id: 'game-3',
+      [`${sportKey}-game-3`]: {
+        id: `${sportKey}-game-3`,
         type: 'game',
-        roundName: '준결승 1경기',
-        child1Id: 'game-1',
-        child2Id: 'team-3',
+        roundName: '본선1',
+        child1Id: `${sportKey}-game-1`,
+        child2Id: `${sportKey}-team-3`,
         team1: '6강 1 승자',
         team2: 'POSTECH',
         score1: 0,
@@ -151,12 +151,12 @@ export function createPhoto2Preset(sportKey: SportKey): TournamentTreeData {
         venue: '체육관',
         level: 2,
       },
-      'game-4': {
-        id: 'game-4',
+      [`${sportKey}-game-4`]: {
+        id: `${sportKey}-game-4`,
         type: 'game',
-        roundName: '준결승 2경기',
-        child1Id: 'game-2',
-        child2Id: 'team-6',
+        roundName: '본선2',
+        child1Id: `${sportKey}-game-2`,
+        child2Id: `${sportKey}-team-6`,
         team1: '6강 2 승자',
         team2: 'DGIST',
         score1: 0,
@@ -168,12 +168,12 @@ export function createPhoto2Preset(sportKey: SportKey): TournamentTreeData {
         venue: '체육관',
         level: 2,
       },
-      'game-5': {
-        id: 'game-5',
+      [`${sportKey}-game-5`]: {
+        id: `${sportKey}-game-5`,
         type: 'game',
-        roundName: '결승전',
-        child1Id: 'game-3',
-        child2Id: 'game-4',
+        roundName: '결선',
+        child1Id: `${sportKey}-game-3`,
+        child2Id: `${sportKey}-game-4`,
         team1: '준결승 1 승자',
         team2: '준결승 2 승자',
         score1: 0,
@@ -196,17 +196,17 @@ export function create4TeamPreset(sportKey: SportKey): TournamentTreeData {
   return {
     sportKey,
     nodes: {
-      'team-1': { id: 'team-1', type: 'team', teamName: 'POSTECH', colIndex: 0, level: 0 },
-      'team-2': { id: 'team-2', type: 'team', teamName: 'UNIST', colIndex: 1, level: 0 },
-      'team-3': { id: 'team-3', type: 'team', teamName: 'KAIST', colIndex: 2, level: 0 },
-      'team-4': { id: 'team-4', type: 'team', teamName: 'GIST', colIndex: 3, level: 0 },
+      [`${sportKey}-team-1`]: { id: `${sportKey}-team-1`, type: 'team', teamName: 'POSTECH', colIndex: 0, level: 0 },
+      [`${sportKey}-team-2`]: { id: `${sportKey}-team-2`, type: 'team', teamName: 'UNIST', colIndex: 1, level: 0 },
+      [`${sportKey}-team-3`]: { id: `${sportKey}-team-3`, type: 'team', teamName: 'KAIST', colIndex: 2, level: 0 },
+      [`${sportKey}-team-4`]: { id: `${sportKey}-team-4`, type: 'team', teamName: 'GIST', colIndex: 3, level: 0 },
 
-      'game-1': {
-        id: 'game-1',
+      [`${sportKey}-game-1`]: {
+        id: `${sportKey}-game-1`,
         type: 'game',
-        roundName: '준결승 1경기',
-        child1Id: 'team-1',
-        child2Id: 'team-2',
+        roundName: '본선1',
+        child1Id: `${sportKey}-team-1`,
+        child2Id: `${sportKey}-team-2`,
         team1: 'POSTECH',
         team2: 'UNIST',
         score1: 0,
@@ -218,12 +218,12 @@ export function create4TeamPreset(sportKey: SportKey): TournamentTreeData {
         venue: '대운동장',
         level: 1,
       },
-      'game-2': {
-        id: 'game-2',
+      [`${sportKey}-game-2`]: {
+        id: `${sportKey}-game-2`,
         type: 'game',
-        roundName: '준결승 2경기',
-        child1Id: 'team-3',
-        child2Id: 'team-4',
+        roundName: '본선2',
+        child1Id: `${sportKey}-team-3`,
+        child2Id: `${sportKey}-team-4`,
         team1: 'KAIST',
         team2: 'GIST',
         score1: 0,
@@ -235,12 +235,12 @@ export function create4TeamPreset(sportKey: SportKey): TournamentTreeData {
         venue: '대운동장',
         level: 1,
       },
-      'game-3': {
-        id: 'game-3',
+      [`${sportKey}-game-3`]: {
+        id: `${sportKey}-game-3`,
         type: 'game',
-        roundName: '결승전',
-        child1Id: 'game-1',
-        child2Id: 'game-2',
+        roundName: '결선',
+        child1Id: `${sportKey}-game-1`,
+        child2Id: `${sportKey}-game-2`,
         team1: '준결승 1 승자',
         team2: '준결승 2 승자',
         score1: 0,
@@ -266,21 +266,26 @@ export function convertTreeToMatches(
 ): RawScheduledMatch[] {
   const games = Object.values(tree.nodes).filter((n): n is TournamentGameNode => n.type === 'game');
 
-  return games.map((g) => ({
-    id: g.id,
-    sportKey: tree.sportKey,
-    sportName,
-    icon,
-    team1: g.team1,
-    team2: g.team2,
-    startHour: g.startHour,
-    startMinute: g.startMinute,
-    endHour: g.endHour,
-    endMinute: g.endMinute,
-    venue: g.venue,
-    round: g.roundName,
-    score1Final: g.score1,
-    score2Final: g.score2,
-    winningTeamFinal: g.score1 > g.score2 ? g.team1 : g.score2 > g.score1 ? g.team2 : null,
-  }));
+  return games.map((g) => {
+    // Ensure match ID is uniquely prefixed with sportKey
+    const matchId = g.id.startsWith(`${tree.sportKey}-`) ? g.id : `${tree.sportKey}-${g.id}`;
+    return {
+      id: matchId,
+      sportKey: tree.sportKey,
+      sportName,
+      icon,
+      team1: g.team1,
+      team2: g.team2,
+      startHour: g.startHour,
+      startMinute: g.startMinute,
+      endHour: g.endHour,
+      endMinute: g.endMinute,
+      venue: g.venue,
+      round: g.roundName,
+      score1Final: g.score1,
+      score2Final: g.score2,
+      winningTeamFinal: g.score1 > g.score2 ? g.team1 : g.score2 > g.score1 ? g.team2 : null,
+      isLive: g.status === 'live' || g.isLive,
+    };
+  });
 }
