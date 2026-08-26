@@ -79,7 +79,7 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
     }
 
     const img = new Image();
-    img.src = '/map.png';
+    img.src = '/hqmap.jpg';
     img.onload = () => {
       isMapImagePreloadedInMemory = true;
       setIsMapImageLoaded(true);
@@ -237,7 +237,7 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
           {/* Base Terrain */}
           <rect width="100" height="100" fill="#0f172a" />
           <image
-            href="/map.png"
+            href="/hqmap.jpg"
             x="0"
             y="0"
             width="100"

@@ -7,7 +7,7 @@ import {
   FoodTruckItem,
 } from '../lib/supabase';
 import { CampusMapView } from '../components/CampusMapView';
-import { VenueNode, MapEdge, NavigationResult, findShortestPath } from '../config/stadiumConfig';
+import { VenueNode, MapEdge, NavigationResult, findShortestPath, MAP_BOUNDS } from '../config/stadiumConfig';
 import {
   Utensils,
   Coffee,
@@ -18,6 +18,8 @@ import {
   ChevronDown,
   Trophy,
   Building,
+  Compass,
+  Loader2,
 } from 'lucide-react';
 
 export const CampusMap: React.FC = () => {
@@ -53,8 +55,47 @@ export const CampusMap: React.FC = () => {
   const [showPaths, setShowPaths] = useState<boolean>(true);
 
   // User location / GPS
-  const [userCoords] = useState<{ x: number; y: number } | null>(null);
-  const [gpsError] = useState<string | null>(null);
+  const [userCoords, setUserCoords] = useState<{ x: number; y: number } | null>(null);
+  const [gpsLoading, setGpsLoading] = useState<boolean>(false);
+  const [gpsError, setGpsError] = useState<string | null>(null);
+
+  // HTML5 GPS Geolocation Handler
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      setGpsError('사용 중인 브라우저가 GPS 위치 제공을 지원하지 않습니다.');
+      return;
+    }
+
+    setGpsLoading(true);
+    setGpsError(null);
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+
+        const minLat = MAP_BOUNDS.minLat; // 36.00933323687072
+        const maxLat = MAP_BOUNDS.maxLat; // 36.019560988155675
+        const minLng = MAP_BOUNDS.minLng; // 129.3173654512678
+        const maxLng = MAP_BOUNDS.maxLng; // 129.327847986618
+
+        const clampedLat = Math.max(minLat, Math.min(maxLat, latitude));
+        const clampedLng = Math.max(minLng, Math.min(maxLng, longitude));
+
+        const percentX = ((clampedLng - minLng) / (maxLng - minLng)) * 100;
+        const percentY = (1 - (clampedLat - minLat) / (maxLat - minLat)) * 100;
+
+        setUserCoords({ x: percentX, y: percentY });
+        setGpsLoading(false);
+      },
+      (err) => {
+        console.warn('GPS location error:', err);
+        setUserCoords({ x: 48, y: 48 });
+        setGpsError('GPS 권한이 필요합니다. 기본 포항 캠퍼스 위치로 표시합니다.');
+        setGpsLoading(false);
+      },
+      { timeout: 8000, enableHighAccuracy: true }
+    );
+  };
 
   // Navigation (Dijkstra)
   const [isNavigating, setIsNavigating] = useState<boolean>(false);
@@ -187,8 +228,17 @@ export const CampusMap: React.FC = () => {
     <div className="flex flex-col h-full w-full bg-slate-900 text-gray-900 relative overflow-hidden select-none overscroll-none touch-none">
       {/* 1. Top Controls Overlay (Transparent Floating Chips directly on Map) */}
       <div className="absolute top-3 left-3 right-3 z-30 flex flex-col gap-1.5 pointer-events-none">
-        {/* Row 1: Filter Toggle Chips: 취식 공간, 휴식 공간, 길찾기 */}
+        {/* Row 1: Filter Toggle Chips: 취식 공간, 휴식 공간, 길찾기, 내 위치 */}
         <div className="pointer-events-auto flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+          <button
+            onClick={handleGetLocation}
+            disabled={gpsLoading}
+            className="px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 shrink-0 transition-all shadow-md backdrop-blur-md bg-white/85 text-blue-700 border border-blue-200 hover:bg-white active:scale-95 disabled:opacity-50"
+          >
+            <Compass className={`w-3.5 h-3.5 ${gpsLoading ? 'animate-spin' : ''}`} />
+            <span>{gpsLoading ? '확인 중...' : '내 위치'}</span>
+          </button>
+
           <button
             onClick={() => {
               setShowEatingZones((prev) => {
