@@ -245,7 +245,7 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
             preserveAspectRatio="xMidYMid meet"
           />
 
-          {/* Road Network Lines & Weight Badges */}
+          {/* Road Network Lines (Fixed-pixel slim stroke regardless of zoom level) */}
           {edges.map((edge) => {
             const fromNode = nodeMap.get(edge.fromNodeId);
             const toNode = nodeMap.get(edge.toNodeId);
@@ -262,28 +262,21 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
             const pts = [fromNode, ...(edge.waypoints || []), toNode];
             const pointsStr = pts.map((p) => `${p.x},${p.y}`).join(' ');
 
-            const midWp =
-              edge.waypoints && edge.waypoints.length > 0
-                ? edge.waypoints[Math.floor(edge.waypoints.length / 2)]
-                : {
-                    x: (fromNode.x + toNode.x) / 2,
-                    y: (fromNode.y + toNode.y) / 2,
-                  };
-
             return (
               <g key={edge.id}>
-                {/* Background Shadow Stroke (Slimmer width) */}
+                {/* Background Shadow Outline (Always 1.5~3.5px on screen) */}
                 <polyline
                   points={pointsStr}
                   fill="none"
-                  stroke={isOnPath ? '#ffffff' : '#000000'}
-                  strokeWidth={isOnPath ? 1.8 : isSelected ? 1.4 : 0.8}
-                  strokeOpacity={isNonPathInNavMode ? 0.2 : 0.5}
+                  stroke={isOnPath ? '#ffffff' : '#0f172a'}
+                  strokeWidth={isOnPath ? 3.5 : isSelected ? 2.5 : 1.5}
+                  strokeOpacity={isNonPathInNavMode ? 0.2 : 0.6}
+                  vectorEffect="non-scaling-stroke"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
 
-                {/* Main Visible Road Path (Slimmer width) */}
+                {/* Main Visible Road Line (Always 1~2px slim line on screen) */}
                 <polyline
                   points={pointsStr}
                   fill="none"
@@ -296,45 +289,61 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
                           ? '#475569'
                           : '#94a3b8'
                   }
-                  strokeWidth={isOnPath ? 1.2 : isSelected ? 1.0 : 0.6}
-                  strokeOpacity={isNonPathInNavMode ? 0.3 : 0.9}
-                  strokeDasharray={isNonPathInNavMode ? '1 1' : 'none'}
+                  strokeWidth={isOnPath ? 2.2 : isSelected ? 1.6 : 1.0}
+                  strokeOpacity={isNonPathInNavMode ? 0.3 : 0.85}
+                  strokeDasharray={isNonPathInNavMode ? '3 3' : 'none'}
+                  vectorEffect="non-scaling-stroke"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
-
-                {/* Weight Minutes Badge */}
-                {(!isNavigating || isOnPath) && (
-                  <g
-                    transform={`translate(${midWp.x}, ${midWp.y}) scale(${1 / scale})`}
-                    className="pointer-events-none select-none"
-                  >
-                    <rect
-                      x="-3.5"
-                      y="-1.8"
-                      width="7"
-                      height="3.6"
-                      rx="1"
-                      fill={isOnPath ? '#e11d48' : '#1e293b'}
-                      stroke={isOnPath ? '#ffffff' : '#475569'}
-                      strokeWidth="0.3"
-                    />
-                    <text
-                      x="0"
-                      y="0.7"
-                      fill="#ffffff"
-                      fontSize="2.2"
-                      fontWeight="bold"
-                      textAnchor="middle"
-                    >
-                      {edge.weightMinutes}분
-                    </text>
-                  </g>
-                )}
               </g>
             );
           })}
         </svg>
+
+        {/* Road Minute Badges Overlay Layer (HTML, responsive scale matching POI pins) */}
+        {edges.map((edge) => {
+          const fromNode = nodeMap.get(edge.fromNodeId);
+          const toNode = nodeMap.get(edge.toNodeId);
+          if (!fromNode || !toNode) return null;
+
+          const isPathActive = isNavigating && navResult && navResult.edgeIds.length > 0;
+          const isOnPath = isPathActive && pathEdgeSet.has(edge.id);
+
+          if (!showPaths && !isOnPath) return null;
+          if (isNavigating && !isOnPath) return null;
+
+          const midWp =
+            edge.waypoints && edge.waypoints.length > 0
+              ? edge.waypoints[Math.floor(edge.waypoints.length / 2)]
+              : {
+                  x: (fromNode.x + toNode.x) / 2,
+                  y: (fromNode.y + toNode.y) / 2,
+                };
+
+          return (
+            <div
+              key={`edge_badge_${edge.id}`}
+              style={{
+                top: `${midWp.y}%`,
+                left: `${midWp.x}%`,
+                transform: `translate(-50%, -50%) scale(${1 / scale})`,
+                transition: isDragging ? 'none' : 'transform 0.15s ease-out',
+              }}
+              className="absolute z-15 pointer-events-none select-none"
+            >
+              <div
+                className={`px-1.5 py-0.5 rounded-full text-[8.5px] font-extrabold flex items-center shadow-xs border whitespace-nowrap leading-none ${
+                  isOnPath
+                    ? 'bg-rose-600 text-white border-white ring-1 ring-rose-400/60'
+                    : 'bg-slate-900/90 text-slate-200 border-slate-700/80 backdrop-blur-xs'
+                }`}
+              >
+                <span>{edge.weightMinutes}분</span>
+              </div>
+            </div>
+          );
+        })}
 
         {/* Venue Nodes (POIs) */}
         {nodes.map((node) => {
