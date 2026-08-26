@@ -8,7 +8,13 @@ import {
   deleteMapRoad,
   resetMapToDefaults,
 } from '../../../lib/supabase';
-import { MapPin, Waypoints, RotateCcw, Save, Trash2 } from 'lucide-react';
+import { MAP_BOUNDS, pctToPixel, pixelToPct } from '../../../constants/mapBounds';
+import { MapPin, Waypoints, RotateCcw, Save, Trash2, Crosshair } from 'lucide-react';
+
+interface ExtendedNodeForm extends Partial<VenueNode> {
+  pxX?: number;
+  pxY?: number;
+}
 
 interface MapTabProps {
   mapNodes: VenueNode[];
@@ -27,13 +33,18 @@ export const MapTab: React.FC<MapTabProps> = ({
 }) => {
   const [mapEditorMode, setMapEditorMode] = useState<'node' | 'edge'>('node');
 
-  // Selected Node Form State
+  // Selected Node Form State (Default in pixel coordinates)
+  const defaultPxX = Math.round(MAP_BOUNDS.widthPx / 2);
+  const defaultPxY = Math.round(MAP_BOUNDS.heightPx / 2);
+
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const [nodeForm, setNodeForm] = useState<Partial<VenueNode>>({
+  const [nodeForm, setNodeForm] = useState<ExtendedNodeForm>({
     name: '',
     category: 'sports',
     x: 50,
     y: 50,
+    pxX: defaultPxX,
+    pxY: defaultPxY,
     icon: '📍',
     description: '',
     isEatingZone: false,
@@ -50,18 +61,39 @@ export const MapTab: React.FC<MapTabProps> = ({
   });
 
   const handleSaveNode = async () => {
+    let finalPxX = nodeForm.pxX ?? defaultPxX;
+    let finalPxY = nodeForm.pxY ?? defaultPxY;
+
+    // Convert pixel coordinates to percentage
+    const { xPct, yPct } = pixelToPct(finalPxX, finalPxY);
+
+    // Compute real latitude and longitude from MAP_BOUNDS
+    const lat = Number(
+      (MAP_BOUNDS.maxLat - (yPct / 100) * (MAP_BOUNDS.maxLat - MAP_BOUNDS.minLat)).toFixed(7)
+    );
+    const lng = Number(
+      (MAP_BOUNDS.minLng + (xPct / 100) * (MAP_BOUNDS.maxLng - MAP_BOUNDS.minLng)).toFixed(7)
+    );
+
     let targetNode: VenueNode;
     if (selectedNodeId) {
-      targetNode = { ...mapNodes.find((n) => n.id === selectedNodeId)!, ...nodeForm } as VenueNode;
+      targetNode = {
+        ...mapNodes.find((n) => n.id === selectedNodeId)!,
+        ...nodeForm,
+        x: xPct,
+        y: yPct,
+        lat: nodeForm.lat || lat,
+        lng: nodeForm.lng || lng,
+      } as VenueNode;
     } else {
       targetNode = {
         id: `venue_${Date.now()}`,
         name: nodeForm.name || '새 장소',
         category: (nodeForm.category as any) || 'sports',
-        x: nodeForm.x || 50,
-        y: nodeForm.y || 50,
-        lat: 36.014,
-        lng: 129.326,
+        x: xPct,
+        y: yPct,
+        lat: lat,
+        lng: lng,
         description: nodeForm.description || '',
         icon: nodeForm.icon || '📍',
         isEatingZone: nodeForm.isEatingZone || false,
@@ -81,12 +113,14 @@ export const MapTab: React.FC<MapTabProps> = ({
         category: 'sports',
         x: 50,
         y: 50,
+        pxX: defaultPxX,
+        pxY: defaultPxY,
         icon: '📍',
         description: '',
         isEatingZone: false,
         isRestArea: false,
       });
-      setSaveStatus('✅ Supabase DB에 장소가 성공적으로 저장되었습니다!');
+      setSaveStatus('✅ Supabase DB에 장소 좌표가 성공적으로 저장되었습니다!');
     } else {
       setSaveStatus(`❌ Supabase 저장 실패: ${res.error}`);
     }
@@ -239,7 +273,8 @@ export const MapTab: React.FC<MapTabProps> = ({
             selectedEdgeId={selectedEdgeId}
             onNodeClick={(node) => {
               setSelectedNodeId(node.id);
-              setNodeForm(node);
+              const { pxX, pxY } = pctToPixel(node.x, node.y);
+              setNodeForm({ ...node, pxX, pxY });
               setMapEditorMode('node');
             }}
             onEdgeClick={(edge) => {
@@ -249,7 +284,8 @@ export const MapTab: React.FC<MapTabProps> = ({
             }}
             onMapClick={({ x, y }) => {
               if (mapEditorMode === 'node') {
-                setNodeForm((prev) => ({ ...prev, x, y }));
+                const { pxX, pxY } = pctToPixel(x, y);
+                setNodeForm((prev) => ({ ...prev, x, y, pxX, pxY }));
               } else if (mapEditorMode === 'edge') {
                 setEdgeForm((prev) => ({
                   ...prev,
@@ -278,6 +314,8 @@ export const MapTab: React.FC<MapTabProps> = ({
                         category: 'sports',
                         x: 50,
                         y: 50,
+                        pxX: defaultPxX,
+                        pxY: defaultPxY,
                         icon: '📍',
                         description: '',
                       });
@@ -330,28 +368,60 @@ export const MapTab: React.FC<MapTabProps> = ({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 bg-white p-2 border border-slate-200 rounded">
-                  <div>
-                    <label className="font-bold text-slate-600 text-[10px]">X 위치 (%)</label>
-                    <input
-                      type="number"
-                      value={nodeForm.x || 0}
-                      onChange={(e) =>
-                        setNodeForm({ ...nodeForm, x: Number(e.target.value) })
-                      }
-                      className="w-full border border-slate-300 rounded px-2 py-1 text-xs font-bold"
-                    />
+                {/* Pixel Coordinate Inputs (0-3894 px, 0-4905 px) */}
+                <div className="bg-white p-2.5 border border-slate-300 rounded-lg space-y-2">
+                  <div className="flex items-center justify-between text-[11px] font-extrabold text-slate-700">
+                    <span className="flex items-center gap-1">
+                      <Crosshair className="w-3.5 h-3.5 text-postech" />
+                      지도 이미지 픽셀 좌표 (Pixel Coords)
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-normal">
+                      지도 크기: {MAP_BOUNDS.widthPx} × {MAP_BOUNDS.heightPx} px
+                    </span>
                   </div>
-                  <div>
-                    <label className="font-bold text-slate-600 text-[10px]">Y 위치 (%)</label>
-                    <input
-                      type="number"
-                      value={nodeForm.y || 0}
-                      onChange={(e) =>
-                        setNodeForm({ ...nodeForm, y: Number(e.target.value) })
-                      }
-                      className="w-full border border-slate-300 rounded px-2 py-1 text-xs font-bold"
-                    />
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="font-bold text-slate-600 text-[10px] block mb-0.5">
+                        X 좌표 (0 ~ {MAP_BOUNDS.widthPx} px)
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={MAP_BOUNDS.widthPx}
+                        step={1}
+                        value={nodeForm.pxX ?? defaultPxX}
+                        onChange={(e) => {
+                          const pxX = Number(e.target.value);
+                          const { xPct } = pixelToPct(pxX, nodeForm.pxY ?? defaultPxY);
+                          setNodeForm({ ...nodeForm, pxX, x: xPct });
+                        }}
+                        className="w-full border border-slate-300 rounded px-2 py-1 text-xs font-bold font-mono focus:border-postech focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-bold text-slate-600 text-[10px] block mb-0.5">
+                        Y 좌표 (0 ~ {MAP_BOUNDS.heightPx} px)
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={MAP_BOUNDS.heightPx}
+                        step={1}
+                        value={nodeForm.pxY ?? defaultPxY}
+                        onChange={(e) => {
+                          const pxY = Number(e.target.value);
+                          const { yPct } = pixelToPct(nodeForm.pxX ?? defaultPxX, pxY);
+                          setNodeForm({ ...nodeForm, pxY, y: yPct });
+                        }}
+                        className="w-full border border-slate-300 rounded px-2 py-1 text-xs font-bold font-mono focus:border-postech focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="text-[10px] text-slate-500 flex items-center justify-between pt-1 border-t border-slate-100 font-mono">
+                    <span>% 변환: X {(nodeForm.x ?? 50).toFixed(2)}%, Y {(nodeForm.y ?? 50).toFixed(2)}%</span>
+                    <span>WGS84: {nodeForm.lat ? `${nodeForm.lat.toFixed(5)}, ${nodeForm.lng?.toFixed(5)}` : '자동 계산'}</span>
                   </div>
                 </div>
 
@@ -506,26 +576,30 @@ export const MapTab: React.FC<MapTabProps> = ({
                     곡선/꺾인 도로를 만듭니다.
                   </p>
                   <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
-                    {(edgeForm.waypoints || []).map((wp, wpIdx) => (
-                      <span
-                        key={wpIdx}
-                        className="bg-slate-100 border border-slate-300 text-slate-700 text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1"
-                      >
-                        <span>
-                          #{wpIdx + 1}: ({wp.x}, {wp.y})
-                        </span>
-                        <button
-                          onClick={() => {
-                            const updatedWps = [...(edgeForm.waypoints || [])];
-                            updatedWps.splice(wpIdx, 1);
-                            setEdgeForm({ ...edgeForm, waypoints: updatedWps });
-                          }}
-                          className="text-rose-500 font-bold ml-0.5"
+                    {(edgeForm.waypoints || []).map((wp, wpIdx) => {
+                      const { pxX, pxY } = pctToPixel(wp.x, wp.y);
+                      return (
+                        <span
+                          key={wpIdx}
+                          className="bg-slate-100 border border-slate-300 text-slate-700 text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 font-mono"
+                          title={`백분율: (${wp.x}%, ${wp.y}%)`}
                         >
-                          ×
-                        </button>
-                      </span>
-                    ))}
+                          <span>
+                            #{wpIdx + 1}: ({pxX}px, {pxY}px)
+                          </span>
+                          <button
+                            onClick={() => {
+                              const updatedWps = [...(edgeForm.waypoints || [])];
+                              updatedWps.splice(wpIdx, 1);
+                              setEdgeForm({ ...edgeForm, waypoints: updatedWps });
+                            }}
+                            className="text-rose-500 font-bold ml-0.5"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      );
+                    })}
                   </div>
                 </div>
 
