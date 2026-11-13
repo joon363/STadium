@@ -1,12 +1,18 @@
 import React, { useMemo, useRef } from 'react';
 import { MatchItem, SCHOOLS, SportKey } from '../config/stadiumConfig';
 import { useRealtimeSchedule } from '../hooks/useRealtimeSchedule';
+import { useLanguage } from '../context/LanguageContext';
 import {
   TournamentTreeData,
   TournamentGameNode,
   computeTournamentTreeLayout,
   propagateTournamentTreeWinners,
 } from '../types/tournamentTree';
+import {
+  getLocalizedValue,
+  localizeRoundName,
+  localizeTeamPlaceholder,
+} from '../utils/bilingual';
 import { Radio, ChevronRight, Trophy } from 'lucide-react';
 
 interface TournamentBracketProps {
@@ -25,6 +31,7 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({
   onMatchClick,
 }) => {
   const { getYoutubeLiveUrl } = useRealtimeSchedule();
+  const { language, t } = useLanguage();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Build or use provided tree data, merge realtime match state, and recursively propagate winners
@@ -47,23 +54,27 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({
       Object.keys(updatedNodes).forEach((nodeId) => {
         const node = updatedNodes[nodeId];
         if (node.type === 'game') {
-          const liveMatch = matchMapById.get(node.id) || matchMapByRound.get(node.roundName);
+          const localizedRound = getLocalizedValue(node.roundName, language, (s) =>
+            localizeRoundName(s, language)
+          );
+          const liveMatch =
+            matchMapById.get(node.id) ||
+            matchMapByRound.get(node.roundName) ||
+            matchMapByRound.get(localizedRound);
           if (liveMatch) {
-            const isEnded =
-              liveMatch.statusText === '종료' ||
-              liveMatch.winningTeam !== null ||
-              (!liveMatch.isLive && (liveMatch.score1 > 0 || liveMatch.score2 > 0));
+            const isConfirmed = Boolean(
+              liveMatch.isScoreConfirmed || node.isConfirmed || node.status === 'after'
+            );
+            const resultType = liveMatch.resultType || node.resultType || 'normal';
 
             updatedNodes[nodeId] = {
               ...node,
-              score1: liveMatch.score1,
-              score2: liveMatch.score2,
-              isLive: liveMatch.isLive,
-              status: liveMatch.isLive
-                ? 'live'
-                : isEnded
-                  ? 'after'
-                  : node.status || 'before',
+              score1: isConfirmed ? liveMatch.score1 : 0,
+              score2: isConfirmed ? liveMatch.score2 : 0,
+              isLive: !isConfirmed && liveMatch.isLive,
+              isConfirmed,
+              resultType,
+              status: isConfirmed ? 'after' : liveMatch.isLive ? 'live' : 'before',
               venue: liveMatch.venue || node.venue,
             };
           }
@@ -73,7 +84,7 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({
 
     const rawTree = { ...treeData, nodes: updatedNodes };
     return propagateTournamentTreeWinners(rawTree);
-  }, [treeData, matches]);
+  }, [treeData, matches, language]);
 
   // Compute Layout & SVG Orthogonal Connecting Lines
   const { nodesWithPos, svgLines, totalWidth, totalHeight } = useMemo(() => {
@@ -97,8 +108,7 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({
     return (
       <div className="bg-white border border-gray-200 rounded-xl p-8 text-center text-gray-500 space-y-1.5 shadow-2xs">
         <Trophy className="w-6 h-6 mx-auto text-gray-300 mb-1" />
-        <p className="text-xs font-bold text-gray-700">등록된 토너먼트 대진표가 없습니다.</p>
-        <p className="text-[11px] text-gray-400">관리자 페이지에서 대진표를 등록하면 실시간으로 표시됩니다.</p>
+        <p className="text-xs font-bold text-gray-700">{t('bracket.noBracket')}</p>
       </div>
     );
   }
@@ -113,9 +123,11 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({
         <div className="flex items-center justify-between border-b border-gray-100 pb-1.5 mb-1.5 text-xs font-bold text-gray-800">
           <div className="flex items-center gap-1">
             <Trophy className="w-3.5 h-3.5 text-amber-500" />
-            <span>{sportName} 토너먼트 대진표</span>
+            <span>{sportName} {t('sportDetail.tabBracket')}</span>
           </div>
-          <span className="text-[10px] font-medium text-gray-400">총 {gameCount}경기</span>
+          <span className="text-[10px] font-medium text-gray-400">
+            {t('bracket.totalGames', { count: gameCount })}
+          </span>
         </div>
 
         {/* Scrollable Tree Canvas with Touch & Drag Support */}
@@ -149,9 +161,12 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({
             {/* Nodes Layer */}
             {nodesWithPos.map(({ node, x, y, width, height }) => {
               if (node.type === 'team') {
+                const displayLeafName = getLocalizedValue(node.teamName, language, (s) =>
+                  localizeTeamPlaceholder(s, language)
+                );
                 const school = SCHOOLS[node.teamName] || {
                   color: '#475569',
-                  shortName: node.teamName,
+                  shortName: displayLeafName,
                 };
                 return (
                   <div
@@ -165,7 +180,7 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({
                         className="w-1.5 h-3 rounded-xs shrink-0"
                       />
                       <span className="text-[10px] font-black text-gray-900 truncate">
-                        {school.shortName || node.teamName}
+                        {school.shortName || displayLeafName}
                       </span>
                     </div>
                   </div>
@@ -174,12 +189,33 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({
 
               // Game Node Card Box
               const game = node as TournamentGameNode;
-              const t1 = SCHOOLS[game.team1] || { color: '#64748b', shortName: game.team1 };
-              const t2 = SCHOOLS[game.team2] || { color: '#64748b', shortName: game.team2 };
-              const isT1Win = game.score1 > game.score2;
-              const isT2Win = game.score2 > game.score1;
-              const isLive = game.status === 'live' || (game.status === undefined && game.isLive);
-              const isAfter = game.status === 'after';
+              const displayTeam1 = getLocalizedValue(game.team1, language, (s) =>
+                localizeTeamPlaceholder(s, language)
+              );
+              const displayTeam2 = getLocalizedValue(game.team2, language, (s) =>
+                localizeTeamPlaceholder(s, language)
+              );
+              const displayRound = getLocalizedValue(game.roundName, language, (s) =>
+                localizeRoundName(s, language)
+              );
+              const t1 = SCHOOLS[game.team1] || { color: '#64748b', shortName: displayTeam1 };
+              const t2 = SCHOOLS[game.team2] || { color: '#64748b', shortName: displayTeam2 };
+              const isConfirmed = Boolean(game.isConfirmed || game.status === 'after');
+              const resultType = game.resultType || 'normal';
+              const isT1Win =
+                isConfirmed &&
+                resultType !== 'cancelled' &&
+                (resultType === 'team1_forfeit_win' ||
+                  (resultType === 'normal' && game.score1 > game.score2));
+              const isT2Win =
+                isConfirmed &&
+                resultType !== 'cancelled' &&
+                (resultType === 'team2_forfeit_win' ||
+                  (resultType === 'normal' && game.score2 > game.score1));
+              const isLive =
+                !isConfirmed && (game.status === 'live' || (game.status === undefined && game.isLive));
+              const isAfter = isConfirmed;
+              const isStreamable = true;
 
               return (
                 <React.Fragment key={game.id}>
@@ -193,17 +229,24 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({
                       }}
                       className="absolute flex justify-center z-20 pointer-events-auto"
                     >
-                      <a
-                        href={getYoutubeLiveUrl(game.id) || getYoutubeLiveUrl(sportKey)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="inline-flex items-center gap-0.5 text-[8px] font-black bg-rose-600 hover:bg-rose-700 text-white px-1.5 py-0.2 rounded-full shadow-xs active:scale-95 transition-all cursor-pointer"
-                      >
-                        <Radio className="w-2 h-2" />
-                        <span>LIVE</span>
-                        <ChevronRight className="w-2 h-2" />
-                      </a>
+                      {isStreamable ? (
+                        <a
+                          href={getYoutubeLiveUrl(game.id, game.roundName, sportKey)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center gap-0.5 text-[8px] font-black bg-rose-600 hover:bg-rose-700 text-white px-1.5 py-0.2 rounded-full shadow-xs active:scale-95 transition-all cursor-pointer"
+                        >
+                          <Radio className="w-2 h-2" />
+                          <span>LIVE</span>
+                          <ChevronRight className="w-2 h-2" />
+                        </a>
+                      ) : (
+                        <span className="inline-flex items-center gap-0.5 text-[8px] font-black bg-rose-600 text-white px-1.5 py-0.2 rounded-full shadow-xs">
+                          <Radio className="w-2 h-2" />
+                          <span>LIVE</span>
+                        </span>
+                      )}
                     </div>
                   )}
 
@@ -226,11 +269,16 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({
                   >
                     {/* Top Header Label in Card */}
                     <div className="bg-slate-50 border-b border-gray-100 px-1 py-0 flex items-center justify-between text-[8px] font-bold text-gray-500 leading-tight">
-                      <span className="truncate">{game.roundName}</span>
+                      <span className="truncate">{displayRound}</span>
                       {isLive ? (
                         <span className="text-rose-600 text-[7.5px] font-black">LIVE</span>
+                      ) : isAfter && resultType === 'cancelled' ? (
+                        <span className="text-amber-700 text-[7.5px] font-bold">{t('match.cancelled')}</span>
+                      ) : isAfter &&
+                        (resultType === 'team1_forfeit_win' || resultType === 'team2_forfeit_win') ? (
+                        <span className="text-purple-700 text-[7.5px] font-bold">{t('match.forfeitWin')}</span>
                       ) : isAfter ? (
-                        <span className="text-emerald-700 text-[7.5px] font-bold">종료</span>
+                        <span className="text-emerald-700 text-[7.5px] font-bold">{t('match.ended')}</span>
                       ) : (
                         <span className="shrink-0 text-[7.5px]">
                           {String(game.startHour).padStart(2, '0')}:
@@ -260,9 +308,23 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({
                       </div>
                       <span
                         style={isAfter && isT1Win ? { color: t1.color } : undefined}
-                        className={`text-[10px] font-black shrink-0 ${isAfter && isT1Win ? 'font-black' : 'text-gray-500'}`}
+                        className={`text-[9px] font-black shrink-0 ${
+                          !isAfter
+                            ? 'text-slate-300 font-bold'
+                            : isT1Win
+                              ? 'font-black'
+                              : 'text-gray-500'
+                        }`}
                       >
-                        {game.score1}
+                        {!isAfter
+                          ? t('common.vs')
+                          : resultType === 'cancelled'
+                            ? t('match.cancelled')
+                            : resultType === 'team1_forfeit_win'
+                              ? t('match.forfeitWin')
+                              : resultType === 'team2_forfeit_win'
+                                ? t('match.forfeitLoss')
+                                : game.score1}
                       </span>
                     </div>
 
@@ -287,9 +349,23 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({
                       </div>
                       <span
                         style={isAfter && isT2Win ? { color: t2.color } : undefined}
-                        className={`text-[10px] font-black shrink-0 ${isAfter && isT2Win ? 'font-black' : 'text-gray-500'}`}
+                        className={`text-[9px] font-black shrink-0 ${
+                          !isAfter
+                            ? 'text-slate-300 font-bold'
+                            : isT2Win
+                              ? 'font-black'
+                              : 'text-gray-500'
+                        }`}
                       >
-                        {game.score2}
+                        {!isAfter
+                          ? ''
+                          : resultType === 'cancelled'
+                            ? t('match.cancelled')
+                            : resultType === 'team2_forfeit_win'
+                              ? t('match.forfeitWin')
+                              : resultType === 'team1_forfeit_win'
+                                ? t('match.forfeitLoss')
+                                : game.score2}
                       </span>
                     </div>
                   </div>
@@ -301,7 +377,7 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({
 
         {/* Bottom Direction Hint */}
         <div className="pt-1.5 mt-1 border-t border-gray-100 text-[9px] text-gray-400 flex items-center justify-between">
-          <span>▲ 아래(예선)에서 위(결승)로 토너먼트가 진행됩니다.</span>
+          <span>{t('bracket.directionHint')}</span>
           <span>STadium Championship</span>
         </div>
       </div>

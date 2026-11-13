@@ -1,5 +1,6 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import { SchoolProvider } from './context/SchoolContext';
 import { RealtimeScheduleProvider } from './hooks/useRealtimeSchedule';
 import { MobileContainer } from './components/MobileContainer';
@@ -17,12 +18,15 @@ const FoodTruckGuide = lazy(() => import('./pages/FoodTruckGuide').then((m) => (
 const SponsorGuide = lazy(() => import('./pages/SponsorGuide').then((m) => ({ default: m.SponsorGuide })));
 const Admin = lazy(() => import('./pages/Admin').then((m) => ({ default: m.Admin })));
 
-const PageLoadingFallback: React.FC = () => (
-  <div className="flex-1 flex flex-col items-center justify-center min-h-[300px] p-6 text-gray-500">
-    <Loader2 className="w-7 h-7 text-postech animate-spin mb-2" />
-    <span className="text-xs font-bold text-gray-600">페이지를 불러오는 중...</span>
-  </div>
-);
+const PageLoadingFallback: React.FC = () => {
+  const { t } = useLanguage();
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center min-h-[300px] p-6 text-gray-500">
+      <Loader2 className="w-7 h-7 text-postech animate-spin mb-2" />
+      <span className="text-xs font-bold text-gray-600">{t('common.loading')}</span>
+    </div>
+  );
+};
 
 const HIDE_HEADER_ROUTES = [
   '/soccer',
@@ -62,26 +66,28 @@ const LayoutWrapper: React.FC = () => {
 
 export const App: React.FC = () => {
   return (
-    <SchoolProvider>
-      <RealtimeScheduleProvider>
-        <BrowserRouter>
-          <Routes>
-            {/* Admin Route - PC Widescreen 16:9 Layout */}
-            <Route
-              path="/admin"
-              element={
-                <Suspense fallback={<PageLoadingFallback />}>
-                  <Admin />
-                </Suspense>
-              }
-            />
+    <LanguageProvider>
+      <SchoolProvider>
+        <RealtimeScheduleProvider>
+          <BrowserRouter>
+            <Routes>
+              {/* Admin Route - PC Widescreen 16:9 Layout */}
+              <Route
+                path="/admin"
+                element={
+                  <Suspense fallback={<PageLoadingFallback />}>
+                    <Admin />
+                  </Suspense>
+                }
+              />
 
-            {/* Visitor Routes - Mobile Layout */}
-            <Route path="/*" element={<LayoutWrapper />} />
-          </Routes>
-        </BrowserRouter>
-      </RealtimeScheduleProvider>
-    </SchoolProvider>
+              {/* Visitor Routes - Mobile Layout */}
+              <Route path="/*" element={<LayoutWrapper />} />
+            </Routes>
+          </BrowserRouter>
+        </RealtimeScheduleProvider>
+      </SchoolProvider>
+    </LanguageProvider>
   );
 };
 

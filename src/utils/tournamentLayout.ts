@@ -5,6 +5,40 @@ import {
   ComputedPositionNode,
   ComputedSvgLine,
 } from '../types/tournamentTree';
+import { encodeBilingual, localizeRoundName, parseBilingual } from './bilingual';
+
+export function isThirdPlaceGameNode(game: TournamentGameNode): boolean {
+  const koRound = parseBilingual(game.roundName).ko;
+  return Boolean(game.isThirdPlace || /3.*4위|34위|3,4위/.test(koRound));
+}
+
+export function isGameNodeConfirmed(game: TournamentGameNode): boolean {
+  return Boolean(game.isConfirmed || game.status === 'after');
+}
+
+export function getConfirmedGameWinner(game: TournamentGameNode): string | null {
+  if (!isGameNodeConfirmed(game)) return null;
+  const rt = game.resultType || 'normal';
+  if (rt === 'cancelled') return null;
+  if (rt === 'team1_forfeit_win') return game.team1;
+  if (rt === 'team2_forfeit_win') return game.team2;
+  if (game.score1 !== game.score2) {
+    return game.score1 > game.score2 ? game.team1 : game.team2;
+  }
+  return null;
+}
+
+export function getConfirmedGameLoser(game: TournamentGameNode): string | null {
+  if (!isGameNodeConfirmed(game)) return null;
+  const rt = game.resultType || 'normal';
+  if (rt === 'cancelled') return null;
+  if (rt === 'team1_forfeit_win') return game.team2;
+  if (rt === 'team2_forfeit_win') return game.team1;
+  if (game.score1 !== game.score2) {
+    return game.score1 > game.score2 ? game.team2 : game.team1;
+  }
+  return null;
+}
 
 /**
  * Calculates absolute (X, Y) coordinates and upward SVG connecting lines for any custom tournament tree
@@ -94,6 +128,10 @@ export function computeTournamentTreeLayout(
       centerX = c2Pos.x;
     }
 
+    if (isThirdPlaceGameNode(game)) {
+      centerX = Math.max(centerX + cardWidth + 14, c2Pos ? c2Pos.x : centerX + cardWidth + 14);
+    }
+
     const y = baselineY - game.level * levelHeight;
 
     posMap.set(game.id, {
@@ -109,6 +147,7 @@ export function computeTournamentTreeLayout(
   const svgLines: ComputedSvgLine[] = [];
 
   sortedGames.forEach((game) => {
+    if (isThirdPlaceGameNode(game)) return;
     const gPos = posMap.get(game.id);
     const c1Pos = posMap.get(game.child1Id);
     const c2Pos = posMap.get(game.child2Id);
@@ -191,19 +230,6 @@ export function propagateTournamentTreeWinners(
   const updatedNodes = { ...tree.nodes };
   const allNodes = Object.values(updatedNodes);
 
-  // Helper to determine if a game node has completed and who won
-  const getGameWinner = (game: TournamentGameNode): string | null => {
-    // 1. Explicitly marked as after (finished)
-    const isAfter = game.status === 'after';
-    // 2. Or has final scores and not live
-    const hasScores = !game.isLive && (game.score1 > 0 || game.score2 > 0);
-
-    if ((isAfter || hasScores) && game.score1 !== game.score2) {
-      return game.score1 > game.score2 ? game.team1 : game.team2;
-    }
-    return null;
-  };
-
   // Sort game nodes by level ascending (Level 1 -> Level 2 -> Level 3 ...)
   const gameNodes = allNodes
     .filter((n): n is TournamentGameNode => n.type === 'game')
@@ -219,6 +245,26 @@ export function propagateTournamentTreeWinners(
     for (const game of gameNodes) {
       const c1 = updatedNodes[game.child1Id];
       const c2 = updatedNodes[game.child2Id];
+      const isThird = isThirdPlaceGameNode(game);
+      const koSuffix = isThird ? '패자' : '승자';
+      const enSuffix = isThird ? 'Loser' : 'Winner';
+
+      const buildPlaceholder = (roundRaw: string) => {
+        const koRound = parseBilingual(roundRaw).ko;
+        const enRound = localizeRoundName(roundRaw, 'en');
+        return encodeBilingual(`${koRound} ${koSuffix}`, `${enRound} ${enSuffix}`);
+      };
+
+      const isPlaceholderTeam = (teamRaw: string | null | undefined) => {
+        if (!teamRaw) return true;
+        const { ko, en } = parseBilingual(teamRaw);
+        return (
+          ko.includes('승자') ||
+          ko.includes('패자') ||
+          en.includes('Winner') ||
+          en.includes('Loser')
+        );
+      };
 
       let nextTeam1 = game.team1;
       let nextTeam2 = game.team2;
@@ -230,18 +276,15 @@ export function propagateTournamentTreeWinners(
             nextTeam1 = c1.teamName;
           }
         } else if (c1.type === 'game') {
-          const winner = getGameWinner(c1);
-          if (winner && !winner.includes('승자')) {
-            if (nextTeam1 !== winner) {
-              nextTeam1 = winner;
+          const decidedTeam = isThird ? getConfirmedGameLoser(c1) : getConfirmedGameWinner(c1);
+          if (decidedTeam && !isPlaceholderTeam(decidedTeam)) {
+            if (nextTeam1 !== decidedTeam) {
+              nextTeam1 = decidedTeam;
             }
-          } else {
-            const placeholder = `${c1.roundName} 승자`;
-            // If child hasn't ended and current team is either a placeholder or outdated winner
-            if (c1.status !== 'after' && (!c1.score1 && !c1.score2)) {
-              if (nextTeam1 !== placeholder) {
-                nextTeam1 = placeholder;
-              }
+          } else if (!isGameNodeConfirmed(c1)) {
+            const placeholder = buildPlaceholder(c1.roundName);
+            if (nextTeam1 !== placeholder) {
+              nextTeam1 = placeholder;
             }
           }
         }
@@ -254,17 +297,15 @@ export function propagateTournamentTreeWinners(
             nextTeam2 = c2.teamName;
           }
         } else if (c2.type === 'game') {
-          const winner = getGameWinner(c2);
-          if (winner && !winner.includes('승자')) {
-            if (nextTeam2 !== winner) {
-              nextTeam2 = winner;
+          const decidedTeam = isThird ? getConfirmedGameLoser(c2) : getConfirmedGameWinner(c2);
+          if (decidedTeam && !isPlaceholderTeam(decidedTeam)) {
+            if (nextTeam2 !== decidedTeam) {
+              nextTeam2 = decidedTeam;
             }
-          } else {
-            const placeholder = `${c2.roundName} 승자`;
-            if (c2.status !== 'after' && (!c2.score1 && !c2.score2)) {
-              if (nextTeam2 !== placeholder) {
-                nextTeam2 = placeholder;
-              }
+          } else if (!isGameNodeConfirmed(c2)) {
+            const placeholder = buildPlaceholder(c2.roundName);
+            if (nextTeam2 !== placeholder) {
+              nextTeam2 = placeholder;
             }
           }
         }

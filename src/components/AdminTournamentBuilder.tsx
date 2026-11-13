@@ -14,12 +14,19 @@ import {
   Plus,
   Trash2,
   Trophy,
-  Layers,
   Sparkles,
   RefreshCw,
   Radio,
   CheckCircle2,
 } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
+import {
+  encodeBilingual,
+  getLocalizedValue,
+  localizeRoundName,
+  localizeTeamPlaceholder,
+  parseBilingual,
+} from '../utils/bilingual';
 
 interface AdminTournamentCanvasProps {
   sportKey: SportKey;
@@ -44,6 +51,8 @@ export const AdminTournamentBuilder: React.FC<AdminTournamentCanvasProps> = ({
   selectedNodeId,
   onSelectNode,
 }) => {
+  const { language, t } = useLanguage();
+
   // Selected nodes for pairing (up to 2 nodes selected)
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
   // Node currently highlighted
@@ -106,7 +115,8 @@ export const AdminTournamentBuilder: React.FC<AdminTournamentCanvasProps> = ({
   const handleAddTeamNode = () => {
     const nextCol = leafTeams.length;
     const defaultSchools = ['POSTECH', 'KAIST', 'GIST', 'UNIST', 'DGIST', 'KENTECH'];
-    const assignedSchool = defaultSchools[nextCol % defaultSchools.length] || `팀 ${nextCol + 1}`;
+    const assignedSchool =
+      defaultSchools[nextCol % defaultSchools.length] || `Team ${nextCol + 1}`;
 
     const newId = `${sportKey}-team-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
     const newTeamNode: TournamentLeafNode = {
@@ -134,12 +144,23 @@ export const AdminTournamentBuilder: React.FC<AdminTournamentCanvasProps> = ({
     const [c1, c2] = n1.level <= n2.level ? [n1, n2] : [n2, n1];
     const newLevel = Math.max(c1.level, c2.level) + 1;
 
-    const team1Label = c1.type === 'team' ? c1.teamName : `${c1.roundName} 승자`;
-    const team2Label = c2.type === 'team' ? c2.teamName : `${c2.roundName} 승자`;
+    const buildWinnerPlaceholder = (child: TournamentLeafNode | TournamentGameNode) => {
+      if (child.type === 'team') return child.teamName;
+      const koChildRound = parseBilingual(child.roundName).ko || child.roundName;
+      const koPh = `${koChildRound} 승자`;
+      return encodeBilingual(koPh, localizeTeamPlaceholder(koPh, 'en'));
+    };
+
+    const team1Label = buildWinnerPlaceholder(c1);
+    const team2Label = buildWinnerPlaceholder(c2);
 
     const gameCount = allNodeList.filter((n) => n.type === 'game').length + 1;
-    const roundNameDefault =
+    const koRoundDefault =
       newLevel >= 3 ? '결선' : newLevel === 2 ? `본선 ${gameCount}경기` : `예선 ${gameCount}경기`;
+    const roundNameDefault = encodeBilingual(
+      koRoundDefault,
+      localizeRoundName(koRoundDefault, 'en')
+    );
 
     const newGameId = `${sportKey}-game-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
     const newGameNode: TournamentGameNode = {
@@ -156,7 +177,7 @@ export const AdminTournamentBuilder: React.FC<AdminTournamentCanvasProps> = ({
       startMinute: 0,
       endHour: 11 + (gameCount - 1) * 2,
       endMinute: 30,
-      venue: '체육관',
+      venue: encodeBilingual('체육관', 'Gymnasium'),
       level: newLevel,
     };
 
@@ -195,11 +216,11 @@ export const AdminTournamentBuilder: React.FC<AdminTournamentCanvasProps> = ({
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-[11px] font-bold text-slate-600 flex items-center gap-1">
             <Sparkles className="w-3 h-3 text-amber-500" />
-            <span>프리셋:</span>
+            <span>{t('admin.bracket.presetLabel')}</span>
           </span>
           <button
             onClick={() => {
-              if (confirm('사진 1 (5개교 비대칭) 템플릿을 불러오시겠습니까?')) {
+              if (confirm(t('admin.bracket.confirmPreset1'))) {
                 onChange(createPhoto1Preset(sportKey));
                 setSelectedNodeIds([]);
                 setActiveNodeId(null);
@@ -207,11 +228,11 @@ export const AdminTournamentBuilder: React.FC<AdminTournamentCanvasProps> = ({
             }}
             className="px-2 py-1 bg-white hover:bg-slate-100 text-amber-800 border border-slate-200 rounded text-[11px] font-bold transition-colors shadow-2xs"
           >
-            ⚾ 5개교 비대칭
+            {t('admin.bracket.preset5')}
           </button>
           <button
             onClick={() => {
-              if (confirm('사진 2 (6개교 정석) 템플릿을 불러오시겠습니까?')) {
+              if (confirm(t('admin.bracket.confirmPreset2'))) {
                 onChange(createPhoto2Preset(sportKey));
                 setSelectedNodeIds([]);
                 setActiveNodeId(null);
@@ -219,11 +240,11 @@ export const AdminTournamentBuilder: React.FC<AdminTournamentCanvasProps> = ({
             }}
             className="px-2 py-1 bg-white hover:bg-slate-100 text-sky-800 border border-slate-200 rounded text-[11px] font-bold transition-colors shadow-2xs"
           >
-            🏸 6개교 래더
+            {t('admin.bracket.preset6')}
           </button>
           <button
             onClick={() => {
-              if (confirm('4개교 준결승 토너먼트 템플릿을 불러오시겠습니까?')) {
+              if (confirm(t('admin.bracket.confirmPreset4'))) {
                 onChange(create4TeamPreset(sportKey));
                 setSelectedNodeIds([]);
                 setActiveNodeId(null);
@@ -231,11 +252,11 @@ export const AdminTournamentBuilder: React.FC<AdminTournamentCanvasProps> = ({
             }}
             className="px-2 py-1 bg-white hover:bg-slate-100 text-emerald-800 border border-slate-200 rounded text-[11px] font-bold transition-colors shadow-2xs"
           >
-            🏆 4개교
+            {t('admin.bracket.preset4')}
           </button>
           <button
             onClick={() => {
-              if (confirm('모든 대진표 노드를 초기화하시겠습니까?')) {
+              if (confirm(t('admin.bracket.confirmReset'))) {
                 onChange({ sportKey, nodes: {} });
                 setSelectedNodeIds([]);
                 setActiveNodeId(null);
@@ -244,7 +265,7 @@ export const AdminTournamentBuilder: React.FC<AdminTournamentCanvasProps> = ({
             className="px-2 py-1 bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 rounded text-[11px] font-bold transition-colors shadow-2xs flex items-center gap-0.5"
           >
             <RefreshCw className="w-2.5 h-2.5" />
-            <span>초기화</span>
+            <span>{t('admin.bracket.resetBtn')}</span>
           </button>
         </div>
 
@@ -255,7 +276,7 @@ export const AdminTournamentBuilder: React.FC<AdminTournamentCanvasProps> = ({
             className="px-3 py-1.5 bg-postech hover:bg-postech-dark text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow-2xs transition-all active:scale-95"
           >
             <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>{isSaving ? '저장 중...' : '대진표 전체 저장'}</span>
+            <span>{isSaving ? t('admin.saving') : t('admin.matches.saveTreeAll')}</span>
           </button>
         )}
       </div>
@@ -269,17 +290,15 @@ export const AdminTournamentBuilder: React.FC<AdminTournamentCanvasProps> = ({
               <Plus className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-xs font-bold text-slate-800">등록된 대진표 노드가 없습니다</h4>
-              <p className="text-[11px] text-slate-400 mt-0.5">
-                상단 프리셋을 선택하거나 아래 버튼으로 1행 팀 노드를 추가하세요.
-              </p>
+              <h4 className="text-xs font-bold text-slate-800">{t('admin.bracket.emptyTitle')}</h4>
+              <p className="text-[11px] text-slate-400 mt-0.5">{t('admin.bracket.emptyDesc')}</p>
             </div>
             <button
               onClick={handleAddTeamNode}
               className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold inline-flex items-center gap-1 shadow-sm transition-all"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>+ 1행 팀 노드 추가</span>
+              <span>{t('admin.bracket.addRow1Btn')}</span>
             </button>
           </div>
         ) : (
@@ -317,21 +336,25 @@ export const AdminTournamentBuilder: React.FC<AdminTournamentCanvasProps> = ({
                 (node as TournamentGameNode).roundName === selectedMatchRound;
 
               if (node.type === 'team') {
+                const localizedTeamName = getLocalizedValue(node.teamName, language, (ko) =>
+                  localizeTeamPlaceholder(ko, language)
+                );
                 const school = SCHOOLS[node.teamName] || {
                   color: '#475569',
-                  shortName: node.teamName,
+                  shortName: localizedTeamName,
                 };
                 return (
                   <div
                     key={node.id}
                     onClick={() => handleNodeClick(node.id)}
                     style={{ left: x, top: y, width, height }}
-                    className={`absolute z-10 rounded-md flex items-center justify-between px-1.5 shadow-2xs cursor-pointer transition-all border ${isSelected
-                      ? 'ring-2 ring-postech border-postech bg-rose-50'
-                      : isActive
-                        ? 'ring-2 ring-slate-500 border-slate-700 bg-white'
-                        : 'border-slate-300 bg-white hover:border-slate-400'
-                      }`}
+                    className={`absolute z-10 rounded-md flex items-center justify-between px-1.5 shadow-2xs cursor-pointer transition-all border ${
+                      isSelected
+                        ? 'ring-2 ring-postech border-postech bg-rose-50'
+                        : isActive
+                          ? 'ring-2 ring-slate-500 border-slate-700 bg-white'
+                          : 'border-slate-300 bg-white hover:border-slate-400'
+                    }`}
                   >
                     <div className="flex items-center gap-1 min-w-0">
                       <div
@@ -339,29 +362,50 @@ export const AdminTournamentBuilder: React.FC<AdminTournamentCanvasProps> = ({
                         className="w-1.5 h-3 rounded-xs shrink-0"
                       />
                       <span className="text-[10px] font-black text-slate-900 truncate">
-                        {school.shortName || node.teamName}
+                        {school.shortName || localizedTeamName}
                       </span>
                     </div>
-                    <span className="text-[8px] font-bold text-slate-400">1행</span>
+                    <span className="text-[8px] font-bold text-slate-400">
+                      {t('admin.bracket.row1')}
+                    </span>
                   </div>
                 );
               }
 
               // Game Node Card Box
               const game = node as TournamentGameNode;
-              const t1 = SCHOOLS[game.team1] || { color: '#64748b', shortName: game.team1 };
-              const t2 = SCHOOLS[game.team2] || { color: '#64748b', shortName: game.team2 };
-              const isT1Win = game.score1 > game.score2;
-              const isT2Win = game.score2 > game.score1;
-              const isLive = game.status === 'live' || (game.status === undefined && game.isLive);
-              const isAfter = game.status === 'after';
+              const t1Display = getLocalizedValue(game.team1, language, (ko) =>
+                localizeTeamPlaceholder(ko, language)
+              );
+              const t2Display = getLocalizedValue(game.team2, language, (ko) =>
+                localizeTeamPlaceholder(ko, language)
+              );
+              const t1 = SCHOOLS[game.team1] || { color: '#64748b', shortName: t1Display };
+              const t2 = SCHOOLS[game.team2] || { color: '#64748b', shortName: t2Display };
+              const isConfirmed = Boolean(game.isConfirmed || game.status === 'after');
+              const resultType = game.resultType || 'normal';
+              const isT1Win =
+                isConfirmed &&
+                resultType !== 'cancelled' &&
+                (resultType === 'team1_forfeit_win' ||
+                  (resultType === 'normal' && game.score1 > game.score2));
+              const isT2Win =
+                isConfirmed &&
+                resultType !== 'cancelled' &&
+                (resultType === 'team2_forfeit_win' ||
+                  (resultType === 'normal' && game.score2 > game.score1));
+              const isLive =
+                !isConfirmed &&
+                (game.status === 'live' || (game.status === undefined && game.isLive));
+              const isAfter = isConfirmed;
 
               return (
                 <div
                   key={game.id}
                   onClick={() => handleNodeClick(game.id)}
                   style={{ left: x, top: y, width, height }}
-                  className={`absolute z-10 rounded-md flex flex-col justify-between overflow-hidden shadow-2xs cursor-pointer transition-all border ${isMatchHighlighted
+                  className={`absolute z-10 rounded-md flex flex-col justify-between overflow-hidden shadow-2xs cursor-pointer transition-all border ${
+                    isMatchHighlighted
                       ? 'ring-2 ring-amber-500 border-amber-500 bg-amber-50/40'
                       : isSelected
                         ? 'ring-2 ring-postech border-postech bg-rose-50'
@@ -370,20 +414,34 @@ export const AdminTournamentBuilder: React.FC<AdminTournamentCanvasProps> = ({
                           : isLive
                             ? 'border-rose-500 ring-1 ring-rose-200 bg-white'
                             : isAfter
-                              ? 'border-slate-300 bg-slate-50/70'
+                              ? 'border-emerald-300 bg-emerald-50/20'
                               : 'border-slate-300 bg-white hover:border-slate-400'
-                    }`}
+                  }`}
                 >
                   {/* Top Header Label in Card */}
                   <div className="bg-slate-100/90 border-b border-slate-200/80 px-1 py-0 flex items-center justify-between text-[8px] font-bold text-slate-600 leading-tight">
-                    <span className="truncate">{game.roundName}</span>
+                    <span className="truncate">
+                      {getLocalizedValue(game.roundName, language, (ko) =>
+                        localizeRoundName(ko, language)
+                      )}
+                    </span>
                     {isLive ? (
                       <span className="text-rose-600 flex items-center gap-0.5 text-[7.5px] font-black">
                         <Radio className="w-1.5 h-1.5" /> LIVE
                       </span>
+                    ) : isAfter && resultType === 'cancelled' ? (
+                      <span className="text-amber-700 text-[7.5px] font-bold">
+                        {t('match.cancelled')}
+                      </span>
+                    ) : isAfter &&
+                      (resultType === 'team1_forfeit_win' ||
+                        resultType === 'team2_forfeit_win') ? (
+                      <span className="text-purple-700 text-[7.5px] font-bold">
+                        {t('match.forfeitWin')}
+                      </span>
                     ) : isAfter ? (
                       <span className="text-emerald-700 text-[7.5px] font-bold">
-                        종료
+                        {t('admin.matches.confirmedShort')}
                       </span>
                     ) : (
                       <span className="text-slate-400 text-[7.5px]">
@@ -395,35 +453,61 @@ export const AdminTournamentBuilder: React.FC<AdminTournamentCanvasProps> = ({
 
                   {/* Team 1 Row */}
                   <div
-                    className={`flex items-center justify-between px-1 py-0 h-1/2 border-b border-slate-100 ${isAfter && isT1Win ? 'font-bold text-slate-900 bg-slate-100/80' : isAfter && isT2Win ? 'text-slate-400 opacity-60' : 'text-slate-700'
-                      }`}
+                    className={`flex items-center justify-between px-1 py-0 h-1/2 border-b border-slate-100 ${
+                      isAfter && isT1Win
+                        ? 'font-bold text-slate-900 bg-slate-100/80'
+                        : isAfter && isT2Win
+                          ? 'text-slate-400 opacity-60'
+                          : 'text-slate-700'
+                    }`}
                   >
                     <div className="flex items-center gap-1 min-w-0">
                       <div
                         style={{ backgroundColor: t1.color }}
                         className="w-1 h-2.5 rounded-xs shrink-0"
                       />
-                      <span className="text-[10px] truncate">{t1.shortName || game.team1}</span>
+                      <span className="text-[10px] truncate">{t1.shortName || t1Display}</span>
                     </div>
-                    <span className="text-[10px] font-black text-slate-800 shrink-0">
-                      {game.score1}
+                    <span className="text-[9px] font-black text-slate-800 shrink-0">
+                      {!isAfter
+                        ? 'VS'
+                        : resultType === 'cancelled'
+                          ? t('match.cancelled')
+                          : resultType === 'team1_forfeit_win'
+                            ? t('match.forfeitWin')
+                            : resultType === 'team2_forfeit_win'
+                              ? t('match.forfeitLoss')
+                              : game.score1}
                     </span>
                   </div>
 
                   {/* Team 2 Row */}
                   <div
-                    className={`flex items-center justify-between px-1 py-0 h-1/2 ${isAfter && isT2Win ? 'font-bold text-slate-900 bg-slate-100/80' : isAfter && isT1Win ? 'text-slate-400 opacity-60' : 'text-slate-700'
-                      }`}
+                    className={`flex items-center justify-between px-1 py-0 h-1/2 ${
+                      isAfter && isT2Win
+                        ? 'font-bold text-slate-900 bg-slate-100/80'
+                        : isAfter && isT1Win
+                          ? 'text-slate-400 opacity-60'
+                          : 'text-slate-700'
+                    }`}
                   >
                     <div className="flex items-center gap-1 min-w-0">
                       <div
                         style={{ backgroundColor: t2.color }}
                         className="w-1 h-2.5 rounded-xs shrink-0"
                       />
-                      <span className="text-[10px] truncate">{t2.shortName || game.team2}</span>
+                      <span className="text-[10px] truncate">{t2.shortName || t2Display}</span>
                     </div>
-                    <span className="text-[10px] font-black text-slate-800 shrink-0">
-                      {game.score2}
+                    <span className="text-[9px] font-black text-slate-800 shrink-0">
+                      {!isAfter
+                        ? ''
+                        : resultType === 'cancelled'
+                          ? t('match.cancelled')
+                          : resultType === 'team2_forfeit_win'
+                            ? t('match.forfeitWin')
+                            : resultType === 'team1_forfeit_win'
+                              ? t('match.forfeitLoss')
+                              : game.score2}
                     </span>
                   </div>
                 </div>
@@ -441,7 +525,7 @@ export const AdminTournamentBuilder: React.FC<AdminTournamentCanvasProps> = ({
             className="px-2.5 py-1.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 rounded-lg text-xs font-bold flex items-center gap-1 shadow-2xs transition-colors"
           >
             <Plus className="w-3.5 h-3.5 text-postech" />
-            <span>팀 노드 추가 (1행)</span>
+            <span>{t('admin.bracket.addTeamBtn')}</span>
           </button>
 
           {activeNodeId && (
@@ -450,7 +534,7 @@ export const AdminTournamentBuilder: React.FC<AdminTournamentCanvasProps> = ({
               className="px-2.5 py-1.5 bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 rounded-lg text-xs font-bold flex items-center gap-1 shadow-2xs transition-colors"
             >
               <Trash2 className="w-3.5 h-3.5" />
-              <span>선택 노드 삭제</span>
+              <span>{t('admin.bracket.deleteActiveBtn')}</span>
             </button>
           )}
         </div>
@@ -463,19 +547,20 @@ export const AdminTournamentBuilder: React.FC<AdminTournamentCanvasProps> = ({
           >
             <Trophy className="w-3.5 h-3.5" />
             <span>
-              선택한 2개 노드로 윗행 경기 생성 (Level{' '}
-              {Math.max(
-                nodes[selectedNodeIds[0]]?.level || 0,
-                nodes[selectedNodeIds[1]]?.level || 0
-              ) + 1}
-              )
+              {t('admin.bracket.mergeBtn', {
+                level:
+                  Math.max(
+                    nodes[selectedNodeIds[0]]?.level || 0,
+                    nodes[selectedNodeIds[1]]?.level || 0
+                  ) + 1,
+              })}
             </span>
           </button>
         )}
 
         {selectedNodeIds.length === 1 && (
           <span className="text-[11px] text-slate-500 font-bold">
-            * 짝지을 상대 노드를 1개 더 클릭하세요.
+            {t('admin.bracket.pairHint')}
           </span>
         )}
       </div>

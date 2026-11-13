@@ -2,12 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Store, MapPin, Clock, Info, Loader2 } from 'lucide-react';
 import { getSupabaseBooths, BoothItem } from '../lib/supabase';
+import { useLanguage } from '../context/LanguageContext';
+import { getLocalizedValue, localizeVenueName } from '../utils/bilingual';
 
 export const BoothGuide: React.FC = () => {
   const navigate = useNavigate();
   const [booths, setBooths] = useState<BoothItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [activeCategory, setActiveCategory] = useState<string>('ALL');
+  const { language, t } = useLanguage();
 
   useEffect(() => {
     getSupabaseBooths().then((data) => {
@@ -17,11 +20,11 @@ export const BoothGuide: React.FC = () => {
   }, []);
 
   const categories = [
-    { id: 'ALL', label: '전체' },
-    { id: 'experience', label: '체험 부스' },
-    { id: 'food', label: '음식/식음' },
-    { id: 'event', label: '이벤트' },
-    { id: 'promotion', label: '홍보' },
+    { id: 'ALL', label: t('common.all') },
+    { id: 'experience', label: t('booth.catExperience') },
+    { id: 'food', label: t('booth.catFood') },
+    { id: 'event', label: t('booth.catEvent') },
+    { id: 'promotion', label: t('booth.catPromotion') },
   ];
 
   const filteredBooths =
@@ -36,15 +39,16 @@ export const BoothGuide: React.FC = () => {
         <button
           onClick={() => navigate('/')}
           className="touch-target p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white active:bg-slate-800 transition-colors"
+          aria-label={t('common.back')}
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
         <div>
           <h1 className="font-extrabold text-base flex items-center gap-2 text-white">
             <Store className="w-5 h-5 text-amber-500" />
-            <span>부스 안내</span>
+            <span>{t('booth.title')}</span>
           </h1>
-          <p className="text-xs text-slate-400">STadium 행사장 내 체험 및 동아리 부스 목록</p>
+          <p className="text-xs text-slate-400">{t('booth.desc')}</p>
         </div>
       </div>
 
@@ -69,12 +73,12 @@ export const BoothGuide: React.FC = () => {
       {loading ? (
         <div className="py-16 flex flex-col items-center justify-center gap-2.5 text-slate-400 text-xs font-bold bg-slate-900 border border-slate-800 rounded-2xl">
           <Loader2 className="w-6 h-6 text-amber-500 animate-spin" />
-          <span>부스 정보를 불러오는 중...</span>
+          <span>{t('booth.loading')}</span>
         </div>
       ) : filteredBooths.length === 0 ? (
         <div className="py-16 text-center space-y-2 bg-slate-900/50 border border-slate-800 rounded-xl p-6">
           <Info className="w-8 h-8 text-slate-500 mx-auto" />
-          <p className="text-sm font-bold text-slate-300">등록된 부스 정보가 없습니다.</p>
+          <p className="text-sm font-bold text-slate-300">{t('booth.empty')}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-3">
@@ -86,9 +90,13 @@ export const BoothGuide: React.FC = () => {
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2.5">
                   <div>
-                    <h3 className="font-extrabold text-sm text-white">{booth.name}</h3>
+                    <h3 className="font-extrabold text-sm text-white">
+                      {getLocalizedValue(booth.name, language)}
+                    </h3>
                     {booth.operator && (
-                      <p className="text-xs text-amber-400 font-bold">{booth.operator}</p>
+                      <p className="text-xs text-amber-400 font-bold">
+                        {getLocalizedValue(booth.operator, language)}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -96,7 +104,7 @@ export const BoothGuide: React.FC = () => {
 
               {booth.description && (
                 <p className="text-xs text-slate-300 leading-relaxed font-medium bg-slate-950/60 p-2.5 rounded-lg border border-slate-800/80">
-                  {booth.description}
+                  {getLocalizedValue(booth.description, language)}
                 </p>
               )}
 
@@ -104,13 +112,17 @@ export const BoothGuide: React.FC = () => {
                 {booth.location && (
                   <div className="flex items-center gap-1">
                     <MapPin className="w-3.5 h-3.5 text-rose-400 shrink-0" />
-                    <span>{booth.location}</span>
+                    <span>
+                      {getLocalizedValue(booth.location, language, (s) =>
+                        localizeVenueName(s, language)
+                      )}
+                    </span>
                   </div>
                 )}
                 {booth.operatingHours && (
                   <div className="flex items-center gap-1 ml-auto">
                     <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                    <span>{booth.operatingHours}</span>
+                    <span>{getLocalizedValue(booth.operatingHours, language)}</span>
                   </div>
                 )}
               </div>

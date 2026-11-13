@@ -2,74 +2,66 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { SCHOOLS, SportKey, MatchItem } from '../config/stadiumConfig';
 import { useRealtimeSchedule } from '../hooks/useRealtimeSchedule';
+import { useLanguage } from '../context/LanguageContext';
 import { TournamentBracket } from '../components/TournamentBracket';
 import { TournamentTreeData } from '../types/tournamentTree';
-import { getSupabaseTournamentTree, subscribeToRealtimeTables } from '../lib/supabase';
-import { ArrowLeft, Clock, MapPin, Radio, ChevronRight, Calendar, Trophy } from 'lucide-react';
+import { getSupabaseTournamentTree } from '../lib/supabase';
+import { ArrowLeft, Clock, MapPin, Radio, ChevronRight, Calendar, Trophy, RotateCw } from 'lucide-react';
 
 export const SportDetail: React.FC = () => {
   const { sportKey } = useParams<{ sportKey: string }>();
   const navigate = useNavigate();
-  const { sportsConfig, getYoutubeLiveUrl, now } = useRealtimeSchedule();
+  const { sportsConfig, tournamentTrees, getYoutubeLiveUrl, refreshFromSupabase } = useRealtimeSchedule();
+  const { t } = useLanguage();
 
   const [activeTab, setActiveTab] = useState<'timeline' | 'bracket'>('timeline');
-  const [treeData, setTreeData] = useState<TournamentTreeData | null>(null);
-
-  // Dedicated trees for 3 badminton divisions
-  const [badmintonTrees, setBadmintonTrees] = useState<{
-    men: TournamentTreeData | null;
-    women: TournamentTreeData | null;
-    mixed: TournamentTreeData | null;
-  }>({ men: null, women: null, mixed: null });
+  const [fallbackTreeData, setFallbackTreeData] = useState<TournamentTreeData | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const isBadminton = sportKey === 'badminton';
+  const isStreamable = true;
+
+  const treeData = useMemo(() => {
+    if (!sportKey || isBadminton) return null;
+    return tournamentTrees[sportKey] || fallbackTreeData;
+  }, [sportKey, isBadminton, tournamentTrees, fallbackTreeData]);
+
+  const badmintonTrees = useMemo(
+    () => ({
+      men: tournamentTrees['badminton_men'] || null,
+      women: tournamentTrees['badminton_women'] || null,
+      mixed: tournamentTrees['badminton_mixed'] || null,
+    }),
+    [tournamentTrees]
+  );
 
   useEffect(() => {
-    if (!sportKey) return;
+    if (!sportKey || isBadminton) return;
+    if (tournamentTrees[sportKey]) return;
 
     let isMounted = true;
-    const fetchTree = () => {
-      if (isBadminton) {
-        Promise.all([
-          getSupabaseTournamentTree('badminton_men', true),
-          getSupabaseTournamentTree('badminton_women', true),
-          getSupabaseTournamentTree('badminton_mixed', true),
-        ]).then(([men, women, mixed]) => {
-          if (isMounted) {
-            setBadmintonTrees({ men, women, mixed });
-          }
-        });
-      } else {
-        getSupabaseTournamentTree(sportKey, true).then((data) => {
-          if (isMounted) {
-            setTreeData(data);
-          }
-        });
+    getSupabaseTournamentTree(sportKey, false).then((data) => {
+      if (isMounted && data) {
+        setFallbackTreeData(data);
       }
-    };
-
-    fetchTree();
-
-    // 1. WebSocket Subscription for instant zero-latency tournament tree updates
-    const unsubscribe = subscribeToRealtimeTables(['tournament_trees', 'admin_settings'], () => {
-      fetchTree();
     });
-
-    // 2. Fallback Long Polling (60s) & Tab Focus
-    const interval = setInterval(fetchTree, 60000);
-    const handleFocus = () => fetchTree();
-    window.addEventListener('focus', handleFocus);
 
     return () => {
       isMounted = false;
-      unsubscribe();
-      clearInterval(interval);
-      window.removeEventListener('focus', handleFocus);
     };
-  }, [sportKey, isBadminton]);
+  }, [sportKey, isBadminton, tournamentTrees]);
+
+  const handleManualRefresh = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await refreshFromSupabase();
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 500);
+    }
+  };
 
   const config = sportKey ? sportsConfig[sportKey] : null;
-  const nowMs = now.getTime();
 
   // Badminton sub-sports
   const menConfig = sportsConfig['badminton_men'];
@@ -81,20 +73,20 @@ export const SportDetail: React.FC = () => {
     if (!isBadminton) return [];
 
     const menSchedule = (menConfig?.schedule || []).map((m) => ({
-      division: '남자 복식',
-      tag: '남복',
+      division: t('sports.badmintonMen'),
+      tag: t('sports.badmintonMenTag'),
       tagColor: 'bg-blue-600 text-white border-blue-600',
       match: m,
     }));
     const womenSchedule = (womenConfig?.schedule || []).map((m) => ({
-      division: '여자 복식',
-      tag: '여복',
+      division: t('sports.badmintonWomen'),
+      tag: t('sports.badmintonWomenTag'),
       tagColor: 'bg-rose-600 text-white border-rose-600',
       match: m,
     }));
     const mixedSchedule = (mixedConfig?.schedule || []).map((m) => ({
-      division: '혼성 복식',
-      tag: '혼복',
+      division: t('sports.badmintonMixed'),
+      tag: t('sports.badmintonMixedTag'),
       tagColor: 'bg-purple-600 text-white border-purple-600',
       match: m,
     }));
@@ -126,7 +118,7 @@ export const SportDetail: React.FC = () => {
           timeKey,
           timeRangeText: item.match.timeRangeText || '',
           startTimeMs: item.match.startTimeObj.getTime(),
-          venue: item.match.venue || '체육관',
+          venue: item.match.venue || t('match.gymDefault'),
           matches: [],
         });
       }
@@ -140,9 +132,7 @@ export const SportDetail: React.FC = () => {
 
     return sortedGroups.map((group) => {
       const isLive = group.matches.some((m) => m.match.isLive);
-      const isFinished = group.matches.every(
-        (m) => !m.match.isLive && m.match.startTimeObj.getTime() < nowMs
-      );
+      const isFinished = group.matches.every((m) => !m.match.isLive && m.match.isEnded);
 
       const uniqueRounds = Array.from(new Set(group.matches.map((m) => m.match.round)));
       const roundLabel =
@@ -150,7 +140,7 @@ export const SportDetail: React.FC = () => {
           ? uniqueRounds[0]
           : uniqueRounds.length > 1
             ? uniqueRounds.join(', ')
-            : '배드민턴 매치';
+            : t('sportDetail.badmintonMatchTitle');
 
       return {
         timeRangeText: group.timeRangeText,
@@ -161,23 +151,25 @@ export const SportDetail: React.FC = () => {
         matches: group.matches,
       };
     });
-  }, [isBadminton, menConfig, womenConfig, mixedConfig, nowMs]);
+  }, [isBadminton, menConfig, womenConfig, mixedConfig, t]);
 
   if (!config) {
     return (
       <div className="p-8 text-center bg-white min-h-screen flex flex-col items-center justify-center">
-        <p className="text-gray-600 font-bold mb-4">존재하지 않는 종목입니다.</p>
+        <p className="text-gray-600 font-bold mb-4">{t('match.sportNotFound')}</p>
         <button
           onClick={() => navigate('/')}
           className="px-5 py-2.5 bg-postech text-white rounded-xl text-sm font-bold shadow-xs"
         >
-          홈으로 돌아가기
+          {t('common.goHome')}
         </button>
       </div>
     );
   }
 
   const liveMatch = config.liveMatch;
+  const hasLiveTeam1School = Boolean(SCHOOLS[liveMatch.team1]);
+  const hasLiveTeam2School = Boolean(SCHOOLS[liveMatch.team2]);
   const team1School = SCHOOLS[liveMatch.team1] || {
     color: '#64748b',
     bgLight: '#f1f5f9',
@@ -193,12 +185,23 @@ export const SportDetail: React.FC = () => {
     shortName: liveMatch.team2,
   };
 
-  const isTeam1Winning = liveMatch.score1 > liveMatch.score2;
-  const isTeam2Winning = liveMatch.score2 > liveMatch.score1;
+  const isLiveConfirmed = liveMatch.isScoreConfirmed;
+  const liveResultType = liveMatch.resultType || 'normal';
+  const isTeam1Winning =
+    isLiveConfirmed &&
+    liveResultType !== 'cancelled' &&
+    (liveResultType === 'team1_forfeit_win' ||
+      (liveResultType === 'normal' && liveMatch.score1 > liveMatch.score2));
+  const isTeam2Winning =
+    isLiveConfirmed &&
+    liveResultType !== 'cancelled' &&
+    (liveResultType === 'team2_forfeit_win' ||
+      (liveResultType === 'normal' && liveMatch.score2 > liveMatch.score1));
 
   // Check if any badminton division is live
-  const isAnyBadmintonLive =
-    Boolean(menConfig?.liveMatch?.isLive || womenConfig?.liveMatch?.isLive || mixedConfig?.liveMatch?.isLive);
+  const isAnyBadmintonLive = Boolean(
+    menConfig?.liveMatch?.isLive || womenConfig?.liveMatch?.isLive || mixedConfig?.liveMatch?.isLive
+  );
 
   return (
     <div className="flex flex-col min-h-full bg-slate-50 text-gray-900 pb-10">
@@ -207,7 +210,7 @@ export const SportDetail: React.FC = () => {
         <button
           onClick={() => navigate('/')}
           className="p-2 -ml-2 rounded-xl text-gray-700 hover:bg-gray-100 active:bg-gray-200 transition-colors touch-target z-10"
-          aria-label="뒤로가기"
+          aria-label={t('common.back')}
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
@@ -217,8 +220,16 @@ export const SportDetail: React.FC = () => {
           <span>{config.name}</span>
         </div>
 
-        {/* Right placeholder to keep layout balanced */}
-        <div className="w-9" />
+        <button
+          type="button"
+          onClick={handleManualRefresh}
+          disabled={isRefreshing}
+          title={t('common.refreshTooltip')}
+          aria-label={t('common.refresh')}
+          className="p-2 -mr-2 rounded-xl text-gray-700 hover:bg-gray-100 active:bg-gray-200 transition-colors z-10 cursor-pointer"
+        >
+          <RotateCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+        </button>
       </div>
 
       <div className="p-3 space-y-3">
@@ -228,7 +239,7 @@ export const SportDetail: React.FC = () => {
           <section className="bg-white border border-gray-200 rounded-2xl p-3.5 shadow-2xs space-y-2.5">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <div className="flex items-center gap-1.5 font-extrabold text-xs text-slate-800">
-                <span>🏸 체육관 배드민턴 동시 진행 현황</span>
+                <span>{t('sportDetail.badmintonLiveHeader')}</span>
               </div>
               {isAnyBadmintonLive ? (
                 <a
@@ -238,28 +249,38 @@ export const SportDetail: React.FC = () => {
                   className="inline-flex items-center gap-1 text-[10px] font-extrabold bg-rose-50 text-rose-600 border border-rose-200 px-2 py-0.5 rounded-full"
                 >
                   <Radio className="w-2.5 h-2.5 text-rose-500" />
-                  <span>LIVE 중계</span>
+                  <span>{t('sportDetail.liveStream')}</span>
                   <ChevronRight className="w-2.5 h-2.5 text-rose-500" />
                 </a>
               ) : (
                 <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
-                  체육관 진행
+                  {t('sportDetail.gymInProgress')}
                 </span>
               )}
             </div>
 
-            {/* 3 Simultaneous Badminton Rows (남복, 여복, 혼복) */}
+            {/* 3 Simultaneous Badminton Rows */}
             <div className="space-y-2">
               {[
-                { title: '남자 복식', tag: '남복', color: 'bg-blue-600', subMatch: menConfig?.liveMatch },
-                { title: '여자 복식', tag: '여복', color: 'bg-rose-600', subMatch: womenConfig?.liveMatch },
-                { title: '혼성 복식', tag: '혼복', color: 'bg-purple-600', subMatch: mixedConfig?.liveMatch },
+                { title: t('sports.badmintonMen'), tag: t('sports.badmintonMenTag'), color: 'bg-blue-600', subMatch: menConfig?.liveMatch },
+                { title: t('sports.badmintonWomen'), tag: t('sports.badmintonWomenTag'), color: 'bg-rose-600', subMatch: womenConfig?.liveMatch },
+                { title: t('sports.badmintonMixed'), tag: t('sports.badmintonMixedTag'), color: 'bg-purple-600', subMatch: mixedConfig?.liveMatch },
               ].map((row, idx) => {
                 const subM = row.subMatch;
                 const t1 = subM ? SCHOOLS[subM.team1] : null;
                 const t2 = subM ? SCHOOLS[subM.team2] : null;
-                const isT1Lead = (subM?.score1 || 0) > (subM?.score2 || 0);
-                const isT2Lead = (subM?.score2 || 0) > (subM?.score1 || 0);
+                const isSubConf = Boolean(subM?.isScoreConfirmed);
+                const subRType = subM?.resultType || 'normal';
+                const isT1Lead =
+                  isSubConf &&
+                  subRType !== 'cancelled' &&
+                  (subRType === 'team1_forfeit_win' ||
+                    (subRType === 'normal' && (subM?.score1 || 0) > (subM?.score2 || 0)));
+                const isT2Lead =
+                  isSubConf &&
+                  subRType !== 'cancelled' &&
+                  (subRType === 'team2_forfeit_win' ||
+                    (subRType === 'normal' && (subM?.score2 || 0) > (subM?.score1 || 0)));
 
                 return (
                   <div
@@ -275,7 +296,7 @@ export const SportDetail: React.FC = () => {
                         {row.tag}
                       </span>
                       <span className="text-[11px] font-extrabold text-slate-700 truncate">
-                        {subM?.round || '일정'}
+                        {subM?.round || t('sportDetail.scheduleFallback')}
                       </span>
                     </div>
 
@@ -284,23 +305,39 @@ export const SportDetail: React.FC = () => {
                       <div className="flex items-center gap-1 min-w-0 justify-end flex-1">
                         {t1 && <span style={{ backgroundColor: t1.color }} className="w-1.5 h-3 rounded-xs shrink-0" />}
                         <span className={`text-xs font-extrabold truncate ${isT1Lead ? 'text-slate-900 font-black' : 'text-slate-600'}`}>
-                          {subM?.team1 || '팀1'}
+                          {subM?.team1 || t('match.team1Default')}
                         </span>
                       </div>
 
                       <div className="flex items-center gap-1 px-1 font-extrabold text-xs">
-                        <span className={isT1Lead ? 'text-blue-600 font-black' : 'text-slate-800'}>
-                          {subM?.score1 || 0}
-                        </span>
-                        <span className="text-slate-300">:</span>
-                        <span className={isT2Lead ? 'text-blue-600 font-black' : 'text-slate-800'}>
-                          {subM?.score2 || 0}
-                        </span>
+                        {!isSubConf ? (
+                          <span className="text-slate-400 font-extrabold text-[11px]">{t('common.vs')}</span>
+                        ) : subRType === 'cancelled' ? (
+                          <span className="text-amber-700 bg-amber-50 border border-amber-200 px-1 py-0.2 rounded text-[10px]">
+                            {t('match.cancelled')}
+                          </span>
+                        ) : subRType === 'team1_forfeit_win' || subRType === 'team2_forfeit_win' ? (
+                          <span className="text-purple-700 bg-purple-50 border border-purple-200 px-1 py-0.2 rounded text-[10px]">
+                            {subRType === 'team1_forfeit_win'
+                              ? t('match.forfeitResultCompact1')
+                              : t('match.forfeitResultCompact2')}
+                          </span>
+                        ) : (
+                          <>
+                            <span className={isT1Lead ? 'text-blue-600 font-black' : 'text-slate-800'}>
+                              {subM?.score1 || 0}
+                            </span>
+                            <span className="text-slate-300">:</span>
+                            <span className={isT2Lead ? 'text-blue-600 font-black' : 'text-slate-800'}>
+                              {subM?.score2 || 0}
+                            </span>
+                          </>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-1 min-w-0 justify-start flex-1">
                         <span className={`text-xs font-extrabold truncate ${isT2Lead ? 'text-slate-900 font-black' : 'text-slate-600'}`}>
-                          {subM?.team2 || '팀2'}
+                          {subM?.team2 || t('match.team2Default')}
                         </span>
                         {t2 && <span style={{ backgroundColor: t2.color }} className="w-1.5 h-3 rounded-xs shrink-0" />}
                       </div>
@@ -310,15 +347,24 @@ export const SportDetail: React.FC = () => {
                     <div className="min-w-[65px] text-right">
                       {subM?.isLive ? (
                         <span className="inline-flex items-center gap-0.5 text-[9px] font-black bg-rose-600 text-white px-1.5 py-0.5 rounded-full">
-                          🔴 LIVE
+                          🔴 {t('common.live')}
                         </span>
-                      ) : subM?.statusText === '종료' ? (
+                      ) : isSubConf && subRType === 'cancelled' ? (
+                        <span className="text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-md">
+                          {t('match.cancelled')}
+                        </span>
+                      ) : isSubConf &&
+                        (subRType === 'team1_forfeit_win' || subRType === 'team2_forfeit_win') ? (
+                        <span className="text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200 px-1.5 py-0.5 rounded-md">
+                          {t('match.forfeitWin')}
+                        </span>
+                      ) : subM?.isEnded ? (
                         <span className="text-[10px] font-bold bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded-md">
-                          종료
+                          {t('match.ended')}
                         </span>
                       ) : (
                         <span className="text-[10px] font-bold text-slate-500">
-                          {subM?.timeRangeText.split('-')[0]?.trim() || '예정'}
+                          {subM?.timeRangeText.split('-')[0]?.trim() || t('match.scheduled')}
                         </span>
                       )}
                     </div>
@@ -370,29 +416,42 @@ export const SportDetail: React.FC = () => {
               <div className="relative z-10 flex items-center justify-between">
                 {/* Team 1 Standalone Logo */}
                 <div className="flex items-center justify-center flex-1 min-w-0 h-14">
-                  <img
-                    src={team1School.logoUrl}
-                    alt={liveMatch.team1}
-                    loading="eager"
-                    decoding="async"
-                    className="h-11 w-auto max-w-[100px] object-contain"
-                  />
+                  {hasLiveTeam1School ? (
+                    <img
+                      src={team1School.logoUrl}
+                      alt={liveMatch.team1}
+                      loading="eager"
+                      decoding="async"
+                      className="h-11 w-auto max-w-[100px] object-contain"
+                    />
+                  ) : (
+                    <span className="text-sm font-extrabold text-slate-600 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-lg truncate">
+                      {liveMatch.team1}
+                    </span>
+                  )}
                 </div>
 
                 {/* Score & Status Center */}
                 <div className="flex flex-col items-center justify-center px-3">
                   <div className="mb-0.5">
                     {liveMatch.isLive ? (
-                      <a
-                        href={getYoutubeLiveUrl(liveMatch.id) || getYoutubeLiveUrl(sportKey)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-[10px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-2.5 py-0.5 rounded-full active:scale-95 transition-all shadow-2xs cursor-pointer"
-                      >
-                        <Radio className="w-3 h-3 text-rose-500" />
-                        <span>LIVE · {liveMatch.statusText}</span>
-                        <ChevronRight className="w-3 h-3 text-rose-500" />
-                      </a>
+                      isStreamable ? (
+                        <a
+                          href={getYoutubeLiveUrl(liveMatch.id, liveMatch.round, sportKey)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-[10px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-2.5 py-0.5 rounded-full active:scale-95 transition-all shadow-2xs cursor-pointer"
+                        >
+                          <Radio className="w-3 h-3 text-rose-500" />
+                          <span>LIVE · {liveMatch.statusText}</span>
+                          <ChevronRight className="w-3 h-3 text-rose-500" />
+                        </a>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-rose-50 text-rose-600 border border-rose-200 px-2.5 py-0.5 rounded-full shadow-2xs">
+                          <Radio className="w-3 h-3 text-rose-500" />
+                          <span>LIVE · {liveMatch.statusText}</span>
+                        </span>
+                      )
                     ) : (
                       <span className="text-[10px] font-bold bg-gray-100 text-gray-600 px-2.5 py-0.5 rounded-full">
                         {liveMatch.statusText}
@@ -400,15 +459,31 @@ export const SportDetail: React.FC = () => {
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2.5 text-3xl font-bold tracking-tight my-0.5">
-                    <span style={isTeam1Winning ? { color: team1School.color } : { color: '#0f172a' }}>
-                      {liveMatch.score1}
-                    </span>
-                    <span className="text-gray-300 font-light">:</span>
-                    <span style={isTeam2Winning ? { color: team2School.color } : { color: '#0f172a' }}>
-                      {liveMatch.score2}
-                    </span>
-                  </div>
+                  {!isLiveConfirmed ? (
+                    <div className="text-2xl font-extrabold text-slate-400 tracking-widest my-1">
+                      VS
+                    </div>
+                  ) : liveResultType === 'cancelled' ? (
+                    <div className="text-sm font-extrabold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg my-1">
+                      {t('match.cancelled')}
+                    </div>
+                  ) : liveResultType === 'team1_forfeit_win' || liveResultType === 'team2_forfeit_win' ? (
+                    <div className="text-sm font-extrabold text-purple-700 bg-purple-50 border border-purple-200 px-2.5 py-1 rounded-lg my-1">
+                      {liveResultType === 'team1_forfeit_win'
+                        ? t('match.forfeitResult1')
+                        : t('match.forfeitResult2')}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2.5 text-3xl font-bold tracking-tight my-0.5">
+                      <span style={isTeam1Winning ? { color: team1School.color } : { color: '#0f172a' }}>
+                        {liveMatch.score1}
+                      </span>
+                      <span className="text-gray-300 font-light">:</span>
+                      <span style={isTeam2Winning ? { color: team2School.color } : { color: '#0f172a' }}>
+                        {liveMatch.score2}
+                      </span>
+                    </div>
+                  )}
 
                   <div className="flex items-center gap-1 text-[11px] font-bold text-gray-500">
                     <MapPin className="w-3 h-3 text-gray-400" />
@@ -418,13 +493,19 @@ export const SportDetail: React.FC = () => {
 
                 {/* Team 2 Standalone Logo */}
                 <div className="flex items-center justify-center flex-1 min-w-0 h-14">
-                  <img
-                    src={team2School.logoUrl}
-                    alt={liveMatch.team2}
-                    loading="eager"
-                    decoding="async"
-                    className="h-11 w-auto max-w-[100px] object-contain"
-                  />
+                  {hasLiveTeam2School ? (
+                    <img
+                      src={team2School.logoUrl}
+                      alt={liveMatch.team2}
+                      loading="eager"
+                      decoding="async"
+                      className="h-11 w-auto max-w-[100px] object-contain"
+                    />
+                  ) : (
+                    <span className="text-sm font-extrabold text-slate-600 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-lg truncate">
+                      {liveMatch.team2}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -434,8 +515,8 @@ export const SportDetail: React.FC = () => {
         {/* 3. Segmented Control Tabs */}
         <section className="bg-white border border-gray-200 rounded-xl p-1 shadow-2xs flex items-center">
           {[
-            { key: 'timeline', label: '경기 타임라인', icon: <Calendar className="w-3.5 h-3.5" /> },
-            { key: 'bracket', label: '토너먼트 현황', icon: <Trophy className="w-3.5 h-3.5" /> },
+            { key: 'timeline', label: t('sportDetail.tabTimeline'), icon: <Calendar className="w-3.5 h-3.5" /> },
+            { key: 'bracket', label: t('sportDetail.tabBracket'), icon: <Trophy className="w-3.5 h-3.5" /> },
           ].map((tab) => {
             const isActive = activeTab === tab.key;
             return (
@@ -458,9 +539,11 @@ export const SportDetail: React.FC = () => {
         {activeTab === 'timeline' && (
           <section className="space-y-2.5">
             <div className="flex items-center justify-between text-xs font-bold text-gray-600 px-1">
-              <span>{config.name} 전체 경기 타임라인</span>
+              <span>{t('sportDetail.timelineHeading', { sport: config.name })}</span>
               <span className="text-[11px] font-medium text-gray-400">
-                {isBadminton ? `총 ${badmintonTimelineSlots.length}개 라운드 (각 3경기)` : `총 ${config.schedule.length}경기`}
+                {isBadminton
+                  ? t('sportDetail.totalRounds', { count: badmintonTimelineSlots.length })
+                  : t('sportDetail.totalMatches', { count: config.schedule.length })}
               </span>
             </div>
 
@@ -495,7 +578,9 @@ export const SportDetail: React.FC = () => {
                       <div className="flex items-center justify-between text-xs text-gray-500 border-b border-gray-100 pb-2 mb-2">
                         <div className="flex items-center gap-1.5 font-bold">
                           <Clock className="w-3.5 h-3.5 text-slate-500" />
-                          <span className="font-black text-gray-900 text-xs">{slot.timeRangeText || '경기 시간'}</span>
+                          <span className="font-black text-gray-900 text-xs">
+                            {slot.timeRangeText || t('sportDetail.matchTimeFallback')}
+                          </span>
                           <span className="text-[10px] text-gray-400 font-medium">· {slot.roundLabel}</span>
                         </div>
                         <div className="flex items-center gap-1.5">
@@ -507,16 +592,16 @@ export const SportDetail: React.FC = () => {
                               className="inline-flex items-center gap-0.5 text-[10px] font-extrabold bg-rose-50 text-rose-600 border border-rose-200 px-2 py-0.5 rounded-full"
                             >
                               <Radio className="w-2.5 h-2.5 text-rose-500" />
-                              <span>LIVE 진행중</span>
+                              <span>{t('sportDetail.liveInProgress')}</span>
                               <ChevronRight className="w-2.5 h-2.5 text-rose-500" />
                             </a>
                           ) : slot.isFinished ? (
                             <span className="text-[10px] font-bold bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
-                              종료
+                              {t('match.ended')}
                             </span>
                           ) : (
                             <span className="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
-                              예정
+                              {t('match.scheduled')}
                             </span>
                           )}
                         </div>
@@ -529,8 +614,16 @@ export const SportDetail: React.FC = () => {
                           if (!m) return null;
                           const t1 = SCHOOLS[m.team1] || { color: '#64748b', shortName: m.team1 };
                           const t2 = SCHOOLS[m.team2] || { color: '#64748b', shortName: m.team2 };
-                          const isT1Win = m.score1 > m.score2;
-                          const isT2Win = m.score2 > m.score1;
+                          const isConf = m.isScoreConfirmed;
+                          const rType = m.resultType || 'normal';
+                          const isT1Win =
+                            isConf &&
+                            rType !== 'cancelled' &&
+                            (rType === 'team1_forfeit_win' || (rType === 'normal' && m.score1 > m.score2));
+                          const isT2Win =
+                            isConf &&
+                            rType !== 'cancelled' &&
+                            (rType === 'team2_forfeit_win' || (rType === 'normal' && m.score2 > m.score1));
 
                           return (
                             <div
@@ -558,13 +651,29 @@ export const SportDetail: React.FC = () => {
                                 </div>
 
                                 <div className="flex items-center gap-1 px-1 font-extrabold text-xs">
-                                  <span className={isT1Win ? 'text-blue-600 font-black' : 'text-slate-800'}>
-                                    {m.score1}
-                                  </span>
-                                  <span className="text-slate-300">-</span>
-                                  <span className={isT2Win ? 'text-blue-600 font-black' : 'text-slate-800'}>
-                                    {m.score2}
-                                  </span>
+                                  {!isConf ? (
+                                    <span className="text-slate-400 font-extrabold text-[11px]">{t('common.vs')}</span>
+                                  ) : rType === 'cancelled' ? (
+                                    <span className="text-amber-700 bg-amber-50 border border-amber-200 px-1 py-0.2 rounded text-[10px]">
+                                      {t('match.cancelled')}
+                                    </span>
+                                  ) : rType === 'team1_forfeit_win' || rType === 'team2_forfeit_win' ? (
+                                    <span className="text-purple-700 bg-purple-50 border border-purple-200 px-1 py-0.2 rounded text-[10px]">
+                                      {rType === 'team1_forfeit_win'
+                                        ? t('match.forfeitResultCompact1')
+                                        : t('match.forfeitResultCompact2')}
+                                    </span>
+                                  ) : (
+                                    <>
+                                      <span className={isT1Win ? 'text-blue-600 font-black' : 'text-slate-800'}>
+                                        {m.score1}
+                                      </span>
+                                      <span className="text-slate-300">-</span>
+                                      <span className={isT2Win ? 'text-blue-600 font-black' : 'text-slate-800'}>
+                                        {m.score2}
+                                      </span>
+                                    </>
+                                  )}
                                 </div>
 
                                 <div className="flex items-center gap-1 min-w-0 justify-start flex-1">
@@ -577,11 +686,16 @@ export const SportDetail: React.FC = () => {
 
                               <div className="min-w-[45px] text-right">
                                 {m.isLive ? (
-                                  <span className="text-[9px] font-black text-rose-600">🔴 LIVE</span>
-                                ) : m.statusText === '종료' ? (
-                                  <span className="text-[10px] font-bold text-slate-400">종료</span>
+                                  <span className="text-[9px] font-black text-rose-600">🔴 {t('common.live')}</span>
+                                ) : isConf && rType === 'cancelled' ? (
+                                  <span className="text-[10px] font-bold text-amber-700">{t('match.cancelled')}</span>
+                                ) : isConf &&
+                                  (rType === 'team1_forfeit_win' || rType === 'team2_forfeit_win') ? (
+                                  <span className="text-[10px] font-bold text-purple-700">{t('match.forfeitWin')}</span>
+                                ) : m.isEnded ? (
+                                  <span className="text-[10px] font-bold text-slate-400">{t('match.ended')}</span>
                                 ) : (
-                                  <span className="text-[10px] font-bold text-slate-400">예정</span>
+                                  <span className="text-[10px] font-bold text-slate-400">{t('match.scheduled')}</span>
                                 )}
                               </div>
                             </div>
@@ -618,9 +732,17 @@ export const SportDetail: React.FC = () => {
                     logoText: item.team2.slice(0, 1),
                     logoUrl: '/kaist.png',
                   };
-                  const isT1Win = item.score1 > item.score2;
-                  const isT2Win = item.score2 > item.score1;
-                  const isFinished = !item.isLive && item.startTimeObj.getTime() < nowMs;
+                  const isConf = item.isScoreConfirmed;
+                  const rType = item.resultType || 'normal';
+                  const isT1Win =
+                    isConf &&
+                    rType !== 'cancelled' &&
+                    (rType === 'team1_forfeit_win' || (rType === 'normal' && item.score1 > item.score2));
+                  const isT2Win =
+                    isConf &&
+                    rType !== 'cancelled' &&
+                    (rType === 'team2_forfeit_win' || (rType === 'normal' && item.score2 > item.score1));
+                  const isFinished = !item.isLive && item.isEnded;
 
                   return (
                     <div key={item.id || idx} className="relative">
@@ -649,24 +771,40 @@ export const SportDetail: React.FC = () => {
                           <span className="font-extrabold text-gray-800">{item.round}</span>
                           <div className="flex items-center gap-2">
                             {item.isLive ? (
-                              <a
-                                href={getYoutubeLiveUrl(item.id) || getYoutubeLiveUrl(sportKey)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={(e) => e.stopPropagation()}
-                                className="inline-flex items-center gap-0.5 text-[10px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-2 py-0.5 rounded-full active:scale-95 transition-all cursor-pointer"
-                              >
-                                <Radio className="w-2.5 h-2.5 text-rose-500" />
-                                <span>LIVE</span>
-                                <ChevronRight className="w-2.5 h-2.5 text-rose-500" />
-                              </a>
-                            ) : item.startTimeObj.getTime() > nowMs ? (
+                              isStreamable ? (
+                                <a
+                                  href={getYoutubeLiveUrl(item.id, item.round, sportKey)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="inline-flex items-center gap-0.5 text-[10px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-2 py-0.5 rounded-full active:scale-95 transition-all cursor-pointer"
+                                >
+                                  <Radio className="w-2.5 h-2.5 text-rose-500" />
+                                  <span>LIVE</span>
+                                  <ChevronRight className="w-2.5 h-2.5 text-rose-500" />
+                                </a>
+                              ) : (
+                                <span className="inline-flex items-center gap-0.5 text-[10px] font-bold bg-rose-50 text-rose-600 border border-rose-200 px-2 py-0.5 rounded-full">
+                                  <Radio className="w-2.5 h-2.5 text-rose-500" />
+                                  <span>LIVE</span>
+                                </span>
+                              )
+                            ) : isConf && rType === 'cancelled' ? (
+                              <span className="text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full">
+                                {t('match.cancelled')}
+                              </span>
+                            ) : isConf &&
+                              (rType === 'team1_forfeit_win' || rType === 'team2_forfeit_win') ? (
+                              <span className="text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-full">
+                                {t('match.forfeitWin')}
+                              </span>
+                            ) : !isFinished ? (
                               <span className="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
-                                {item.countdownText || '예정'}
+                                {item.countdownText || t('match.scheduled')}
                               </span>
                             ) : (
                               <span className="text-[10px] font-bold bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
-                                종료
+                                {t('match.ended')}
                               </span>
                             )}
                           </div>
@@ -723,15 +861,29 @@ export const SportDetail: React.FC = () => {
 
                             {/* Score */}
                             <div className="flex flex-col items-center px-3 min-w-[70px]">
-                              <div className="text-base font-bold flex items-center gap-1.5">
-                                <span style={isT1Win ? { color: t1.color } : { color: '#0f172a' }}>
-                                  {item.score1}
-                                </span>
-                                <span className="text-gray-300">-</span>
-                                <span style={isT2Win ? { color: t2.color } : { color: '#0f172a' }}>
-                                  {item.score2}
-                                </span>
-                              </div>
+                              {!isConf ? (
+                                <div className="text-sm font-extrabold text-slate-400 tracking-wider">
+                                  {t('common.vs')}
+                                </div>
+                              ) : rType === 'cancelled' ? (
+                                <div className="text-xs font-extrabold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
+                                  {t('match.cancelled')}
+                                </div>
+                              ) : rType === 'team1_forfeit_win' || rType === 'team2_forfeit_win' ? (
+                                <div className="text-xs font-extrabold text-purple-700 bg-purple-50 border border-purple-200 px-1.5 py-0.5 rounded">
+                                  {rType === 'team1_forfeit_win' ? t('match.forfeitResult1') : t('match.forfeitResult2')}
+                                </div>
+                              ) : (
+                                <div className="text-base font-bold flex items-center gap-1.5">
+                                  <span style={isT1Win ? { color: t1.color } : { color: '#0f172a' }}>
+                                    {item.score1}
+                                  </span>
+                                  <span className="text-gray-300">-</span>
+                                  <span style={isT2Win ? { color: t2.color } : { color: '#0f172a' }}>
+                                    {item.score2}
+                                  </span>
+                                </div>
+                              )}
                             </div>
 
                             {/* Team 2: Color Badge */}
@@ -777,7 +929,7 @@ export const SportDetail: React.FC = () => {
                   <TournamentBracket
                     matches={menConfig?.schedule}
                     treeData={badmintonTrees.men || undefined}
-                    sportName="배드민턴 남자복식"
+                    sportName={t('sportDetail.badmintonMenFull')}
                     sportKey="badminton_men"
                   />
                 </div>
@@ -787,7 +939,7 @@ export const SportDetail: React.FC = () => {
                   <TournamentBracket
                     matches={womenConfig?.schedule}
                     treeData={badmintonTrees.women || undefined}
-                    sportName="배드민턴 여자복식"
+                    sportName={t('sportDetail.badmintonWomenFull')}
                     sportKey="badminton_women"
                   />
                 </div>
@@ -797,7 +949,7 @@ export const SportDetail: React.FC = () => {
                   <TournamentBracket
                     matches={mixedConfig?.schedule}
                     treeData={badmintonTrees.mixed || undefined}
-                    sportName="배드민턴 혼성복식"
+                    sportName={t('sportDetail.badmintonMixedFull')}
                     sportKey="badminton_mixed"
                   />
                 </div>

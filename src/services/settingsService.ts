@@ -1,6 +1,7 @@
 import { supabase } from './supabase/client';
 import { getFromCache, saveToCache, invalidateAppCache } from './supabase/cache';
 export {
+  getSupabaseAllTournamentTrees,
   getSupabaseTournamentTree,
   updateSupabaseTournamentTree,
 } from './tournamentTreesService';

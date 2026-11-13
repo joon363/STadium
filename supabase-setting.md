@@ -46,8 +46,21 @@ CREATE TABLE IF NOT EXISTS public.matches (
     score2_final INT DEFAULT 0,
     winning_team_final VARCHAR(50),
     subtitle VARCHAR(255),
+    is_confirmed BOOLEAN NOT NULL DEFAULT FALSE,
+    result_type VARCHAR(30) NOT NULL DEFAULT 'normal',
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+-- Table: tournament_trees (Sport Tournament Brackets & Manual Rank Overrides)
+CREATE TABLE IF NOT EXISTS public.tournament_trees (
+    sport_key VARCHAR(50) PRIMARY KEY,
+    nodes JSONB NOT NULL DEFAULT '{}'::jsonb,
+    manual_ranks JSONB NOT NULL DEFAULT '{}'::jsonb,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_matches_sport_key ON public.matches(sport_key);
+CREATE INDEX IF NOT EXISTS idx_matches_start_time ON public.matches(start_hour, start_minute);
 
 -- Table: stage_performances (Gym Stage Timetable)
 CREATE TABLE IF NOT EXISTS public.stage_performances (

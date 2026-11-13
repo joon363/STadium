@@ -8,6 +8,8 @@ import {
 } from '../lib/supabase';
 import { CampusMapView } from '../components/CampusMapView';
 import { VenueNode, MapEdge, NavigationResult, findShortestPath } from '../config/stadiumConfig';
+import { useLanguage } from '../context/LanguageContext';
+import { getLocalizedValue, localizeVenueName } from '../utils/bilingual';
 import {
   Utensils,
   Coffee,
@@ -21,6 +23,7 @@ import {
 } from 'lucide-react';
 
 export const CampusMap: React.FC = () => {
+  const { language, t } = useLanguage();
   const [nodes, setNodes] = useState<VenueNode[]>([]);
   const [edges, setEdges] = useState<MapEdge[]>([]);
   const [loadingMap, setLoadingMap] = useState<boolean>(true);
@@ -203,7 +206,7 @@ export const CampusMap: React.FC = () => {
               }`}
           >
             <Utensils className="w-3.5 h-3.5" />
-            <span>취식 공간</span>
+            <span>{t('map.eatingZones')}</span>
           </button>
 
           <button
@@ -220,10 +223,10 @@ export const CampusMap: React.FC = () => {
               }`}
           >
             <Coffee className="w-3.5 h-3.5" />
-            <span>휴식 공간</span>
+            <span>{t('map.restAreas')}</span>
           </button>
 
-          <button
+          {/* <button
             onClick={() => setIsNavigating((prev) => !prev)}
             className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 shrink-0 transition-all shadow-md backdrop-blur-md ${isNavigating
               ? 'bg-postech text-white border border-rose-400 font-extrabold ring-2 ring-rose-300/50 shadow-rose-500/20'
@@ -231,17 +234,17 @@ export const CampusMap: React.FC = () => {
               }`}
           >
             <Navigation className="w-3.5 h-3.5" />
-            <span>길찾기</span>
-          </button>
+            <span>{t('map.navigation')}</span>
+          </button> */}
         </div>
 
         {/* Row 2: Layer Checkbox Chips (Top-left, rounded white chips, black text) */}
         <div className="pointer-events-auto flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
           {[
-            { id: 'names', label: '장소 이름', checked: showVenueNames, onChange: () => setShowVenueNames((v) => !v) },
-            { id: 'sports', label: '경기 장소', checked: showSportsVenues, onChange: () => setShowSportsVenues((v) => !v) },
-            { id: 'general', label: '일반 장소', checked: showGeneralVenues, onChange: () => setShowGeneralVenues((v) => !v) },
-            { id: 'paths', label: '경로', checked: showPaths, onChange: () => setShowPaths((v) => !v) },
+            { id: 'names', label: t('map.layerVenueNames'), checked: showVenueNames, onChange: () => setShowVenueNames((v) => !v) },
+            { id: 'sports', label: t('map.layerSports'), checked: showSportsVenues, onChange: () => setShowSportsVenues((v) => !v) },
+            { id: 'general', label: t('map.layerGeneral'), checked: showGeneralVenues, onChange: () => setShowGeneralVenues((v) => !v) },
+            { id: 'paths', label: t('map.layerPaths'), checked: showPaths, onChange: () => setShowPaths((v) => !v) },
           ].map((item) => (
             <label
               key={item.id}
@@ -270,7 +273,7 @@ export const CampusMap: React.FC = () => {
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div>
                 <label className="text-[10px] font-extrabold text-gray-600 block mb-0.5">
-                  출발지
+                  {t('map.navStart')}
                 </label>
                 <select
                   value={startVenue}
@@ -279,7 +282,7 @@ export const CampusMap: React.FC = () => {
                 >
                   {nodes.map((node) => (
                     <option key={node.id} value={node.id}>
-                      {node.name}
+                      {getLocalizedValue(node.name, language, (s) => localizeVenueName(s, language))}
                     </option>
                   ))}
                 </select>
@@ -287,7 +290,7 @@ export const CampusMap: React.FC = () => {
 
               <div>
                 <label className="text-[10px] font-extrabold text-gray-600 block mb-0.5">
-                  목적지
+                  {t('map.navDest')}
                 </label>
                 <select
                   value={destVenue}
@@ -296,7 +299,7 @@ export const CampusMap: React.FC = () => {
                 >
                   {nodes.map((node) => (
                     <option key={node.id} value={node.id}>
-                      {node.name}
+                      {getLocalizedValue(node.name, language, (s) => localizeVenueName(s, language))}
                     </option>
                   ))}
                 </select>
@@ -307,7 +310,7 @@ export const CampusMap: React.FC = () => {
               <div className="flex items-center justify-between text-xs bg-white/80 border border-rose-200 rounded-lg p-2 font-bold shadow-2xs">
                 <div className="flex items-center gap-1.5 text-postech font-bold">
                   <Clock className="w-3.5 h-3.5 shrink-0" />
-                  <span>예상 소요시간: 약 {navResult.totalMinutes}분</span>
+                  <span>{t('map.estTime', { min: navResult.totalMinutes })}</span>
                 </div>
               </div>
             )}
@@ -369,7 +372,7 @@ export const CampusMap: React.FC = () => {
                   : 'text-gray-600 hover:text-gray-900'
                   }`}
               >
-                부스 ({booths.length})
+                {t('map.sheetBooths')} ({booths.length})
               </button>
 
               <button
@@ -382,7 +385,7 @@ export const CampusMap: React.FC = () => {
                   : 'text-gray-600 hover:text-gray-900'
                   }`}
               >
-                푸드트럭 ({foodTrucks.length})
+                {t('map.sheetFoodTrucks')} ({foodTrucks.length})
               </button>
 
               <button
@@ -395,7 +398,7 @@ export const CampusMap: React.FC = () => {
                   : 'text-gray-600 hover:text-gray-900'
                   }`}
               >
-                <span>경기 장소 ({sportsNodes.length})</span>
+                <span>{t('map.sheetSportsVenues')} ({sportsNodes.length})</span>
               </button>
 
               <button
@@ -408,14 +411,14 @@ export const CampusMap: React.FC = () => {
                   : 'text-gray-600 hover:text-gray-900'
                   }`}
               >
-                <span>일반 장소 ({generalNodes.length})</span>
+                <span>{t('map.sheetGeneralVenues')} ({generalNodes.length})</span>
               </button>
             </div>
 
             <button
               onClick={cycleSnapState}
               className="p-1 text-gray-500 hover:text-gray-900 rounded-lg hover:bg-gray-100 ml-1 shrink-0"
-              title="크기 조절"
+              title={t('map.resizeHandle')}
             >
               {snapState === 'expanded' ? (
                 <ChevronDown className="w-4 h-4" />
@@ -433,7 +436,7 @@ export const CampusMap: React.FC = () => {
             {sheetTab === 'booth' &&
               (booths.length === 0 ? (
                 <div className="p-8 text-center text-xs font-bold text-gray-400">
-                  등록된 부스가 없습니다.
+                  {t('map.emptyBooths')}
                 </div>
               ) : (
                 booths.map((b) => (
@@ -448,23 +451,27 @@ export const CampusMap: React.FC = () => {
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <h4 className="font-extrabold text-xs text-gray-900 truncate">
-                            {b.name}
+                            {getLocalizedValue(b.name, language)}
                           </h4>
                           {b.operator && (
                             <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.2 rounded">
-                              {b.operator}
+                              {getLocalizedValue(b.operator, language)}
                             </span>
                           )}
                         </div>
                         <p className="text-[11px] text-gray-600 font-medium leading-relaxed mt-0.5">
-                          {b.description}
+                          {getLocalizedValue(b.description, language)}
                         </p>
                         <div className="flex items-center gap-2 text-[10px] text-gray-500 font-bold mt-1">
                           <span className="flex items-center gap-0.5 text-gray-600">
                             <MapPin className="w-3 h-3 text-amber-600" />
-                            {b.location}
+                            {getLocalizedValue(b.location, language, (s) =>
+                              localizeVenueName(s, language)
+                            )}
                           </span>
-                          <span>• {b.operatingHours}</span>
+                          {b.operatingHours && (
+                            <span>• {getLocalizedValue(b.operatingHours, language)}</span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -476,29 +483,37 @@ export const CampusMap: React.FC = () => {
             {sheetTab === 'foodtruck' &&
               (foodTrucks.length === 0 ? (
                 <div className="p-8 text-center text-xs font-bold text-gray-400">
-                  등록된 푸드트럭이 없습니다.
+                  {t('map.emptyTrucks')}
                 </div>
               ) : (
-                foodTrucks.map((t) => (
+                foodTrucks.map((truck) => (
                   <div
-                    key={t.id}
+                    key={truck.id}
                     className="bg-gray-50/80 border border-gray-200 rounded-2xl p-2.5 flex items-start justify-between gap-2.5 shadow-2xs hover:border-gray-300 transition-colors"
                   >
                     <div className="flex items-start gap-2.5 min-w-0">
                       <div className="w-9 h-9 rounded-xl bg-orange-100 border border-orange-200 flex items-center justify-center text-lg shrink-0">
-                        {t.icon || '🚚'}
+                        {truck.icon || '🚚'}
                       </div>
                       <div className="min-w-0">
-                        <h4 className="font-extrabold text-xs text-gray-900 truncate">{t.name}</h4>
+                        <h4 className="font-extrabold text-xs text-gray-900 truncate">
+                          {getLocalizedValue(truck.name, language)}
+                        </h4>
                         <p className="text-[11px] text-gray-700 font-bold leading-relaxed mt-0.5 text-orange-700">
-                          메뉴: {t.menuSummary}
+                          {t('map.menuPrefix', {
+                            menu: getLocalizedValue(truck.menuSummary, language),
+                          })}
                         </p>
                         <div className="flex items-center gap-2 text-[10px] text-gray-500 font-bold mt-1">
                           <span className="flex items-center gap-0.5 text-gray-600">
                             <MapPin className="w-3 h-3 text-orange-600" />
-                            {t.location}
+                            {getLocalizedValue(truck.location, language, (s) =>
+                              localizeVenueName(s, language)
+                            )}
                           </span>
-                          <span>• {t.operatingHours}</span>
+                          {truck.operatingHours && (
+                            <span>• {getLocalizedValue(truck.operatingHours, language)}</span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -506,15 +521,15 @@ export const CampusMap: React.FC = () => {
                 ))
               ))}
 
-            {/* 3. Sports Venues Tab (경기 장소: category === 'sports') */}
+            {/* 3. Sports Venues Tab */}
             {sheetTab === 'sports_venue' && (
               <div className="space-y-1.5">
                 <div className="text-[11px] font-bold text-gray-500 px-1">
-                  경기 장소 목록 ({sportsNodes.length})
+                  {t('map.sportsVenueList', { count: sportsNodes.length })}
                 </div>
                 {sportsNodes.length === 0 ? (
                   <div className="p-8 text-center text-xs font-bold text-gray-400">
-                    등록된 경기 장소가 없습니다.
+                    {t('map.emptySportsVenues')}
                   </div>
                 ) : (
                   sportsNodes.map((node) => {
@@ -535,14 +550,18 @@ export const CampusMap: React.FC = () => {
                           <span className="text-xl">{node.icon || '🏆'}</span>
                           <div className="min-w-0">
                             <h4 className="font-extrabold text-xs text-gray-900 truncate">
-                              {node.name}
+                              {getLocalizedValue(node.name, language, (s) =>
+                                localizeVenueName(s, language)
+                              )}
                             </h4>
-                            <p className="text-[10px] text-gray-500 truncate">{node.description}</p>
+                            <p className="text-[10px] text-gray-500 truncate">
+                              {getLocalizedValue(node.description, language)}
+                            </p>
                           </div>
                         </div>
                         {isCurrentlySelected && (
                           <span className="text-[10px] font-bold text-rose-600 bg-rose-100/70 px-1.5 py-0.2 rounded">
-                            선택됨
+                            {t('map.selectedBadge')}
                           </span>
                         )}
                       </div>
@@ -552,15 +571,15 @@ export const CampusMap: React.FC = () => {
               </div>
             )}
 
-            {/* 4. General Venues Tab (일반 장소: category !== 'sports') */}
+            {/* 4. General Venues Tab */}
             {sheetTab === 'general_venue' && (
               <div className="space-y-1.5">
                 <div className="text-[11px] font-bold text-gray-500 px-1">
-                  일반 장소 목록 ({generalNodes.length})
+                  {t('map.generalVenueList', { count: generalNodes.length })}
                 </div>
                 {generalNodes.length === 0 ? (
                   <div className="p-8 text-center text-xs font-bold text-gray-400">
-                    등록된 일반 장소가 없습니다.
+                    {t('map.emptyGeneralVenues')}
                   </div>
                 ) : (
                   generalNodes.map((node) => {
@@ -581,14 +600,18 @@ export const CampusMap: React.FC = () => {
                           <span className="text-xl">{node.icon || '📍'}</span>
                           <div className="min-w-0">
                             <h4 className="font-extrabold text-xs text-gray-900 truncate">
-                              {node.name}
+                              {getLocalizedValue(node.name, language, (s) =>
+                                localizeVenueName(s, language)
+                              )}
                             </h4>
-                            <p className="text-[10px] text-gray-500 truncate">{node.description}</p>
+                            <p className="text-[10px] text-gray-500 truncate">
+                              {getLocalizedValue(node.description, language)}
+                            </p>
                           </div>
                         </div>
                         {isCurrentlySelected && (
                           <span className="text-[10px] font-bold text-blue-600 bg-blue-100/70 px-1.5 py-0.2 rounded">
-                            선택됨
+                            {t('map.selectedBadge')}
                           </span>
                         )}
                       </div>

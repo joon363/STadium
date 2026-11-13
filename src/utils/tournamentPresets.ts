@@ -1,5 +1,6 @@
 import { SportKey, RawScheduledMatch } from '../types/stadium';
 import { TournamentTreeData, TournamentGameNode } from '../types/tournamentTree';
+import { isGameNodeConfirmed, getConfirmedGameWinner } from './tournamentLayout';
 
 /**
  * Creates default tree preset matching Photo 1 (5-Team Asymmetric Tournament)
@@ -269,6 +270,10 @@ export function convertTreeToMatches(
   return games.map((g) => {
     // Ensure match ID is uniquely prefixed with sportKey
     const matchId = g.id.startsWith(`${tree.sportKey}-`) ? g.id : `${tree.sportKey}-${g.id}`;
+    const isConfirmed = isGameNodeConfirmed(g);
+    const resultType = g.resultType || 'normal';
+    const winningTeamFinal = getConfirmedGameWinner(g);
+
     return {
       id: matchId,
       sportKey: tree.sportKey,
@@ -282,10 +287,12 @@ export function convertTreeToMatches(
       endMinute: g.endMinute,
       venue: g.venue,
       round: g.roundName,
-      score1Final: g.score1,
-      score2Final: g.score2,
-      winningTeamFinal: g.score1 > g.score2 ? g.team1 : g.score2 > g.score1 ? g.team2 : null,
-      isLive: g.status === 'live' || g.isLive,
+      score1Final: isConfirmed ? g.score1 : 0,
+      score2Final: isConfirmed ? g.score2 : 0,
+      winningTeamFinal,
+      isLive: !isConfirmed && (g.status === 'live' || g.isLive),
+      isConfirmed,
+      resultType,
     };
   });
 }

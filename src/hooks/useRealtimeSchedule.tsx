@@ -10,28 +10,29 @@ import {
   SchoolStanding,
   YouTubeLiveItem,
 } from '../config/stadiumConfig';
+import { TournamentTreeData } from '../types/tournamentTree';
 import {
   getSupabaseMatches,
+  getSupabaseAllTournamentTrees,
   getSupabaseStagePerformances,
-  getSupabaseYoutubeLiveUrl,
   getSupabaseYoutubeLiveList,
   getSupabaseStageDelay,
-  getSupabaseNotices,
-  getSupabaseBooths,
-  subscribeToRealtimeTables,
 } from '../lib/supabase';
 import { useSchool } from '../context/SchoolContext';
+import { useLanguage } from '../context/LanguageContext';
+import { resolveYoutubeLiveUrl } from '../services/youtubeLiveService';
 
 export interface UseRealtimeScheduleResult {
   now: Date;
   sportsConfig: Record<string, SportConfig>;
+  tournamentTrees: Record<string, TournamentTreeData>;
   stageConfig: EvaluatedStagePerformance;
   stageSchedule: StageItem[];
   stageDelayMinutes: number;
   overallStandings: SchoolStanding[];
   youtubeLiveUrl: string;
   youtubeLiveList: YouTubeLiveItem[];
-  getYoutubeLiveUrl: (targetKey?: string) => string;
+  getYoutubeLiveUrl: (targetKey?: string, round?: string, fallbackSportKey?: string) => string;
   timeString: string;
   isSupabaseLoaded: boolean;
   refreshFromSupabase: () => Promise<void>;
@@ -42,6 +43,7 @@ const RealtimeScheduleContext = createContext<UseRealtimeScheduleResult | null>(
 export const RealtimeScheduleProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [now, setNow] = useState<Date>(() => new Date());
   const [supabaseMatches, setSupabaseMatches] = useState<RawScheduledMatch[] | null>(null);
+  const [tournamentTrees, setTournamentTrees] = useState<Record<string, TournamentTreeData>>({});
   const [supabaseStage, setSupabaseStage] = useState<StageItem[] | null>(null);
   const [stageDelayMinutes, setStageDelayMinutes] = useState<number>(0);
   const [youtubeLiveUrl, setYoutubeLiveUrl] = useState<string>(
@@ -51,125 +53,88 @@ export const RealtimeScheduleProvider: React.FC<{ children: React.ReactNode }> =
   const [isSupabaseLoaded, setIsSupabaseLoaded] = useState<boolean>(false);
 
   const { selectedSchool } = useSchool();
+  const { language } = useLanguage();
 
-  // Helper to dynamically resolve YouTube live URL for a given sport, match, or stage
+  // Helper to dynamically resolve YouTube live URL for a given match, round, sport, or stage
   const getYoutubeLiveUrl = useCallback(
-    (targetKey: string = 'main'): string => {
-      const found = youtubeLiveList.find(
-        (item) => item.sportKey === targetKey
+    (targetKey: string = 'main', round?: string, fallbackSportKey?: string): string => {
+      return resolveYoutubeLiveUrl(
+        youtubeLiveList,
+        targetKey,
+        round,
+        fallbackSportKey,
+        youtubeLiveUrl
       );
-      if (found && found.url && found.isActive) {
-        return found.url;
-      }
-      const main = youtubeLiveList.find((item) => item.sportKey === 'main');
-      return main?.url || youtubeLiveUrl || 'https://www.youtube.com/@stadium_official';
     },
     [youtubeLiveList, youtubeLiveUrl]
   );
 
-  // 1. High-Frequency Realtime Data Fetcher (Matches)
-  const loadMatchesData = useCallback(async (forceRefresh = false) => {
+  const loadAllInitialData = useCallback(async (forceRefresh = false) => {
     try {
-      const matches = await getSupabaseMatches(forceRefresh);
+      const [matches, trees, stage, ytList, delay] = await Promise.all([
+        getSupabaseMatches(forceRefresh),
+        getSupabaseAllTournamentTrees(forceRefresh),
+        getSupabaseStagePerformances(forceRefresh),
+        getSupabaseYoutubeLiveList(forceRefresh),
+        getSupabaseStageDelay(forceRefresh),
+      ]);
+
       if (matches && matches.length > 0) {
         setSupabaseMatches(matches);
       }
-    } catch (e) {
-      console.warn('Could not load matches data:', e);
-    }
-  }, []);
-
-  // 2. Long Polling Data Fetcher (Stage performances, admin settings, notices, booths, youtube_live - 1 min)
-  const loadLongPollingData = useCallback(async (forceRefresh = false) => {
-    try {
-      const [stage, ytUrl, ytList, delay] = await Promise.all([
-        getSupabaseStagePerformances(forceRefresh),
-        getSupabaseYoutubeLiveUrl(forceRefresh),
-        getSupabaseYoutubeLiveList(forceRefresh),
-        getSupabaseStageDelay(forceRefresh),
-        getSupabaseNotices(forceRefresh),
-        getSupabaseBooths(forceRefresh),
-      ]);
-
+      if (trees && Object.keys(trees).length > 0) {
+        setTournamentTrees(trees);
+      }
       if (stage && stage.length > 0) {
         setSupabaseStage(stage);
       }
-      if (ytUrl) {
-        setYoutubeLiveUrl(ytUrl);
-      }
       if (ytList && ytList.length > 0) {
         setYoutubeLiveList(ytList);
+        const mainItem = ytList.find((item) => item.sportKey === 'main');
+        if (mainItem?.url) {
+          setYoutubeLiveUrl(mainItem.url);
+        }
       }
       if (delay !== undefined && delay !== null) {
         setStageDelayMinutes(delay);
       }
     } catch (e) {
-      console.warn('Could not load long-polling data:', e);
+      console.warn('Could not load initial schedule data:', e);
+    } finally {
+      setIsSupabaseLoaded(true);
     }
   }, []);
 
-  const loadAllInitialData = useCallback(async (forceRefresh = false) => {
-    await Promise.all([loadMatchesData(forceRefresh), loadLongPollingData(forceRefresh)]);
-    setIsSupabaseLoaded(true);
-  }, [loadMatchesData, loadLongPollingData]);
-
   useEffect(() => {
-    // 1. Initial Load
-    loadAllInitialData(true);
+    // 1. Initial Load Only (No background polling, no window.focus refetch, no WebSocket auto-refetch)
+    loadAllInitialData(false);
 
-    // 2. Global 1-second Ticker for smooth time updates
+    // 2. Local clock ticker every 30 seconds for lightweight local time evaluation (zero network traffic)
     const timer = setInterval(() => {
       setNow(new Date());
-    }, 1000);
-
-    // 3. Supabase Realtime WebSocket Subscription (matches & tournament_trees)
-    const unsubscribe = subscribeToRealtimeTables(
-      ['matches', 'tournament_trees'],
-      (table) => {
-        if (table === 'matches') {
-          loadMatchesData(true);
-        }
-      }
-    );
-
-    // 4. Long Polling Interval (Every 60 Seconds / 1 Minute)
-    const longPollingTimer = setInterval(() => {
-      loadLongPollingData(true);
-    }, 60000);
-
-    // 5. On Window Focus: Refresh fresh data
-    const handleFocus = () => {
-      loadAllInitialData(true);
-    };
-    window.addEventListener('focus', handleFocus);
+    }, 30000);
 
     return () => {
       clearInterval(timer);
-      clearInterval(longPollingTimer);
-      unsubscribe();
-      window.removeEventListener('focus', handleFocus);
     };
-  }, [loadAllInitialData, loadMatchesData, loadLongPollingData]);
+  }, [loadAllInitialData]);
 
   // Derive schedule data with memoization
   const sportsConfig = useMemo(
-    () => getRealtimeSportsConfig(now, supabaseMatches, selectedSchool),
-    [now, supabaseMatches, selectedSchool]
+    () => getRealtimeSportsConfig(now, supabaseMatches, selectedSchool, language),
+    [now, supabaseMatches, selectedSchool, language]
   );
 
   const stageConfig = useMemo(
-    () => getRealtimeStageConfig(now, supabaseStage, stageDelayMinutes),
-    [now, supabaseStage, stageDelayMinutes]
+    () => getRealtimeStageConfig(now, supabaseStage, stageDelayMinutes, language),
+    [now, supabaseStage, stageDelayMinutes, language]
   );
 
-  const stageSchedule = useMemo(
-    () => supabaseStage || [],
-    [supabaseStage]
-  );
+  const stageSchedule = useMemo(() => supabaseStage || [], [supabaseStage]);
 
   const overallStandings = useMemo(
-    () => calculateOverallStandings(supabaseMatches, now),
-    [supabaseMatches, now]
+    () => calculateOverallStandings(supabaseMatches, now, tournamentTrees, language),
+    [supabaseMatches, now, tournamentTrees, language]
   );
 
   const hours = String(now.getHours()).padStart(2, '0');
@@ -181,6 +146,7 @@ export const RealtimeScheduleProvider: React.FC<{ children: React.ReactNode }> =
     () => ({
       now,
       sportsConfig,
+      tournamentTrees,
       stageConfig,
       stageSchedule,
       stageDelayMinutes,
@@ -190,11 +156,15 @@ export const RealtimeScheduleProvider: React.FC<{ children: React.ReactNode }> =
       getYoutubeLiveUrl,
       timeString,
       isSupabaseLoaded,
-      refreshFromSupabase: () => loadAllInitialData(true),
+      refreshFromSupabase: () => {
+        setNow(new Date());
+        return loadAllInitialData(true);
+      },
     }),
     [
       now,
       sportsConfig,
+      tournamentTrees,
       stageConfig,
       stageSchedule,
       stageDelayMinutes,
@@ -219,10 +189,11 @@ export function useRealtimeSchedule(): UseRealtimeScheduleResult {
     const now = new Date();
     const sportsConfig = getRealtimeSportsConfig(now, null, 'ALL');
     const stageConfig = getRealtimeStageConfig(now, null, 0);
-    const overallStandings = calculateOverallStandings(null, now);
+    const overallStandings = calculateOverallStandings(null, now, null);
     return {
       now,
       sportsConfig,
+      tournamentTrees: {},
       stageConfig,
       stageSchedule: [],
       stageDelayMinutes: 0,

@@ -6,6 +6,10 @@ import {
   uploadImageToSupabase,
 } from '../../../lib/supabase';
 import { Store, Plus, Upload } from 'lucide-react';
+import { useLanguage } from '../../../context/LanguageContext';
+import { BilingualField } from '../components/BilingualField';
+import { finalizeBilingualText } from '../../../utils/autoTranslate';
+import { getLocalizedValue, localizeVenueName } from '../../../utils/bilingual';
 
 interface BoothsTabProps {
   booths: BoothItem[];
@@ -22,6 +26,7 @@ export const BoothsTab: React.FC<BoothsTabProps> = ({
   setIsSaving,
   setSaveStatus,
 }) => {
+  const { language, t } = useLanguage();
   const [editingBooth, setEditingBooth] = useState<Partial<BoothItem>>({
     id: '',
     name: '',
@@ -37,29 +42,38 @@ export const BoothsTab: React.FC<BoothsTabProps> = ({
 
   const handleSaveBooth = async () => {
     if (!editingBooth.name) {
-      alert('부스 이름을 입력해 주세요.');
+      alert(t('admin.booths.reqAlert'));
       return;
     }
+
+    setIsSaving(true);
+    const [bName, bOperator, bLocation, bDescription, bHours] = await Promise.all([
+      finalizeBilingualText(editingBooth.name),
+      finalizeBilingualText(editingBooth.operator || ''),
+      finalizeBilingualText(editingBooth.location || ''),
+      finalizeBilingualText(editingBooth.description || ''),
+      finalizeBilingualText(editingBooth.operatingHours || ''),
+    ]);
+
     const itemToSave: BoothItem = {
       id: editingBooth.id || `booth-${Date.now()}`,
-      name: editingBooth.name,
-      operator: editingBooth.operator || '',
-      location: editingBooth.location || '',
+      name: bName,
+      operator: bOperator,
+      location: bLocation,
       category: editingBooth.category || 'experience',
-      description: editingBooth.description || '',
-      operatingHours: editingBooth.operatingHours || '',
+      description: bDescription,
+      operatingHours: bHours,
       icon: editingBooth.icon || '🎪',
       imageUrl: editingBooth.imageUrl || '',
       isActive: editingBooth.isActive ?? true,
       displayOrder: Number(editingBooth.displayOrder || 0),
     };
 
-    setIsSaving(true);
     const res = await upsertSupabaseBooth(itemToSave);
     setIsSaving(false);
 
     if (res.success) {
-      setSaveStatus(`부스 [${itemToSave.name}] 정보가 저장되었습니다.`);
+      setSaveStatus(t('admin.savedSuccess'));
       setBooths((prev) => {
         const idx = prev.findIndex((b) => b.id === itemToSave.id);
         if (idx >= 0) {
@@ -82,18 +96,18 @@ export const BoothsTab: React.FC<BoothsTabProps> = ({
         displayOrder: 0,
       });
     } else {
-      setSaveStatus(`부스 저장 실패: ${res.error}`);
+      setSaveStatus(t('admin.saveFailed', { error: res.error || '' }));
     }
     setTimeout(() => setSaveStatus(null), 3000);
   };
 
   const handleDeleteBooth = async (id: string) => {
-    if (!confirm('정말 이 부스를 삭제하시겠습니까?')) return;
+    if (!confirm(t('admin.confirmDelete'))) return;
     setIsSaving(true);
     const res = await deleteSupabaseBooth(id);
     setIsSaving(false);
     if (res.success) {
-      setSaveStatus('부스가 삭제되었습니다.');
+      setSaveStatus(t('admin.deletedSuccess'));
       setBooths((prev) => prev.filter((b) => b.id !== id));
       if (editingBooth.id === id) {
         setEditingBooth({
@@ -110,7 +124,7 @@ export const BoothsTab: React.FC<BoothsTabProps> = ({
         });
       }
     } else {
-      setSaveStatus(`삭제 실패: ${res.error}`);
+      setSaveStatus(t('admin.deleteFailed', { error: res.error || '' }));
     }
     setTimeout(() => setSaveStatus(null), 3000);
   };
@@ -121,11 +135,9 @@ export const BoothsTab: React.FC<BoothsTabProps> = ({
         <div>
           <h2 className="font-extrabold text-base text-gray-900 flex items-center gap-2">
             <Store className="w-5 h-5 text-amber-500" />
-            <span>🎪 부스 관리</span>
+            <span>{t('admin.booths.title')}</span>
           </h2>
-          <p className="text-xs text-gray-500 font-medium">
-            행사장 내 동아리/체험 부스 정보를 추가 및 편집합니다.
-          </p>
+          <p className="text-xs text-gray-500 font-medium">{t('admin.booths.desc')}</p>
         </div>
         <button
           onClick={() =>
@@ -145,7 +157,7 @@ export const BoothsTab: React.FC<BoothsTabProps> = ({
           className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold flex items-center gap-1 transition-colors"
         >
           <Plus className="w-4 h-4" />
-          <span>새 부스 등록</span>
+          <span>{t('admin.booths.newBtn')}</span>
         </button>
       </div>
 
@@ -153,86 +165,75 @@ export const BoothsTab: React.FC<BoothsTabProps> = ({
         {/* Form Side */}
         <div className="col-span-5 bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
           <h3 className="font-extrabold text-sm text-slate-800 border-b border-slate-200 pb-2">
-            {editingBooth.id ? '부스 정보 수정' : '새 부스 추가'}
+            {editingBooth.id ? t('admin.booths.formEdit') : t('admin.booths.formNew')}
           </h3>
-          <div className="space-y-2 text-xs">
-            <div>
-              <label className="font-bold text-gray-700 block mb-1">부스 이름 *</label>
-              <input
-                type="text"
-                value={editingBooth.name || ''}
-                onChange={(e) => setEditingBooth({ ...editingBooth, name: e.target.value })}
-                placeholder="예: AI 로봇 체험 부스"
-                className="w-full border border-gray-300 p-2 rounded text-xs font-bold"
-              />
-            </div>
+          <div className="space-y-2.5 text-xs">
+            <BilingualField
+              label={t('admin.booths.fieldName')}
+              required
+              compact
+              value={editingBooth.name || ''}
+              onChange={(val) => setEditingBooth({ ...editingBooth, name: val })}
+              placeholderKo="예: AI 로봇 체험 부스"
+              inputClassName="w-full border border-gray-300 p-2 rounded text-xs font-bold bg-white"
+            />
+            <BilingualField
+              label={t('admin.booths.fieldOp')}
+              compact
+              value={editingBooth.operator || ''}
+              onChange={(val) => setEditingBooth({ ...editingBooth, operator: val })}
+              placeholderKo="예: POSTECH 로봇동아리"
+              inputClassName="w-full border border-gray-300 p-2 rounded text-xs bg-white"
+            />
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="font-bold text-gray-700 block mb-1">운영 주체</label>
-                <input
-                  type="text"
-                  value={editingBooth.operator || ''}
-                  onChange={(e) =>
-                    setEditingBooth({ ...editingBooth, operator: e.target.value })
-                  }
-                  placeholder="예: POSTECH 로봇동아리"
-                  className="w-full border border-gray-300 p-2 rounded text-xs"
-                />
-              </div>
-              <div>
-                <label className="font-bold text-gray-700 block mb-1">카테고리</label>
+                <label className="font-bold text-gray-700 block mb-1">
+                  {t('admin.booths.fieldCat')}
+                </label>
                 <select
                   value={editingBooth.category || 'experience'}
                   onChange={(e) =>
                     setEditingBooth({ ...editingBooth, category: e.target.value })
                   }
-                  className="w-full border border-gray-300 p-2 rounded text-xs font-bold"
+                  className="w-full border border-gray-300 p-2 rounded text-xs font-bold bg-white"
                 >
-                  <option value="experience">체험 부스</option>
-                  <option value="food">음식/식음</option>
-                  <option value="event">이벤트</option>
-                  <option value="promotion">홍보</option>
+                  <option value="experience">{t('booth.catExperience')}</option>
+                  <option value="food">{t('booth.catFood')}</option>
+                  <option value="event">{t('booth.catEvent')}</option>
+                  <option value="promotion">{t('booth.catPromotion')}</option>
                 </select>
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="font-bold text-gray-700 block mb-1">위치 정보</label>
+                <label className="font-bold text-gray-700 block mb-1">
+                  {t('admin.booths.fieldIcon')}
+                </label>
                 <input
                   type="text"
-                  value={editingBooth.location || ''}
-                  onChange={(e) =>
-                    setEditingBooth({ ...editingBooth, location: e.target.value })
-                  }
-                  placeholder="예: 학생회관 앞 광장"
-                  className="w-full border border-gray-300 p-2 rounded text-xs"
-                />
-              </div>
-              <div>
-                <label className="font-bold text-gray-700 block mb-1">운영 시간</label>
-                <input
-                  type="text"
-                  value={editingBooth.operatingHours || ''}
-                  onChange={(e) =>
-                    setEditingBooth({ ...editingBooth, operatingHours: e.target.value })
-                  }
-                  placeholder="10:00 ~ 18:00"
-                  className="w-full border border-gray-300 p-2 rounded text-xs"
+                  value={editingBooth.icon || '🎪'}
+                  onChange={(e) => setEditingBooth({ ...editingBooth, icon: e.target.value })}
+                  className="w-full border border-gray-300 p-2 rounded text-xs text-center font-bold bg-white"
                 />
               </div>
             </div>
-            <div>
-              <label className="font-bold text-gray-700 block mb-1">아이콘 이모지</label>
-              <input
-                type="text"
-                value={editingBooth.icon || '🎪'}
-                onChange={(e) => setEditingBooth({ ...editingBooth, icon: e.target.value })}
-                className="w-20 border border-gray-300 p-2 rounded text-xs text-center font-bold"
-              />
-            </div>
+            <BilingualField
+              label={t('admin.booths.fieldLoc')}
+              compact
+              value={editingBooth.location || ''}
+              onChange={(val) => setEditingBooth({ ...editingBooth, location: val })}
+              placeholderKo="예: 학생회관 앞 광장"
+              inputClassName="w-full border border-gray-300 p-2 rounded text-xs bg-white"
+            />
+            <BilingualField
+              label={t('admin.booths.fieldHours')}
+              compact
+              value={editingBooth.operatingHours || ''}
+              onChange={(val) => setEditingBooth({ ...editingBooth, operatingHours: val })}
+              placeholderKo="10:00 ~ 18:00"
+              inputClassName="w-full border border-gray-300 p-2 rounded text-xs bg-white"
+            />
             <div>
               <label className="font-bold text-gray-700 block mb-1">
-                이미지 업로드 (Supabase Storage)
+                {t('admin.booths.fieldImg')}
               </label>
               <div className="flex items-center gap-2">
                 <input
@@ -241,12 +242,12 @@ export const BoothsTab: React.FC<BoothsTabProps> = ({
                   onChange={(e) =>
                     setEditingBooth({ ...editingBooth, imageUrl: e.target.value })
                   }
-                  placeholder="이미지 URL 또는 직접 업로드"
-                  className="flex-1 border border-gray-300 p-2 rounded text-xs"
+                  placeholder="https://..."
+                  className="flex-1 border border-gray-300 p-2 rounded text-xs bg-white"
                 />
                 <label className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded text-xs font-bold flex items-center gap-1 cursor-pointer shrink-0">
                   <Upload className="w-3.5 h-3.5" />
-                  <span>업로드</span>
+                  <span>{t('admin.upload')}</span>
                   <input
                     type="file"
                     accept="image/*"
@@ -259,28 +260,25 @@ export const BoothsTab: React.FC<BoothsTabProps> = ({
                       setIsSaving(false);
                       if (res.url) {
                         setEditingBooth((prev) => ({ ...prev, imageUrl: res.url }));
-                        setSaveStatus('이미지가 Supabase Storage에 업로드되었습니다!');
+                        setSaveStatus(t('admin.uploadDone'));
                         setTimeout(() => setSaveStatus(null), 3000);
                       } else {
-                        alert(`업로드 실패: ${res.error || '버킷 설정을 확인해주세요.'}`);
+                        alert(t('admin.uploadFail', { error: res.error || '' }));
                       }
                     }}
                   />
                 </label>
               </div>
             </div>
-            <div>
-              <label className="font-bold text-gray-700 block mb-1">부스 설명</label>
-              <textarea
-                rows={3}
-                value={editingBooth.description || ''}
-                onChange={(e) =>
-                  setEditingBooth({ ...editingBooth, description: e.target.value })
-                }
-                placeholder="부스 상세 설명 및 진행 프로그램"
-                className="w-full border border-gray-300 p-2 rounded text-xs"
-              />
-            </div>
+            <BilingualField
+              label={t('admin.booths.fieldDesc')}
+              multiline
+              rows={3}
+              value={editingBooth.description || ''}
+              onChange={(val) => setEditingBooth({ ...editingBooth, description: val })}
+              placeholderKo="부스 상세 설명 및 진행 프로그램"
+              inputClassName="w-full border border-gray-300 p-2 rounded text-xs bg-white"
+            />
             <div className="flex items-center justify-between pt-2">
               <label className="flex items-center gap-2 cursor-pointer font-bold text-gray-700">
                 <input
@@ -290,7 +288,7 @@ export const BoothsTab: React.FC<BoothsTabProps> = ({
                     setEditingBooth({ ...editingBooth, isActive: e.target.checked })
                   }
                 />
-                <span>공개 표시 여부</span>
+                <span>{t('admin.visibleToggle')}</span>
               </label>
               <div className="flex items-center gap-2">
                 {editingBooth.id && (
@@ -298,15 +296,15 @@ export const BoothsTab: React.FC<BoothsTabProps> = ({
                     onClick={() => handleDeleteBooth(editingBooth.id!)}
                     className="px-3 py-1.5 bg-rose-100 text-rose-700 hover:bg-rose-200 rounded font-bold"
                   >
-                    삭제
+                    {t('admin.delete')}
                   </button>
                 )}
                 <button
                   onClick={handleSaveBooth}
                   disabled={isSaving}
-                  className="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded font-bold shadow-2xs"
+                  className="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded font-bold shadow-2xs disabled:opacity-50"
                 >
-                  저장하기
+                  {isSaving ? t('admin.saving') : t('admin.save')}
                 </button>
               </div>
             </div>
@@ -319,18 +317,18 @@ export const BoothsTab: React.FC<BoothsTabProps> = ({
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-100 text-slate-700 font-extrabold border-b border-slate-200">
                 <tr>
-                  <th className="p-2.5">이모지/이름</th>
-                  <th className="p-2.5">운영주체</th>
-                  <th className="p-2.5">위치</th>
-                  <th className="p-2.5">상태</th>
-                  <th className="p-2.5 text-right">관리</th>
+                  <th className="p-2.5">{t('admin.booths.fieldName')}</th>
+                  <th className="p-2.5">{t('admin.booths.fieldOp')}</th>
+                  <th className="p-2.5">{t('admin.booths.fieldLoc')}</th>
+                  <th className="p-2.5">{t('admin.status')}</th>
+                  <th className="p-2.5 text-right">{t('admin.manage')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
                 {booths.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="p-8 text-center text-slate-400">
-                      등록된 부스가 없습니다.
+                      {t('admin.booths.empty')}
                     </td>
                   </tr>
                 ) : (
@@ -338,18 +336,24 @@ export const BoothsTab: React.FC<BoothsTabProps> = ({
                     <tr key={b.id} className="hover:bg-slate-50">
                       <td className="p-2.5 font-bold text-slate-900 flex items-center gap-2">
                         <span>{b.icon}</span>
-                        <span>{b.name}</span>
+                        <span>{getLocalizedValue(b.name, language)}</span>
                       </td>
-                      <td className="p-2.5 text-slate-600">{b.operator || '-'}</td>
-                      <td className="p-2.5 text-slate-600">{b.location || '-'}</td>
+                      <td className="p-2.5 text-slate-600">
+                        {getLocalizedValue(b.operator, language) || '-'}
+                      </td>
+                      <td className="p-2.5 text-slate-600">
+                        {getLocalizedValue(b.location, language, (s) =>
+                          localizeVenueName(s, language)
+                        ) || '-'}
+                      </td>
                       <td className="p-2.5">
                         {b.isActive ? (
                           <span className="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-bold text-[10px]">
-                            공개
+                            {t('admin.public')}
                           </span>
                         ) : (
                           <span className="text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded font-bold text-[10px]">
-                            숨김
+                            {t('admin.hidden')}
                           </span>
                         )}
                       </td>
@@ -358,7 +362,7 @@ export const BoothsTab: React.FC<BoothsTabProps> = ({
                           onClick={() => setEditingBooth(b)}
                           className="px-2 py-1 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded font-bold text-[11px]"
                         >
-                          편집
+                          {t('admin.edit')}
                         </button>
                       </td>
                     </tr>

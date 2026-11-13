@@ -1,4 +1,4 @@
-import { RawScheduledMatch } from '../types/stadium';
+import { MatchResultType, RawScheduledMatch } from '../types/stadium';
 import { supabase } from './supabase/client';
 import { getFromCache, saveToCache, invalidateAppCache } from './supabase/cache';
 
@@ -8,13 +8,13 @@ function rawString(val: any): string {
 
 /**
  * Fetch all scheduled matches
- * By default, returns memory/local cache instantly while kicking off a background refresh, or forces refresh
+ * Uses standard cache TTL and only refreshes on initial load or explicit refresh
  */
 export async function getSupabaseMatches(
   forceRefresh: boolean = false
 ): Promise<RawScheduledMatch[] | null> {
   if (!forceRefresh) {
-    const cached = getFromCache<RawScheduledMatch[]>('matches', 10000); // 10s short TTL
+    const cached = getFromCache<RawScheduledMatch[]>('matches');
     if (cached) return cached;
   }
 
@@ -24,6 +24,8 @@ export async function getSupabaseMatches(
     const { data, error } = await supabase
       .from('matches')
       .select('*')
+      .order('start_hour', { ascending: true })
+      .order('start_minute', { ascending: true })
       .order('id', { ascending: true });
 
     if (error || !data || data.length === 0) {
@@ -48,6 +50,8 @@ export async function getSupabaseMatches(
       score2Final: Number(row.score2_final),
       winningTeamFinal: row.winning_team_final,
       subtitle: row.subtitle || undefined,
+      isConfirmed: Boolean(row.is_confirmed),
+      resultType: (row.result_type as MatchResultType) || 'normal',
     }));
 
     saveToCache('matches', formatted);
@@ -82,6 +86,8 @@ export async function updateSupabaseMatch(match: RawScheduledMatch): Promise<boo
       score2_final: match.score2Final,
       winning_team_final: match.winningTeamFinal,
       subtitle: match.subtitle || null,
+      is_confirmed: Boolean(match.isConfirmed),
+      result_type: match.resultType || 'normal',
     });
 
     if (error) {
@@ -92,6 +98,67 @@ export async function updateSupabaseMatch(match: RawScheduledMatch): Promise<boo
     return true;
   } catch (err) {
     console.error('Supabase match update error:', err);
+    return false;
+  }
+}
+
+/**
+ * Synchronize all matches for a sportKey in a single bulk operation (deleting orphaned match IDs)
+ */
+export async function syncSupabaseSportMatches(
+  sportKey: string,
+  matches: RawScheduledMatch[]
+): Promise<boolean> {
+  if (!supabase) return true;
+
+  try {
+    const { data: existingRows } = await supabase
+      .from('matches')
+      .select('id')
+      .eq('sport_key', sportKey);
+
+    const nextIds = new Set(matches.map((m) => m.id));
+    const orphanIds = (existingRows || [])
+      .map((r: { id: string }) => r.id)
+      .filter((id: string) => !nextIds.has(id));
+
+    if (orphanIds.length > 0) {
+      await supabase.from('matches').delete().in('id', orphanIds);
+    }
+
+    if (matches.length > 0) {
+      const payload = matches.map((match) => ({
+        id: match.id,
+        sport_key: match.sportKey,
+        sport_name: match.sportName,
+        icon: match.icon,
+        team1: match.team1,
+        team2: match.team2,
+        start_hour: match.startHour,
+        start_minute: match.startMinute,
+        end_hour: match.endHour,
+        end_minute: match.endMinute,
+        venue: match.venue,
+        round: match.round,
+        score1_final: match.score1Final,
+        score2_final: match.score2Final,
+        winning_team_final: match.winningTeamFinal ?? null,
+        subtitle: match.subtitle || null,
+        is_confirmed: Boolean(match.isConfirmed),
+        result_type: match.resultType || 'normal',
+      }));
+
+      const { error } = await supabase.from('matches').upsert(payload);
+      if (error) {
+        console.error(`Failed to bulk sync matches for ${sportKey}:`, error);
+        return false;
+      }
+    }
+
+    invalidateAppCache('matches');
+    return true;
+  } catch (err) {
+    console.error(`Supabase bulk match sync error (${sportKey}):`, err);
     return false;
   }
 }

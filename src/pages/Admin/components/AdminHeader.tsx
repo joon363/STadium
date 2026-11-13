@@ -14,8 +14,10 @@ import {
   KeyRound,
   CheckCircle2,
   Phone,
+  Globe,
 } from 'lucide-react';
 import { AdminTab } from '../types';
+import { useLanguage } from '../../../context/LanguageContext';
 
 interface AdminHeaderProps {
   activeTab: AdminTab;
@@ -33,18 +35,19 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
   saveStatus,
 }) => {
   const navigate = useNavigate();
+  const { language, toggleLanguage, t } = useLanguage();
 
   const tabs: Array<{ id: AdminTab; label: string; icon: React.ReactNode }> = [
-    { id: 'matches', label: '운동경기 스코어 & 일정', icon: <Trophy className="w-4 h-4" /> },
-    { id: 'stage', label: '대강당 문화공연', icon: <Music className="w-4 h-4" /> },
-    { id: 'map', label: '📍 장소 & 도로 편집', icon: <MapPin className="w-4 h-4" /> },
-    { id: 'booths', label: '🎪 부스 관리', icon: <Store className="w-4 h-4 text-amber-500" /> },
-    { id: 'foodtrucks', label: '🚚 푸드트럭 관리', icon: <Truck className="w-4 h-4 text-orange-500" /> },
-    { id: 'sponsors', label: '🏢 후원 기업 관리', icon: <Building2 className="w-4 h-4 text-blue-500" /> },
-    { id: 'notices', label: '📢 공지사항 관리', icon: <Bell className="w-4 h-4 text-rose-600" /> },
-    { id: 'faqs', label: '❓ FAQ 관리', icon: <HelpCircle className="w-4 h-4 text-purple-600" /> },
-    { id: 'contact', label: '📞 비상연락망 관리', icon: <Phone className="w-4 h-4 text-emerald-500" /> },
-    { id: 'settings', label: '관리자 설정 & Supabase', icon: <KeyRound className="w-4 h-4" /> },
+    { id: 'matches', label: t('admin.tabMatches'), icon: <Trophy className="w-4 h-4" /> },
+    { id: 'stage', label: t('admin.tabStage'), icon: <Music className="w-4 h-4" /> },
+    { id: 'map', label: t('admin.tabMap'), icon: <MapPin className="w-4 h-4" /> },
+    { id: 'booths', label: t('admin.tabBooths'), icon: <Store className="w-4 h-4 text-amber-500" /> },
+    { id: 'foodtrucks', label: t('admin.tabFoodtrucks'), icon: <Truck className="w-4 h-4 text-orange-500" /> },
+    { id: 'sponsors', label: t('admin.tabSponsors'), icon: <Building2 className="w-4 h-4 text-blue-500" /> },
+    { id: 'notices', label: t('admin.tabNotices'), icon: <Bell className="w-4 h-4 text-rose-600" /> },
+    { id: 'faqs', label: t('admin.tabFaqs'), icon: <HelpCircle className="w-4 h-4 text-purple-600" /> },
+    { id: 'contact', label: t('admin.tabContact'), icon: <Phone className="w-4 h-4 text-emerald-500" /> },
+    { id: 'settings', label: t('admin.tabSettings'), icon: <KeyRound className="w-4 h-4" /> },
   ];
 
   return (
@@ -57,9 +60,9 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
           </div>
           <div>
             <h1 className="font-extrabold text-base tracking-tight">
-              2026 STadium 통합 관리자 시스템
+              {t('admin.systemTitle')}
             </h1>
-            <p className="text-[11px] text-slate-400">16:9 PC 최적화 웹 대시보드</p>
+            <p className="text-[11px] text-slate-400">{t('admin.systemSubtitle')}</p>
           </div>
         </div>
 
@@ -71,18 +74,26 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
             </div>
           )}
           <button
+            onClick={toggleLanguage}
+            className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-extrabold flex items-center gap-1 transition-colors"
+            title={language === 'ko' ? 'Switch to English' : '한국어로 전환'}
+          >
+            <Globe className="w-3.5 h-3.5 text-slate-400" />
+            <span>{t('header.langToggle')}</span>
+          </button>
+          <button
             onClick={onRefresh}
             disabled={isLoading}
             className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-            <span>새로고침</span>
+            <span>{t('common.refresh')}</span>
           </button>
           <button
             onClick={() => navigate('/')}
             className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition-colors"
           >
-            사용자 웹으로 이동
+            {t('admin.goUserWeb')}
           </button>
         </div>
       </header>
