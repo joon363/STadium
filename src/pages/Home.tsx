@@ -1,12 +1,62 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { SCHOOLS } from '../config/stadiumConfig';
+import { MatchItem, SCHOOLS, SportConfig } from '../config/stadiumConfig';
 import { useRealtimeSchedule } from '../hooks/useRealtimeSchedule';
 import { useSchool } from '../context/SchoolContext';
 import { useLanguage } from '../context/LanguageContext';
 import { SportsGridCard } from '../components/SportsGridCard';
 import { LeaderboardSection } from '../components/LeaderboardSection';
 import { Music, ChevronRight, Filter, Radio, List, LayoutGrid, ArrowLeftRight } from 'lucide-react';
+
+interface HomeMatchCardEntry {
+  key: string;
+  match: MatchItem;
+  path: string;
+}
+
+const LIST_SPORT_ORDER = ['soccer', 'baseball', 'lol', 'basketball', 'badminton'] as const;
+
+function buildListMatchItems(
+  sportsConfig: Record<string, SportConfig>,
+  selectedSchool: string
+): HomeMatchCardEntry[] {
+  const liveItems: HomeMatchCardEntry[] = [];
+  const upcomingItems: HomeMatchCardEntry[] = [];
+  const endedItems: HomeMatchCardEntry[] = [];
+
+  for (const sportKey of LIST_SPORT_ORDER) {
+    const cfg = sportsConfig[sportKey];
+    if (!cfg) continue;
+
+    const schedule = cfg.schedule || [];
+    const schoolMatches =
+      selectedSchool && selectedSchool !== 'ALL'
+        ? schedule.filter((m) => m.team1 === selectedSchool || m.team2 === selectedSchool)
+        : schedule;
+
+    const activePool = schoolMatches.length > 0 ? schoolMatches : schedule;
+    const liveMatches = activePool.filter((m) => m.isLive);
+
+    if (liveMatches.length > 0) {
+      for (const m of liveMatches) {
+        liveItems.push({
+          key: `${sportKey}-${m.id}`,
+          match: m,
+          path: cfg.path,
+        });
+      }
+    } else if (cfg.liveMatch) {
+      const targetBucket = cfg.liveMatch.isEnded ? endedItems : upcomingItems;
+      targetBucket.push({
+        key: `${sportKey}-${cfg.liveMatch.id}`,
+        match: cfg.liveMatch,
+        path: cfg.path,
+      });
+    }
+  }
+
+  return [...liveItems, ...upcomingItems, ...endedItems];
+}
 
 export const Home: React.FC = () => {
   const navigate = useNavigate();
@@ -44,13 +94,22 @@ export const Home: React.FC = () => {
   const fourthPath = gymSport === 'basketball' ? '/basketball' : '/badminton';
   const fourthKey = gymSport === 'basketball' ? 'basketball' : 'badminton';
 
-  // All 4 primary sports matches
-  const matchItems = [
-    { key: 'soccer', match: sportsConfig.soccer?.liveMatch, path: sportsConfig.soccer?.path || '/soccer' },
-    { key: 'baseball', match: sportsConfig.baseball?.liveMatch, path: sportsConfig.baseball?.path || '/baseball' },
-    { key: 'lol', match: sportsConfig.lol?.liveMatch, path: sportsConfig.lol?.path || '/lol' },
-    { key: fourthKey, match: fourthMatch, path: fourthPath },
-  ];
+  // All 4 primary sports matches for 2x2 Grid (live cards sorted first)
+  const gridMatchItems = useMemo(() => {
+    const items = [
+      { key: 'soccer', match: sportsConfig.soccer?.liveMatch, path: sportsConfig.soccer?.path || '/soccer' },
+      { key: 'baseball', match: sportsConfig.baseball?.liveMatch, path: sportsConfig.baseball?.path || '/baseball' },
+      { key: 'lol', match: sportsConfig.lol?.liveMatch, path: sportsConfig.lol?.path || '/lol' },
+      { key: fourthKey, match: fourthMatch, path: fourthPath },
+    ];
+    return [...items].sort((a, b) => (a.match?.isLive ? 0 : 1) - (b.match?.isLive ? 0 : 1));
+  }, [sportsConfig, fourthKey, fourthMatch, fourthPath]);
+
+  // Expanded List View items: all simultaneous live matches on top, non-live sports below
+  const listMatchItems = useMemo(
+    () => buildListMatchItems(sportsConfig, selectedSchool),
+    [sportsConfig, selectedSchool]
+  );
 
   return (
     <div className="flex flex-col gap-5 p-3 text-gray-900">
@@ -80,20 +139,20 @@ export const Home: React.FC = () => {
       <section className="space-y-2">
         {viewMode === 'grid' ? (
           <div className="grid grid-cols-2 gap-2">
-            {matchItems.map((item) => (
+            {gridMatchItems.map((item) => (
               <SportsGridCard key={item.key} match={item.match} path={item.path} layout="grid" />
             ))}
           </div>
         ) : (
           <div className="space-y-2">
-            {matchItems.map((item) => (
+            {listMatchItems.map((item) => (
               <SportsGridCard key={item.key} match={item.match} path={item.path} layout="horizontal" />
             ))}
           </div>
         )}
 
-        {/* 2 Wide Horizontal Action Buttons: List/Grid Toggle + Basketball/Badminton Swap */}
-        <div className="grid grid-cols-2 gap-2 pt-0.5">
+        {/* Action Buttons: List/Grid Toggle (+ Basketball/Badminton Swap in Grid View) */}
+        <div className={`grid gap-2 pt-0.5 ${viewMode === 'grid' ? 'grid-cols-2' : 'grid-cols-1'}`}>
           {/* Button 1: Grid <-> List Toggle */}
           <button
             onClick={() => setViewMode((prev) => (prev === 'grid' ? 'list' : 'grid'))}
@@ -112,14 +171,16 @@ export const Home: React.FC = () => {
             )}
           </button>
 
-          {/* Button 2: Basketball <-> Badminton Sport Swap */}
-          <button
-            onClick={() => setGymSport((prev) => (prev === 'basketball' ? 'badminton' : 'basketball'))}
-            className="w-full py-2 px-3 bg-white hover:bg-gray-50 active:bg-gray-100 border border-gray-200/90 rounded-xl text-xs font-bold text-gray-700 flex items-center justify-center gap-1.5 shadow-2xs hover:shadow-xs transition-all select-none"
-          >
-            <ArrowLeftRight className="w-3.5 h-3.5 text-postech" />
-            <span>{gymSport === 'basketball' ? t('home.swapToBadminton') : t('home.swapToBasketball')}</span>
-          </button>
+          {/* Button 2: Basketball <-> Badminton Sport Swap (Grid View 4th slot) */}
+          {viewMode === 'grid' && (
+            <button
+              onClick={() => setGymSport((prev) => (prev === 'basketball' ? 'badminton' : 'basketball'))}
+              className="w-full py-2 px-3 bg-white hover:bg-gray-50 active:bg-gray-100 border border-gray-200/90 rounded-xl text-xs font-bold text-gray-700 flex items-center justify-center gap-1.5 shadow-2xs hover:shadow-xs transition-all select-none"
+            >
+              <ArrowLeftRight className="w-3.5 h-3.5 text-postech" />
+              <span>{gymSport === 'basketball' ? t('home.swapToBadminton') : t('home.swapToBasketball')}</span>
+            </button>
+          )}
         </div>
       </section>
 
