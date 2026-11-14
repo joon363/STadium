@@ -6,6 +6,54 @@ import {
   StageItem,
   EvaluatedStagePerformance,
 } from '../types/stadium';
+import type { Language } from '../context/LanguageContext';
+import { ko } from '../locales/ko';
+import { en } from '../locales/en';
+import {
+  getLocalizedValue,
+  localizeRoundName,
+  localizeStageCategory,
+  localizeTeamPlaceholder,
+  localizeVenueName,
+} from './bilingual';
+
+function fmt(template: string, params?: Record<string, string | number>): string {
+  if (!params) return template;
+  let out = template;
+  for (const [k, v] of Object.entries(params)) {
+    out = out.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v));
+  }
+  return out;
+}
+
+function getSportNamesMap(language: Language): Record<SportKey, string> {
+  const dict = language === 'en' ? en : ko;
+  return {
+    soccer: dict['sports.soccer'],
+    baseball: dict['sports.baseball'],
+    lol: 'LoL',
+    badminton: dict['sports.badminton'],
+    badminton_men: `${dict['sports.badminton']} (${dict['sports.badmintonMenTag']})`,
+    badminton_women: `${dict['sports.badminton']} (${dict['sports.badmintonWomenTag']})`,
+    badminton_mixed: `${dict['sports.badminton']} (${dict['sports.badmintonMixedTag']})`,
+    basketball: dict['sports.basketball'],
+  };
+}
+
+export const EVENT_MONTH = 10; // November (0-indexed)
+export const EVENT_DAY = 14; // 11/14
+
+export function getEventDate(baseNow: Date, hour: number, minute: number): Date {
+  return new Date(
+    baseNow.getFullYear(),
+    EVENT_MONTH,
+    EVENT_DAY,
+    0,
+    hour * 60 + minute,
+    0,
+    0
+  );
+}
 
 export function formatTime(date: Date): string {
   const h = String(date.getHours()).padStart(2, '0');
@@ -13,27 +61,36 @@ export function formatTime(date: Date): string {
   return `${h}:${m}`;
 }
 
-export function formatCountdown(ms: number): string {
-  if (ms <= 60000) return '곧 시작';
+export function formatCountdown(ms: number, language: Language = 'ko'): string {
+  const dict = language === 'en' ? en : ko;
+  if (ms <= 60000) return dict['match.startingSoon'];
   const totalMin = Math.floor(ms / 60000);
   const hours = Math.floor(totalMin / 60);
   const minutes = totalMin % 60;
   if (hours > 0) {
-    return minutes > 0 ? `${hours}시간 ${minutes}분` : `${hours}시간`;
+    return minutes > 0
+      ? fmt(dict['common.hoursMinutes'], { hours, minutes })
+      : fmt(dict['common.hours'], { hours });
   }
-  return `${minutes}분`;
+  return fmt(dict['common.minutes'], { min: minutes });
 }
 
-export function evaluateMatchItem(raw: RawScheduledMatch, now: Date = new Date()): MatchItem {
-  const start = new Date(now);
-  start.setHours(raw.startHour, raw.startMinute, 0, 0);
-
-  const end = new Date(now);
-  end.setHours(raw.endHour, raw.endMinute, 0, 0);
+export function evaluateMatchItem(
+  raw: RawScheduledMatch,
+  now: Date = new Date(),
+  language: Language = 'ko'
+): MatchItem {
+  const dict = language === 'en' ? en : ko;
+  const sportNames = getSportNamesMap(language);
+  const start = getEventDate(now, raw.startHour, raw.startMinute);
+  const end = getEventDate(now, raw.endHour, raw.endMinute);
 
   const nowMs = now.getTime();
-  const isLive = nowMs >= start.getTime() && nowMs <= end.getTime();
-  const isEnded = nowMs > end.getTime();
+  const isScoreConfirmed = Boolean(raw.isConfirmed);
+  const resultType = raw.resultType || 'normal';
+
+  let isLive = !isScoreConfirmed && nowMs >= start.getTime() && nowMs <= end.getTime();
+  let isEnded = isScoreConfirmed || nowMs > end.getTime();
 
   let score1 = 0;
   let score2 = 0;
@@ -41,51 +98,89 @@ export function evaluateMatchItem(raw: RawScheduledMatch, now: Date = new Date()
   let statusText = '';
   let countdownText: string | undefined = undefined;
 
-  if (isEnded) {
-    score1 = raw.score1Final;
-    score2 = raw.score2Final;
-    winningTeam = raw.winningTeamFinal || (score1 > score2 ? raw.team1 : score2 > score1 ? raw.team2 : null);
-    statusText = '종료';
+  const localizedTeam1 = getLocalizedValue(raw.team1, language, (s) =>
+    localizeTeamPlaceholder(s, language)
+  );
+  const localizedTeam2 = getLocalizedValue(raw.team2, language, (s) =>
+    localizeTeamPlaceholder(s, language)
+  );
+
+  if (isScoreConfirmed) {
+    isLive = false;
+    isEnded = true;
+    if (resultType === 'cancelled') {
+      score1 = 0;
+      score2 = 0;
+      winningTeam = null;
+      statusText = dict['match.cancelled'];
+    } else if (resultType === 'team1_forfeit_win') {
+      score1 = raw.score1Final;
+      score2 = raw.score2Final;
+      winningTeam = localizedTeam1;
+      statusText = dict['match.forfeitWin'];
+    } else if (resultType === 'team2_forfeit_win') {
+      score1 = raw.score1Final;
+      score2 = raw.score2Final;
+      winningTeam = localizedTeam2;
+      statusText = dict['match.forfeitWin'];
+    } else {
+      score1 = raw.score1Final;
+      score2 = raw.score2Final;
+      const rawWinner =
+        raw.winningTeamFinal || (score1 > score2 ? raw.team1 : score2 > score1 ? raw.team2 : null);
+      winningTeam = rawWinner
+        ? getLocalizedValue(rawWinner, language, (s) => localizeTeamPlaceholder(s, language))
+        : null;
+      statusText = dict['match.ended'];
+    }
+  } else if (isEnded) {
+    score1 = 0;
+    score2 = 0;
+    winningTeam = null;
+    statusText = dict['match.ended'];
   } else if (isLive) {
     const elapsedMinutes = Math.max(0, Math.floor((nowMs - start.getTime()) / 60000));
-    score1 = raw.score1Final;
-    score2 = raw.score2Final;
-    winningTeam = score1 > score2 ? raw.team1 : score2 > score1 ? raw.team2 : null;
-    statusText = `${elapsedMinutes}분 진행중`;
+    score1 = 0;
+    score2 = 0;
+    winningTeam = null;
+    statusText = fmt(dict['match.elapsedMin'], { min: elapsedMinutes });
     countdownText = undefined;
   } else {
     const remainingMs = start.getTime() - nowMs;
     if (remainingMs <= 60000) {
-      statusText = '곧 시작';
-      countdownText = '곧 시작';
+      statusText = dict['match.startingSoon'];
+      countdownText = dict['match.startingSoon'];
     } else if (remainingMs < 7200000) {
-      // 2시간 이내
-      statusText = `시작까지 ${formatCountdown(remainingMs)}`;
-      countdownText = formatCountdown(remainingMs);
+      const cd = formatCountdown(remainingMs, language);
+      statusText = fmt(dict['match.countdownPrefix'], { time: cd });
+      countdownText = cd;
     } else {
-      statusText = `${formatTime(start)} 예정`;
-      countdownText = formatCountdown(remainingMs);
+      statusText = fmt(dict['match.scheduledAt'], { time: formatTime(start) });
+      countdownText = undefined;
     }
   }
 
   return {
     id: raw.id,
     sportKey: raw.sportKey,
-    sportName: raw.sportName,
+    sportName: sportNames[raw.sportKey] || getLocalizedValue(raw.sportName, language),
     icon: raw.icon,
-    team1: raw.team1,
-    team2: raw.team2,
+    team1: localizedTeam1,
+    team2: localizedTeam2,
     score1,
     score2,
     isLive,
+    isEnded,
+    isScoreConfirmed,
+    resultType,
     statusText,
-    venue: raw.venue,
+    venue: getLocalizedValue(raw.venue, language, (s) => localizeVenueName(s, language)),
     winningTeam,
     startTimeObj: start,
     endTimeObj: end,
     timeRangeText: `${formatTime(start)} - ${formatTime(end)}`,
-    round: raw.round,
-    subtitle: raw.subtitle,
+    round: getLocalizedValue(raw.round, language, (s) => localizeRoundName(s, language)),
+    subtitle: raw.subtitle ? getLocalizedValue(raw.subtitle, language) : undefined,
     countdownText,
   };
 }
@@ -93,8 +188,10 @@ export function evaluateMatchItem(raw: RawScheduledMatch, now: Date = new Date()
 export function getRealtimeSportsConfig(
   now: Date = new Date(),
   customMatches?: RawScheduledMatch[] | null,
-  selectedSchool: string = 'ALL'
+  selectedSchool: string = 'ALL',
+  language: Language = 'ko'
 ): Record<string, SportConfig> {
+  const dict = language === 'en' ? en : ko;
   const result: Record<string, SportConfig> = {};
   const allRawMatches = customMatches || [];
   const sportKeys: SportKey[] = [
@@ -107,16 +204,7 @@ export function getRealtimeSportsConfig(
     'basketball',
   ];
 
-  const names: Record<SportKey, string> = {
-    soccer: '축구',
-    baseball: '야구',
-    lol: 'LoL',
-    badminton: '배드민턴',
-    badminton_men: '배드민턴 (남복)',
-    badminton_women: '배드민턴 (여복)',
-    badminton_mixed: '배드민턴 (혼복)',
-    basketball: '농구',
-  };
+  const names = getSportNamesMap(language);
 
   const icons: Record<SportKey, string> = {
     soccer: '⚽',
@@ -131,7 +219,9 @@ export function getRealtimeSportsConfig(
 
   for (const key of sportKeys) {
     const rawMatches = allRawMatches.filter((m: RawScheduledMatch) => m.sportKey === key);
-    const evaluatedSchedule = rawMatches.map((m: RawScheduledMatch) => evaluateMatchItem(m, now));
+    const evaluatedSchedule = rawMatches
+      .map((m: RawScheduledMatch) => evaluateMatchItem(m, now, language))
+      .sort((a, b) => a.startTimeObj.getTime() - b.startTimeObj.getTime());
 
     const defaultEmptyMatch: MatchItem = {
       id: `${key}-empty`,
@@ -143,13 +233,16 @@ export function getRealtimeSportsConfig(
       score1: 0,
       score2: 0,
       isLive: false,
-      statusText: '일정 준비중',
-      venue: '경기장',
+      isEnded: false,
+      isScoreConfirmed: false,
+      resultType: 'normal',
+      statusText: dict['match.scheduleTbd'],
+      venue: dict['match.venueDefault'],
       winningTeam: null,
-      startTimeObj: new Date(now),
-      endTimeObj: new Date(now),
+      startTimeObj: getEventDate(now, 10, 0),
+      endTimeObj: getEventDate(now, 11, 0),
       timeRangeText: '',
-      round: '경기 일정 준비중',
+      round: dict['match.roundTbd'],
     };
 
     let liveMatch: MatchItem = defaultEmptyMatch;
@@ -163,21 +256,21 @@ export function getRealtimeSportsConfig(
         if (schoolMatches.length > 0) {
           const live = schoolMatches.find((m: MatchItem) => m.isLive);
           const upcoming = schoolMatches.find(
-            (m: MatchItem) => m.startTimeObj.getTime() > now.getTime()
+            (m: MatchItem) => !m.isEnded && m.startTimeObj.getTime() > now.getTime()
           );
           const finished = schoolMatches[schoolMatches.length - 1];
           liveMatch = live || upcoming || finished;
         } else {
           liveMatch =
             evaluatedSchedule.find((m: MatchItem) => m.isLive) ||
-            evaluatedSchedule.find((m: MatchItem) => m.startTimeObj.getTime() > now.getTime()) ||
+            evaluatedSchedule.find((m: MatchItem) => !m.isEnded && m.startTimeObj.getTime() > now.getTime()) ||
             evaluatedSchedule[evaluatedSchedule.length - 1] ||
             defaultEmptyMatch;
         }
       } else {
         liveMatch =
           evaluatedSchedule.find((m: MatchItem) => m.isLive) ||
-          evaluatedSchedule.find((m: MatchItem) => m.startTimeObj.getTime() > now.getTime()) ||
+          evaluatedSchedule.find((m: MatchItem) => !m.isEnded && m.startTimeObj.getTime() > now.getTime()) ||
           evaluatedSchedule[evaluatedSchedule.length - 1] ||
           defaultEmptyMatch;
       }
@@ -202,29 +295,32 @@ export function getRealtimeSportsConfig(
 
   const liveBadmintonMatch =
     allBadmintonMatches.find((m) => m.isLive) ||
-    allBadmintonMatches.find((m) => m.startTimeObj.getTime() > now.getTime()) ||
+    allBadmintonMatches.find((m) => !m.isEnded && m.startTimeObj.getTime() > now.getTime()) ||
     allBadmintonMatches[allBadmintonMatches.length - 1] || {
       id: 'badminton-empty',
       sportKey: 'badminton',
-      sportName: '배드민턴',
+      sportName: names.badminton,
       icon: '🏸',
       team1: 'POSTECH',
       team2: 'KAIST',
       score1: 0,
       score2: 0,
       isLive: false,
-      statusText: '일정 준비중',
-      venue: '체육관',
+      isEnded: false,
+      isScoreConfirmed: false,
+      resultType: 'normal',
+      statusText: dict['match.scheduleTbd'],
+      venue: dict['match.gymDefault'],
       winningTeam: null,
-      startTimeObj: new Date(now),
-      endTimeObj: new Date(now),
+      startTimeObj: getEventDate(now, 10, 0),
+      endTimeObj: getEventDate(now, 11, 0),
       timeRangeText: '',
-      round: '경기 일정 준비중',
+      round: dict['match.roundTbd'],
     };
 
   result['badminton'] = {
     key: 'badminton',
-    name: '배드민턴',
+    name: names.badminton,
     icon: '🏸',
     path: '/badminton',
     liveMatch: liveBadmintonMatch,
@@ -250,19 +346,21 @@ export function getDelayedTime(
 export function getRealtimeStageConfig(
   now: Date = new Date(),
   customStage?: StageItem[] | null,
-  stageDelayMinutes: number = 0
+  stageDelayMinutes: number = 0,
+  language: Language = 'ko'
 ): EvaluatedStagePerformance {
+  const dict = language === 'en' ? en : ko;
   const timetable = customStage || [];
   const nowMs = now.getTime();
 
   if (!timetable || timetable.length === 0) {
     return {
       school: 'POSTECH',
-      clubName: '공연 준비중',
-      category: '문화공연',
+      clubName: dict['stage.defaultTitle'],
+      category: dict['stage.defaultCategory'],
       genre: '',
-      songTitle: '등록된 공연 정보가 없습니다',
-      statusText: '공연 대기중',
+      songTitle: dict['stage.defaultNoInfo'],
+      statusText: dict['common.waiting'],
       nextClubName: '',
       nextRemainingText: '',
       isLive: false,
@@ -275,10 +373,8 @@ export function getRealtimeStageConfig(
     const sTime = getDelayedTime(item.startHour, item.startMinute, stageDelayMinutes);
     const eTime = getDelayedTime(item.endHour, item.endMinute, stageDelayMinutes);
 
-    const s = new Date(now);
-    s.setHours(sTime.hour, sTime.minute, 0, 0);
-    const e = new Date(now);
-    e.setHours(eTime.hour, eTime.minute, 0, 0);
+    const s = getEventDate(now, sTime.hour, sTime.minute);
+    const e = getEventDate(now, eTime.hour, eTime.minute);
 
     if (nowMs >= s.getTime() && nowMs <= e.getTime()) {
       currentIndex = i;
@@ -290,8 +386,7 @@ export function getRealtimeStageConfig(
     for (let i = 0; i < timetable.length; i++) {
       const item = timetable[i];
       const sTime = getDelayedTime(item.startHour, item.startMinute, stageDelayMinutes);
-      const s = new Date(now);
-      s.setHours(sTime.hour, sTime.minute, 0, 0);
+      const s = getEventDate(now, sTime.hour, sTime.minute);
       if (s.getTime() > nowMs) {
         currentIndex = i;
         break;
@@ -304,33 +399,42 @@ export function getRealtimeStageConfig(
   const currSTime = getDelayedTime(currentItem.startHour, currentItem.startMinute, stageDelayMinutes);
   const currETime = getDelayedTime(currentItem.endHour, currentItem.endMinute, stageDelayMinutes);
 
-  const start = new Date(now);
-  start.setHours(currSTime.hour, currSTime.minute, 0, 0);
-  const end = new Date(now);
-  end.setHours(currETime.hour, currETime.minute, 0, 0);
+  const start = getEventDate(now, currSTime.hour, currSTime.minute);
+  const end = getEventDate(now, currETime.hour, currETime.minute);
 
   const isLive = nowMs >= start.getTime() && nowMs <= end.getTime();
+  const isEnded = nowMs > end.getTime();
   const elapsedMin = Math.max(0, Math.floor((nowMs - start.getTime()) / 60000));
 
   const nextItem = timetable[currentIndex + 1] || timetable[0];
   const nextSTime = getDelayedTime(nextItem.startHour, nextItem.startMinute, stageDelayMinutes);
-  const nextStart = new Date(now);
-  nextStart.setHours(nextSTime.hour, nextSTime.minute, 0, 0);
-  if (nextStart.getTime() <= nowMs) {
-    nextStart.setDate(nextStart.getDate() + 1);
-  }
+  const nextStart = getEventDate(now, nextSTime.hour, nextSTime.minute);
 
   const remainingToNextMs = nextStart.getTime() - nowMs;
+  const nextRemainingText =
+    remainingToNextMs <= 0
+      ? ''
+      : remainingToNextMs < 7200000
+        ? fmt(dict['stage.nextInMinutes'], {
+            minutes: Math.max(1, Math.ceil(remainingToNextMs / 60000)),
+          })
+        : fmt(dict['stage.nextAtTime'], { time: nextSTime.timeText });
+
+  const rawCategory = currentItem.category || currentItem.genre || '기타';
 
   return {
     school: currentItem.school,
-    clubName: currentItem.clubName,
-    category: currentItem.category || currentItem.genre || '기타',
-    genre: currentItem.genre || '',
-    songTitle: currentItem.songTitle,
-    statusText: isLive ? `${elapsedMin}분 경과` : `${formatTime(start)} 시작 예정`,
-    nextClubName: nextItem.clubName,
-    nextRemainingText: `약 ${Math.max(1, Math.ceil(remainingToNextMs / 60000))}분 후 `,
+    clubName: getLocalizedValue(currentItem.clubName, language),
+    category: localizeStageCategory(rawCategory, language),
+    genre: currentItem.genre ? getLocalizedValue(currentItem.genre, language) : '',
+    songTitle: getLocalizedValue(currentItem.songTitle, language),
+    statusText: isLive
+      ? fmt(dict['stage.elapsedMin'], { min: elapsedMin })
+      : isEnded
+        ? dict['stage.ended']
+        : fmt(dict['stage.scheduledAt'], { time: formatTime(start) }),
+    nextClubName: getLocalizedValue(nextItem.clubName, language),
+    nextRemainingText,
     isLive,
   };
 }

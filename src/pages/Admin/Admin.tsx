@@ -11,7 +11,7 @@ import {
 } from '../../types/tournamentTree';
 import {
   getSupabaseMatches,
-  getSupabaseTournamentTree,
+  getSupabaseAllTournamentTrees,
   getSupabaseStagePerformances,
   getSupabaseMapData,
   getSupabaseBooths,
@@ -27,6 +27,7 @@ import {
   FAQItem,
 } from '../../lib/supabase';
 import { AdminTab } from './types';
+import { useLanguage } from '../../context/LanguageContext';
 import { AdminAuthGate } from './components/AdminAuthGate';
 import { AdminHeader } from './components/AdminHeader';
 import { MatchesTab } from './tabs/MatchesTab';
@@ -41,6 +42,7 @@ import { ContactTab } from './tabs/ContactTab';
 import { SettingsTab } from './tabs/SettingsTab';
 
 export const Admin: React.FC = () => {
+  const { t } = useLanguage();
   // Auth Gate State
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
 
@@ -72,7 +74,11 @@ export const Admin: React.FC = () => {
   // Load matches & tournament tree on login
   const loadMatchesData = useCallback(async (force = false) => {
     try {
-      const fetchedMatches = await getSupabaseMatches(force);
+      const [fetchedMatches, allTrees] = await Promise.all([
+        getSupabaseMatches(force),
+        getSupabaseAllTournamentTrees(force),
+      ]);
+
       if (fetchedMatches && fetchedMatches.length > 0) {
         setMatches(fetchedMatches);
       }
@@ -88,11 +94,11 @@ export const Admin: React.FC = () => {
       ];
       const loadedTrees: Record<string, TournamentTreeData> = {};
       for (const sKey of sportsList) {
-        const tree = await getSupabaseTournamentTree(sKey, force);
+        const tree = allTrees?.[sKey];
         if (tree && Object.keys(tree.nodes || {}).length > 0) {
           loadedTrees[sKey] = tree;
         } else {
-          loadedTrees[sKey] = { sportKey: sKey, nodes: {} };
+          loadedTrees[sKey] = { sportKey: sKey, nodes: {}, manualRanks: {} };
         }
       }
       setTournamentTrees(loadedTrees);
@@ -172,7 +178,7 @@ export const Admin: React.FC = () => {
     setIsSaving(true);
     await loadTabData(activeTab, true);
     setIsSaving(false);
-    setSaveStatus('데이터를 최신 상태로 새로고침했습니다.');
+    setSaveStatus(t('admin.refreshed'));
     setTimeout(() => setSaveStatus(null), 3000);
   };
 

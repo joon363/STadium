@@ -3,14 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { SCHOOLS } from '../config/stadiumConfig';
 import { useRealtimeSchedule } from '../hooks/useRealtimeSchedule';
 import { useSchool } from '../context/SchoolContext';
+import { useLanguage } from '../context/LanguageContext';
 import { SportsGridCard } from '../components/SportsGridCard';
 import { LeaderboardSection } from '../components/LeaderboardSection';
 import { Music, ChevronRight, Filter, Radio, List, LayoutGrid, ArrowLeftRight } from 'lucide-react';
 
 export const Home: React.FC = () => {
   const navigate = useNavigate();
-  const { sportsConfig, stageConfig, overallStandings, getYoutubeLiveUrl } = useRealtimeSchedule();
+  const { sportsConfig, stageConfig, overallStandings } = useRealtimeSchedule();
   const { selectedSchool, setSelectedSchool } = useSchool();
+  const { t } = useLanguage();
 
   // View Mode: 'grid' (2x2) | 'list' (stacked full-width)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -62,14 +64,14 @@ export const Home: React.FC = () => {
             <Filter className="w-4 h-4" style={{ color: activeSchoolObj.color }} />
             <span className="text-xs font-bold text-gray-900">
               <strong style={{ color: activeSchoolObj.color }}>{activeSchoolObj.shortName}</strong>{' '}
-              경기 필터링 적용 중
+              {t('home.filterNoticeTail')}
             </span>
           </div>
           <button
             onClick={() => setSelectedSchool('ALL')}
             className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-white/80 border text-gray-600 hover:text-gray-900"
           >
-            전체보기
+            {t('common.viewAll')}
           </button>
         </div>
       )}
@@ -100,12 +102,12 @@ export const Home: React.FC = () => {
             {viewMode === 'grid' ? (
               <>
                 <List className="w-3.5 h-3.5 text-gray-500" />
-                <span>리스트 보기</span>
+                <span>{t('home.viewList')}</span>
               </>
             ) : (
               <>
                 <LayoutGrid className="w-3.5 h-3.5 text-gray-500" />
-                <span>그리드 보기</span>
+                <span>{t('home.viewGrid')}</span>
               </>
             )}
           </button>
@@ -116,7 +118,7 @@ export const Home: React.FC = () => {
             className="w-full py-2 px-3 bg-white hover:bg-gray-50 active:bg-gray-100 border border-gray-200/90 rounded-xl text-xs font-bold text-gray-700 flex items-center justify-center gap-1.5 shadow-2xs hover:shadow-xs transition-all select-none"
           >
             <ArrowLeftRight className="w-3.5 h-3.5 text-postech" />
-            <span>{gymSport === 'basketball' ? '배드민턴으로 전환' : '농구로 전환'}</span>
+            <span>{gymSport === 'basketball' ? t('home.swapToBadminton') : t('home.swapToBasketball')}</span>
           </button>
         </div>
       </section>
@@ -126,25 +128,18 @@ export const Home: React.FC = () => {
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-1.5">
             <Music className="w-4 h-4 text-postech" />
-            <h2 className="font-extrabold text-sm text-gray-900 tracking-tight">문화공연</h2>
+            <h2 className="font-extrabold text-sm text-gray-900 tracking-tight">{t('home.stageTitle')}</h2>
           </div>
 
           <div>
             {stageConfig.isLive ? (
-              <a
-                href={getYoutubeLiveUrl('stage')}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="text-[10px] font-extrabold bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-2 py-0.5 rounded-full uppercase flex items-center gap-1 active:scale-95 transition-all shadow-2xs cursor-pointer"
-              >
+              <span className="text-[10px] font-extrabold bg-rose-50 text-rose-600 border border-rose-200 px-2 py-0.5 rounded-full uppercase flex items-center gap-1 shadow-2xs">
                 <Radio className="w-3 h-3 text-rose-500" />
-                <span>STAGE LIVE</span>
-                <ChevronRight className="w-3 h-3 text-rose-500" />
-              </a>
+                <span>{t('common.stageLive')}</span>
+              </span>
             ) : (
               <span className="text-[10px] font-semibold bg-gray-100 text-gray-600 px-2 py-0.2 rounded-full">
-                공연 대기중
+                {t('home.stageWaiting')}
               </span>
             )}
           </div>

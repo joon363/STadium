@@ -24,6 +24,7 @@ export type {
 export {
   getSupabaseMatches,
   updateSupabaseMatch,
+  syncSupabaseSportMatches,
   deleteSupabaseMatch,
 } from '../services/matchesService';
 export {
@@ -76,6 +77,7 @@ export {
   getSupabaseYoutubeLiveByKey,
   upsertSupabaseYoutubeLive,
   deleteSupabaseYoutubeLive,
+  getSupabaseAllTournamentTrees,
   getSupabaseTournamentTree,
   updateSupabaseTournamentTree,
   getSupabaseStageDelay,

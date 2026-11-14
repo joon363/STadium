@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
 import { SCHOOLS, StageItem } from '../config/stadiumConfig';
-
-const STAGE_CATEGORIES = ['ALL', '밴드', '댄스', '보컬', '어쿠스틱', '힙합', '기타'] as const;
 import { useRealtimeSchedule } from '../hooks/useRealtimeSchedule';
 import { useSchool } from '../context/SchoolContext';
-import { getDelayedTime } from '../utils/matchEvaluator';
+import { useLanguage } from '../context/LanguageContext';
+import { getDelayedTime, getEventDate } from '../utils/matchEvaluator';
+import {
+  getLocalizedValue,
+  localizeStageCategory,
+  parseBilingual,
+} from '../utils/bilingual';
 import {
   Clock,
   MapPin,
@@ -13,15 +17,16 @@ import {
   Filter,
   Layers,
   X,
-  Sparkles,
   Disc,
   Info,
-  ChevronRight,
 } from 'lucide-react';
 
+const STAGE_CATEGORIES = ['ALL', '밴드', '댄스', '힙합', '보컬', '응원단', '마술'] as const;
+
 export const StageDetail: React.FC = () => {
-  const { stageConfig, stageSchedule, stageDelayMinutes, now, getYoutubeLiveUrl } = useRealtimeSchedule();
+  const { stageConfig, stageSchedule, stageDelayMinutes, now } = useRealtimeSchedule();
   const { selectedSchool, setSelectedSchool } = useSchool();
+  const { language, t } = useLanguage();
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [selectedSetlist, setSelectedSetlist] = useState<StageItem | null>(null);
 
@@ -29,10 +34,11 @@ export const StageDetail: React.FC = () => {
   const currentSchool = SCHOOLS[stageConfig.school] || SCHOOLS.POSTECH;
   const nowMs = now.getTime();
 
-  // Helper to parse multiline song titles
+  // Helper to parse multiline song titles (localized cleanly before splitting lines)
   const parseSongList = (titleStr: string): string[] => {
-    if (!titleStr) return [];
-    return titleStr
+    const localized = getLocalizedValue(titleStr, language);
+    if (!localized) return [];
+    return localized
       .split(/\r?\n/)
       .map((s) => s.trim())
       .filter(Boolean);
@@ -43,7 +49,8 @@ export const StageDetail: React.FC = () => {
     if (selectedSchool !== 'ALL' && item.school !== selectedSchool) {
       return false;
     }
-    if (selectedCategory !== 'ALL' && item.category !== selectedCategory) {
+    const itemCatKo = parseBilingual(item.category).ko;
+    if (selectedCategory !== 'ALL' && itemCatKo !== selectedCategory) {
       return false;
     }
     return true;
@@ -55,7 +62,7 @@ export const StageDetail: React.FC = () => {
       <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
         <div className="flex items-center gap-1 text-[11px] font-bold text-gray-500 shrink-0 mr-1">
           <Layers className="w-3.5 h-3.5 text-slate-700" />
-          <span>구분</span>
+          <span>{t('stage.filterLabel')}</span>
         </div>
         <button
           onClick={() => setSelectedCategory('ALL')}
@@ -64,20 +71,32 @@ export const StageDetail: React.FC = () => {
             : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
             }`}
         >
-          전체
+          {t('stage.all')}
         </button>
-        {STAGE_CATEGORIES.filter((c) => c !== 'ALL').map((cat: string) => (
-          <button
-            key={cat}
-            onClick={() => setSelectedCategory(cat)}
-            className={`px-2.5 py-1 rounded-full text-xs font-bold shrink-0 transition-colors shadow-2xs ${selectedCategory === cat
-              ? 'bg-slate-900 text-white font-extrabold'
-              : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-              }`}
-          >
-            {cat}
-          </button>
-        ))}
+        {STAGE_CATEGORIES.filter((c) => c !== 'ALL').map((cat: string) => {
+          const categoryKeyMap: Record<string, any> = {
+            '밴드': 'stage.categoryBand',
+            '댄스': 'stage.categoryDance',
+            '힙합': 'stage.categoryHiphop',
+            '보컬': 'stage.categoryVocal',
+            '응원단': 'stage.categoryCheer',
+            '마술': 'stage.categoryMagic',
+          };
+          const label = categoryKeyMap[cat] ? t(categoryKeyMap[cat]) : cat;
+
+          return (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`px-2.5 py-1 rounded-full text-xs font-bold shrink-0 transition-colors shadow-2xs ${selectedCategory === cat
+                ? 'bg-slate-900 text-white font-extrabold'
+                : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                }`}
+            >
+              {label}
+            </button>
+          );
+        })}
       </div>
 
       {/* School Filter Active Banner (If selected) */}
@@ -90,14 +109,14 @@ export const StageDetail: React.FC = () => {
             <Filter className="w-4 h-4" style={{ color: activeSchoolObj.color }} />
             <span className="text-xs font-bold text-gray-900">
               <strong style={{ color: activeSchoolObj.color }}>{activeSchoolObj.shortName}</strong>{' '}
-              공연 일정 필터링 적용 중
+              {t('stage.filterApplied')}
             </span>
           </div>
           <button
             onClick={() => setSelectedSchool('ALL')}
             className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-white/80 border text-gray-600 hover:text-gray-900"
           >
-            전체보기
+            {t('common.viewAll')}
           </button>
         </div>
       )}
@@ -107,20 +126,14 @@ export const StageDetail: React.FC = () => {
         <div className="flex items-center justify-between border-b border-gray-100 pb-2 mb-2 text-xs">
           <div className="flex items-center gap-1.5">
             {stageConfig.isLive ? (
-              <a
-                href={getYoutubeLiveUrl('stage')}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-[11px] font-extrabold bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-2.5 py-0.5 rounded-full uppercase active:scale-95 transition-all shadow-2xs cursor-pointer"
-              >
+              <span className="inline-flex items-center gap-1 text-[11px] font-extrabold bg-rose-50 text-rose-600 border border-rose-200 px-2.5 py-0.5 rounded-full uppercase shadow-2xs">
                 <Radio className="w-3.5 h-3.5 text-rose-500" />
-                <span>STAGE LIVE</span>
-                <ChevronRight className="w-3.5 h-3.5 text-rose-500" />
-              </a>
+                <span>{t('common.stageLive')}</span>
+              </span>
             ) : (
               <div className="flex items-center gap-1.5 text-gray-600 font-bold text-xs">
                 <Radio className="w-3.5 h-3.5" />
-                <span>공연 대기중</span>
+                <span>{t('common.waiting')}</span>
               </div>
             )}
           </div>
@@ -157,17 +170,17 @@ export const StageDetail: React.FC = () => {
         <div className="flex items-center justify-between font-bold text-gray-900 text-xs px-1">
           <div className="flex items-center gap-1.5">
             <Calendar className="w-3.5 h-3.5 text-slate-700" />
-            <h2>전체 공연 타임라인</h2>
+            <h2>{t('stage.allTimeline')}</h2>
           </div>
           <div className="flex items-center gap-1 text-[11px] text-gray-500 font-medium">
             <MapPin className="w-3 h-3 text-slate-600" />
-            <span>POSTECH 대강당</span>
+            <span>{t('stage.auditorium')}</span>
           </div>
         </div>
 
         {filteredSchedule.length === 0 ? (
           <div className="bg-white border border-gray-200 rounded-xl p-6 text-center text-gray-500">
-            <p className="text-xs font-bold">선택하신 조건의 공연 일정이 없습니다.</p>
+            <p className="text-xs font-bold">{t('stage.noMatchingPerformances')}</p>
             <button
               onClick={() => {
                 setSelectedSchool('ALL');
@@ -175,7 +188,7 @@ export const StageDetail: React.FC = () => {
               }}
               className="mt-2 text-xs text-slate-800 font-bold underline"
             >
-              전체 공연 보기
+              {t('stage.viewAllPerformances')}
             </button>
           </div>
         ) : (
@@ -189,10 +202,8 @@ export const StageDetail: React.FC = () => {
               const sTime = getDelayedTime(item.startHour, item.startMinute, stageDelayMinutes);
               const eTime = getDelayedTime(item.endHour, item.endMinute, stageDelayMinutes);
 
-              const start = new Date(now);
-              start.setHours(sTime.hour, sTime.minute, 0, 0);
-              const end = new Date(now);
-              end.setHours(eTime.hour, eTime.minute, 0, 0);
+              const start = getEventDate(now, sTime.hour, sTime.minute);
+              const end = getEventDate(now, eTime.hour, eTime.minute);
 
               const isLive = nowMs >= start.getTime() && nowMs <= end.getTime();
               const isFinished = nowMs > end.getTime();
@@ -267,33 +278,28 @@ export const StageDetail: React.FC = () => {
                           >
                             {schoolObj.shortName}
                           </strong>
-                          {item.clubName}
+                          {getLocalizedValue(item.clubName, language)}
                         </span>
                       </div>
 
                       <div className="flex items-center gap-1 shrink-0">
                         {isLive && (
-                          <a
-                            href={getYoutubeLiveUrl('stage')}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="inline-flex items-center gap-0.5 text-[10px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-1.5 py-0.2 rounded-full mr-0.5 active:scale-95 transition-all cursor-pointer shadow-2xs"
-                          >
-                            <span>LIVE</span>
-                            <ChevronRight className="w-2.5 h-2.5 text-rose-500" />
-                          </a>
+                          <span className="inline-flex items-center gap-0.5 text-[10px] font-bold bg-rose-50 text-rose-600 border border-rose-200 px-1.5 py-0.2 rounded-full mr-0.5 shadow-2xs">
+                            <span>{t('common.live')}</span>
+                          </span>
                         )}
 
                         {/* Category Chip */}
                         <span className="text-[9px] font-bold bg-slate-100 text-slate-800 border border-slate-200/90 px-1.5 py-0.2 rounded">
-                          {item.category}
+                          {getLocalizedValue(item.category, language, (s) =>
+                            localizeStageCategory(s, language)
+                          )}
                         </span>
 
                         {/* Optional Genre Chip */}
                         {item.genre && (
                           <span className="text-[9px] font-bold bg-gray-50 text-gray-600 px-1.5 py-0.2 rounded border border-gray-200">
-                            {item.genre}
+                            {getLocalizedValue(item.genre, language)}
                           </span>
                         )}
                       </div>
@@ -312,7 +318,7 @@ export const StageDetail: React.FC = () => {
                         className="text-[10px] font-bold bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200 px-2 py-0.5 rounded-md flex items-center gap-1 transition-colors"
                       >
                         <Info className="w-3 h-3 text-gray-500" />
-                        <span>세트리스트</span>
+                        <span>{t('stage.setlist')}</span>
                       </button>
                     </div>
                   </div>
@@ -332,7 +338,7 @@ export const StageDetail: React.FC = () => {
               <div className="flex items-center gap-2">
                 <Disc className="w-4 h-4 text-slate-800" />
                 <h3 className="font-extrabold text-sm text-gray-900">
-                  [{SCHOOLS[selectedSetlist.school]?.shortName}] {selectedSetlist.clubName}
+                  [{SCHOOLS[selectedSetlist.school]?.shortName}] {getLocalizedValue(selectedSetlist.clubName, language)}
                 </h3>
               </div>
               <button
@@ -346,11 +352,13 @@ export const StageDetail: React.FC = () => {
             {/* Badges */}
             <div className="flex items-center gap-1.5 text-xs">
               <span className="text-[10px] font-bold bg-slate-100 text-slate-800 border border-slate-200 px-2 py-0.5 rounded-md">
-                {selectedSetlist.category}
+                {getLocalizedValue(selectedSetlist.category, language, (s) =>
+                  localizeStageCategory(s, language)
+                )}
               </span>
               {selectedSetlist.genre && (
                 <span className="text-[10px] font-bold bg-gray-50 text-gray-600 px-2 py-0.5 rounded-md border border-gray-200">
-                  {selectedSetlist.genre}
+                  {getLocalizedValue(selectedSetlist.genre, language)}
                 </span>
               )}
             </div>
@@ -358,7 +366,7 @@ export const StageDetail: React.FC = () => {
             {/* Songs List */}
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-1.5">
               <div className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">
-                <span>세트리스트</span>
+                <span>{t('stage.setlist')}</span>
               </div>
               {parseSongList(selectedSetlist.songTitle).map((song, songIdx) => (
                 <p
@@ -378,7 +386,7 @@ export const StageDetail: React.FC = () => {
               onClick={() => setSelectedSetlist(null)}
               className="w-full py-2 bg-slate-900 text-white font-bold text-xs rounded-xl hover:bg-slate-800 transition-colors"
             >
-              닫기
+              {t('stage.close')}
             </button>
           </div>
         </div>

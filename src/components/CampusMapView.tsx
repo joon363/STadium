@@ -1,6 +1,8 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { VenueNode, MapEdge, NavigationResult } from '../config/stadiumConfig';
 import { Search, Loader2 } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
+import { getLocalizedValue, localizeVenueName } from '../utils/bilingual';
 
 export interface CampusMapViewProps {
   nodes: VenueNode[];
@@ -56,6 +58,7 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
   destVenue = '',
   navResult = null,
 }) => {
+  const { language, t } = useLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
   const showNames = showVenueNames !== undefined ? showVenueNames : showVenueInfo;
 
@@ -214,7 +217,7 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
       {(!isMapImageLoaded || isLoading || nodes.length === 0) && (
         <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-950/95 backdrop-blur-xs text-white gap-2.5 pointer-events-none select-none">
           <Loader2 className="w-8 h-8 text-rose-500 animate-spin" />
-          <div className="text-xs font-bold text-slate-300">캠퍼스 지도를 불러오는 중...</div>
+          <div className="text-xs font-bold text-slate-300">{t('map.loadingView')}</div>
         </div>
       )}
 
@@ -327,7 +330,7 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
                       fontWeight="bold"
                       textAnchor="middle"
                     >
-                      {edge.weightMinutes}분
+                      {t('map.walkingMinutes', { min: edge.weightMinutes })}
                     </text>
                   </g>
                 )}
@@ -388,7 +391,7 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
               {/* Venue Name Label */}
               {showNames && (
                 <div className="absolute top-8 left-1/2 -translate-x-1/2 bg-white/95 text-gray-900 text-[10px] font-extrabold px-2 py-0.5 rounded-md whitespace-nowrap border border-gray-200 shadow-md">
-                  {node.name}
+                  {getLocalizedValue(node.name, language, (s) => localizeVenueName(s, language))}
                 </div>
               )}
             </div>
@@ -410,7 +413,7 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
               <div className="w-2 h-2 rounded-full bg-white" />
             </div>
             <div className="absolute top-6 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-md whitespace-nowrap">
-              📍 내 위치
+              {t('map.myLocation')}
             </div>
           </div>
         )}
@@ -439,7 +442,7 @@ export const CampusMapView: React.FC<CampusMapViewProps> = ({
             value={scale}
             onChange={(e) => setScale(parseFloat(e.target.value))}
             className="w-20 h-1 accent-rose-500 cursor-pointer -rotate-90 rounded-full bg-white/30 backdrop-blur-xs"
-            title={`줌: ${scale.toFixed(1)}x`}
+            title={t('map.zoomTitle', { scale: scale.toFixed(1) })}
           />
         </div>
       </div>

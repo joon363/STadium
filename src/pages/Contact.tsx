@@ -7,6 +7,13 @@ import {
   FAQItem,
   ContactConfig,
 } from '../lib/supabase';
+import { LinkifiedText } from '../components/LinkifiedText';
+import { useLanguage } from '../context/LanguageContext';
+import {
+  getLocalizedValue,
+  localizeFaqCategory,
+  parseBilingual,
+} from '../utils/bilingual';
 import {
   Bell,
   Phone,
@@ -25,6 +32,7 @@ import {
 
 export const Contact: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'notice' | 'contact' | 'faq'>('notice');
+  const { language, t } = useLanguage();
 
   // Dynamic DB States
   const [notices, setNotices] = useState<NoticeItem[]>([]);
@@ -65,15 +73,23 @@ export const Contact: React.FC = () => {
     };
   }, []);
 
-  // Extract unique FAQ categories
+  // Extract unique FAQ categories using canonical ko key so switching languages preserves selection
   const faqCategories = useMemo(() => {
-    const cats = Array.from(new Set(faqs.map((f) => f.category || '일반'))).filter(Boolean);
-    return cats;
+    const map = new Map<string, string>();
+    faqs.forEach((f) => {
+      const rawCat = f.category || '일반';
+      const koKey = parseBilingual(rawCat).ko || '일반';
+      if (!map.has(koKey)) {
+        map.set(koKey, rawCat);
+      }
+    });
+    return Array.from(map.entries()).map(([key, raw]) => ({ key, raw }));
   }, [faqs]);
 
   // Filtered FAQs
   const filteredFaqs = faqs.filter((f) => {
-    if (selectedFaqCategory !== 'ALL' && f.category !== selectedFaqCategory) {
+    const koKey = parseBilingual(f.category || '일반').ko || '일반';
+    if (selectedFaqCategory !== 'ALL' && koKey !== selectedFaqCategory) {
       return false;
     }
     return true;
@@ -86,34 +102,34 @@ export const Contact: React.FC = () => {
         <button
           onClick={() => setActiveTab('notice')}
           className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 ${activeTab === 'notice'
-              ? 'bg-white text-slate-900 shadow-xs font-extrabold'
-              : 'text-gray-600 hover:text-gray-900'
+            ? 'bg-white text-slate-900 shadow-xs font-extrabold'
+            : 'text-gray-600 hover:text-gray-900'
             }`}
         >
           <Bell className="w-3.5 h-3.5" />
-          <span>공지사항</span>
+          <span>{t('contact.tabNotice')}</span>
         </button>
 
         <button
           onClick={() => setActiveTab('contact')}
           className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 ${activeTab === 'contact'
-              ? 'bg-white text-slate-900 shadow-xs font-extrabold'
-              : 'text-gray-600 hover:text-gray-900'
+            ? 'bg-white text-slate-900 shadow-xs font-extrabold'
+            : 'text-gray-600 hover:text-gray-900'
             }`}
         >
           <Phone className="w-3.5 h-3.5" />
-          <span>연락처</span>
+          <span>{t('contact.tabContact')}</span>
         </button>
 
         <button
           onClick={() => setActiveTab('faq')}
           className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 ${activeTab === 'faq'
-              ? 'bg-white text-slate-900 shadow-xs font-extrabold'
-              : 'text-gray-600 hover:text-gray-900'
+            ? 'bg-white text-slate-900 shadow-xs font-extrabold'
+            : 'text-gray-600 hover:text-gray-900'
             }`}
         >
           <HelpCircle className="w-3.5 h-3.5" />
-          <span>FAQ</span>
+          <span>{t('contact.tabFaq')}</span>
         </button>
       </div>
 
@@ -123,21 +139,24 @@ export const Contact: React.FC = () => {
           {loading ? (
             <div className="bg-white border border-gray-200 rounded-xl p-8 flex flex-col items-center justify-center gap-2 text-xs font-bold text-gray-400">
               <Loader2 className="w-6 h-6 text-postech animate-spin" />
-              <span>공지사항을 불러오는 중...</span>
+              <span>{t('contact.loadingNotices')}</span>
             </div>
           ) : notices.length === 0 ? (
             <div className="bg-white border border-gray-200 rounded-xl p-6 text-center text-xs font-bold text-gray-500">
-              등록된 공지사항이 없습니다.
+              {t('contact.noNotices')}
             </div>
           ) : (
             <div className="space-y-2">
               {notices.map((notice) => {
                 const isExpanded = expandedNoticeId === notice.id;
                 const formattedDate = notice.createdAt
-                  ? new Date(notice.createdAt).toLocaleDateString('ko-KR', {
-                    month: 'long',
-                    day: 'numeric',
-                  })
+                  ? new Date(notice.createdAt).toLocaleDateString(
+                    language === 'en' ? 'en-US' : 'ko-KR',
+                    {
+                      month: 'long',
+                      day: 'numeric',
+                    }
+                  )
                   : '';
 
                 return (
@@ -145,8 +164,8 @@ export const Contact: React.FC = () => {
                     key={notice.id}
                     onClick={() => setExpandedNoticeId(isExpanded ? null : notice.id || null)}
                     className={`bg-white border rounded-xl px-3 py-2.5 shadow-2xs cursor-pointer transition-all ${notice.isPinned
-                        ? 'border-rose-300 bg-gradient-to-r from-rose-50/40 via-white to-white'
-                        : 'border-gray-200/90 hover:border-gray-300'
+                      ? 'border-rose-300 bg-gradient-to-r from-rose-50/40 via-white to-white'
+                      : 'border-gray-200/90 hover:border-gray-300'
                       }`}
                   >
                     {/* Notice Card Header */}
@@ -156,11 +175,14 @@ export const Contact: React.FC = () => {
                           {notice.isPinned && (
                             <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold bg-rose-600 text-white px-1.5 py-0.2 rounded-md">
                               <Pin className="w-2.5 h-2.5" />
-                              <span>필독</span>
+                              <span>{t('contact.pinned')}</span>
                             </span>
                           )}
                           <h3 className="font-bold text-xs text-gray-900 leading-snug">
-                            {notice.title}
+                            <LinkifiedText
+                              text={getLocalizedValue(notice.title, language)}
+                              showIcon={false}
+                            />
                           </h3>
                         </div>
 
@@ -184,7 +206,7 @@ export const Contact: React.FC = () => {
                     {/* Expandable Notice Content */}
                     {isExpanded && (
                       <div className="mt-2 pt-2 border-t border-gray-100 text-xs text-gray-700 font-medium leading-relaxed whitespace-pre-wrap animate-in fade-in duration-150">
-                        {notice.content}
+                        <LinkifiedText text={getLocalizedValue(notice.content, language)} />
                       </div>
                     )}
                   </div>
@@ -200,7 +222,7 @@ export const Contact: React.FC = () => {
         <div className="space-y-3">
           {/* Quick External Links (Open Chat, Instagram, YouTube) */}
           <section>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               <a
                 href={contactConfig.links.kakaoOpenChat}
                 target="_blank"
@@ -208,7 +230,7 @@ export const Contact: React.FC = () => {
                 className="bg-amber-400 hover:bg-amber-300 text-amber-950 rounded-xl px-2 py-2 flex flex-col items-center justify-center text-center shadow-2xs transition-colors touch-target font-bold text-xs min-h-[52px]"
               >
                 <MessageCircle className="w-4 h-4 mb-0.5 text-amber-950 shrink-0" />
-                <span className="leading-tight text-[11px]">카카오톡</span>
+                <span className="leading-tight text-[11px]">{t('contact.kakao')}</span>
               </a>
 
               <a
@@ -218,18 +240,18 @@ export const Contact: React.FC = () => {
                 className="bg-rose-600 hover:bg-rose-700 text-white rounded-xl px-2 py-2 flex flex-col items-center justify-center text-center shadow-2xs transition-colors touch-target font-bold text-xs min-h-[52px]"
               >
                 <Instagram className="w-4 h-4 mb-0.5 shrink-0" />
-                <span className="leading-tight text-[11px]">인스타그램</span>
+                <span className="leading-tight text-[11px]">{t('contact.instagram')}</span>
               </a>
 
-              <a
+              {/* <a
                 href={contactConfig.links.youtube}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="bg-red-600 hover:bg-red-700 text-white rounded-xl px-2 py-2 flex flex-col items-center justify-center text-center shadow-2xs transition-colors touch-target font-bold text-xs min-h-[52px]"
               >
                 <Youtube className="w-4 h-4 mb-0.5 shrink-0" />
-                <span className="leading-tight text-[11px]">유튜브 중계</span>
-              </a>
+                <span className="leading-tight text-[11px]">{t('contact.youtube')}</span>
+              </a> */}
             </div>
           </section>
 
@@ -237,7 +259,7 @@ export const Contact: React.FC = () => {
           <section className="space-y-1.5 pt-0.5">
             <div className="flex items-center gap-1.5 text-xs font-bold text-gray-500 uppercase tracking-wider px-1">
               <ShieldAlert className="w-3.5 h-3.5 text-postech" />
-              <span>총괄 담당자</span>
+              <span>{t('contact.generalStaff')}</span>
             </div>
 
             <div className="grid grid-cols-1 gap-1.5">
@@ -247,8 +269,12 @@ export const Contact: React.FC = () => {
                   className="bg-white border border-gray-200 rounded-xl px-3 py-2 flex items-center justify-between shadow-2xs"
                 >
                   <div>
-                    <div className="text-[10px] font-bold text-postech">{leader.role}</div>
-                    <div className="font-bold text-xs text-gray-900">{leader.name}</div>
+                    <div className="text-[10px] font-bold text-postech">
+                      {getLocalizedValue(leader.role, language)}
+                    </div>
+                    <div className="font-bold text-xs text-gray-900">
+                      {getLocalizedValue(leader.name, language)}
+                    </div>
                   </div>
 
                   <a
@@ -264,10 +290,10 @@ export const Contact: React.FC = () => {
           </section>
 
           {/* Department Leads */}
-          <section className="space-y-1.5 pt-0.5">
+          {/* <section className="space-y-1.5 pt-0.5">
             <div className="flex items-center gap-1.5 text-xs font-bold text-gray-500 uppercase tracking-wider px-1">
               <UserCheck className="w-3.5 h-3.5 text-blue-600" />
-              <span>부서별 담당자 연락처</span>
+              <span>{t('contact.deptStaff')}</span>
             </div>
 
             <div className="grid grid-cols-1 gap-1.5">
@@ -277,8 +303,12 @@ export const Contact: React.FC = () => {
                   className="bg-white border border-gray-200 rounded-xl px-3 py-2 flex items-center justify-between shadow-2xs"
                 >
                   <div>
-                    <div className="text-[10px] font-bold text-gray-500">{item.role}</div>
-                    <div className="font-bold text-xs text-gray-900">{item.name}</div>
+                    <div className="text-[10px] font-bold text-gray-500">
+                      {getLocalizedValue(item.role, language)}
+                    </div>
+                    <div className="font-bold text-xs text-gray-900">
+                      {getLocalizedValue(item.name, language)}
+                    </div>
                   </div>
 
                   <a
@@ -291,11 +321,11 @@ export const Contact: React.FC = () => {
                 </div>
               ))}
             </div>
-          </section>
+          </section> */}
 
           {/* Safety Notice Footer */}
           <div className="bg-gray-100 border border-gray-200 rounded-xl p-2.5 text-center text-[11px] text-gray-600 font-medium mt-1">
-            응급 상황 발생 시 POSTECH 구급본부(054-279-0119) 또는 119로 신고해 주시기 바랍니다.
+            {t('contact.emergencyCallText')}
           </div>
         </div>
       )}
@@ -309,22 +339,22 @@ export const Contact: React.FC = () => {
               <button
                 onClick={() => setSelectedFaqCategory('ALL')}
                 className={`px-2.5 py-1 rounded-full text-xs font-bold shrink-0 transition-colors shadow-2xs ${selectedFaqCategory === 'ALL'
-                    ? 'bg-slate-900 text-white font-extrabold'
-                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                  ? 'bg-slate-900 text-white font-extrabold'
+                  : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
                   }`}
               >
-                전체
+                {t('contact.allFaqs')}
               </button>
               {faqCategories.map((cat) => (
                 <button
-                  key={cat}
-                  onClick={() => setSelectedFaqCategory(cat)}
-                  className={`px-2.5 py-1 rounded-full text-xs font-bold shrink-0 transition-colors shadow-2xs ${selectedFaqCategory === cat
-                      ? 'bg-slate-900 text-white font-extrabold'
-                      : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                  key={cat.key}
+                  onClick={() => setSelectedFaqCategory(cat.key)}
+                  className={`px-2.5 py-1 rounded-full text-xs font-bold shrink-0 transition-colors shadow-2xs ${selectedFaqCategory === cat.key
+                    ? 'bg-slate-900 text-white font-extrabold'
+                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
                     }`}
                 >
-                  {cat}
+                  {getLocalizedValue(cat.raw, language, (s) => localizeFaqCategory(s, language))}
                 </button>
               ))}
             </div>
@@ -332,7 +362,7 @@ export const Contact: React.FC = () => {
 
           {filteredFaqs.length === 0 ? (
             <div className="bg-white border border-gray-200 rounded-xl p-6 text-center text-xs text-gray-400 font-bold">
-              등록된 FAQ가 없습니다.
+              {t('contact.noFaqs')}
             </div>
           ) : (
             <div className="space-y-1.5">
@@ -348,7 +378,10 @@ export const Contact: React.FC = () => {
                       <div className="flex items-start gap-2 flex-1 min-w-0">
                         <span className="font-extrabold text-slate-800 text-sm shrink-0">Q.</span>
                         <h4 className="font-bold text-xs text-gray-900 leading-snug pt-0.5">
-                          {faq.question}
+                          <LinkifiedText
+                            text={getLocalizedValue(faq.question, language)}
+                            showIcon={false}
+                          />
                         </h4>
                       </div>
 
@@ -364,7 +397,9 @@ export const Contact: React.FC = () => {
                     {isExpanded && (
                       <div className="mt-2 pt-2 border-t border-gray-100 text-xs text-gray-700 font-medium leading-relaxed flex items-start gap-2 animate-in fade-in duration-150">
                         <span className="font-extrabold text-postech text-sm shrink-0">A.</span>
-                        <p className="flex-1 whitespace-pre-wrap pt-0.5">{faq.answer}</p>
+                        <div className="flex-1 whitespace-pre-wrap pt-0.5">
+                          <LinkifiedText text={getLocalizedValue(faq.answer, language)} />
+                        </div>
                       </div>
                     )}
                   </div>

@@ -21,6 +21,12 @@ export type SportKey =
   | 'badminton_mixed'
   | 'basketball';
 
+export type MatchResultType =
+  | 'normal'
+  | 'team1_forfeit_win'
+  | 'team2_forfeit_win'
+  | 'cancelled';
+
 export interface RawScheduledMatch {
   id: string;
   sportKey: SportKey;
@@ -39,6 +45,8 @@ export interface RawScheduledMatch {
   winningTeamFinal?: string | null;
   subtitle?: string;
   isLive?: boolean;
+  isConfirmed?: boolean;
+  resultType?: MatchResultType;
 }
 
 export interface MatchItem {
@@ -51,6 +59,9 @@ export interface MatchItem {
   score1: number;
   score2: number;
   isLive: boolean;
+  isEnded: boolean;
+  isScoreConfirmed: boolean;
+  resultType: MatchResultType;
   statusText: string;
   venue: string;
   winningTeam: string | null;
@@ -76,6 +87,7 @@ export interface SportScoreBreakdown {
   sportName: string;
   rank: number;
   points: number;
+  isTied?: boolean;
 }
 
 export interface SchoolStanding {
@@ -88,6 +100,7 @@ export interface SchoolStanding {
   bgLight: string;
   textColor: string;
   rank: number;
+  isTied?: boolean;
   totalPoints: number;
   breakdown: Record<SportKey, SportScoreBreakdown>;
 }
@@ -243,13 +256,23 @@ export interface ContactConfig {
 
 export type LiveStreamKey =
   | 'soccer'
+  | 'soccer_prelim'
+  | 'soccer_finals'
   | 'baseball'
+  | 'baseball_prelim'
+  | 'baseball_finals'
   | 'lol'
+  | 'lol_prelim_1'
+  | 'lol_prelim_2'
+  | 'lol_prelim_3'
+  | 'lol_finals'
   | 'badminton'
   | 'badminton_men'
   | 'badminton_women'
   | 'badminton_mixed'
   | 'basketball'
+  | 'basketball_prelim'
+  | 'basketball_finals'
   | 'stage'
   | 'main';
 

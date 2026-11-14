@@ -3,6 +3,7 @@ import { MatchItem, SCHOOLS } from '../config/stadiumConfig';
 import { MapPin, Clock, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useRealtimeSchedule } from '../hooks/useRealtimeSchedule';
+import { useLanguage } from '../context/LanguageContext';
 
 interface SportsGridCardProps {
   match: MatchItem;
@@ -17,13 +18,15 @@ export const SportsGridCard: React.FC<SportsGridCardProps> = ({
 }) => {
   const navigate = useNavigate();
   const { getYoutubeLiveUrl } = useRealtimeSchedule();
+  const { t } = useLanguage();
 
-  const isUpcoming =
-    !match.isLive &&
-    (match.countdownText !== undefined ||
-      match.statusText.includes('예정') ||
-      match.startTimeObj.getTime() > Date.now());
-  const isFinished = !match.isLive && !isUpcoming;
+  const isFinished = match.isEnded;
+  const isScoreConfirmed = match.isScoreConfirmed;
+  const resultType = match.resultType || 'normal';
+  const isStreamable = true;
+
+  const hasTeam1School = Boolean(SCHOOLS[match.team1]);
+  const hasTeam2School = Boolean(SCHOOLS[match.team2]);
 
   const team1School = SCHOOLS[match.team1] || {
     color: '#64748b',
@@ -38,8 +41,14 @@ export const SportsGridCard: React.FC<SportsGridCardProps> = ({
     logoUrl: '/kaist.png',
   };
 
-  const isTeam1Winning = match.score1 > match.score2;
-  const isTeam2Winning = match.score2 > match.score1;
+  const isTeam1Winning =
+    isScoreConfirmed &&
+    resultType !== 'cancelled' &&
+    (resultType === 'team1_forfeit_win' || (resultType === 'normal' && match.score1 > match.score2));
+  const isTeam2Winning =
+    isScoreConfirmed &&
+    resultType !== 'cancelled' &&
+    (resultType === 'team2_forfeit_win' || (resultType === 'normal' && match.score2 > match.score1));
 
   if (layout === 'horizontal') {
     return (
@@ -58,24 +67,46 @@ export const SportsGridCard: React.FC<SportsGridCardProps> = ({
 
           <div className="flex items-center gap-1.5">
             {match.isLive ? (
-              <a
-                href={getYoutubeLiveUrl(match.sportKey)}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="inline-flex items-center gap-1 text-[10px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-2 py-0.5 rounded-full active:scale-95 transition-all shadow-2xs cursor-pointer"
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
-                <span>LIVE</span>
-                <ChevronRight className="w-3 h-3 text-rose-500" />
-              </a>
+              isStreamable ? (
+                <a
+                  href={getYoutubeLiveUrl(match.id, match.round, match.sportKey)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-flex items-center gap-1 text-[10px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-2 py-0.5 rounded-full active:scale-95 transition-all shadow-2xs cursor-pointer"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                  <span>LIVE</span>
+                  <ChevronRight className="w-3 h-3 text-rose-500" />
+                </a>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-rose-50 text-rose-600 border border-rose-200 px-2 py-0.5 rounded-full shadow-2xs">
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                  <span>LIVE</span>
+                </span>
+              )
             ) : isFinished ? (
-              <span className="text-[10px] font-bold bg-gray-100 text-gray-600 px-2 py-0.2 rounded-full">
-                종료
-              </span>
+              isScoreConfirmed && resultType === 'cancelled' ? (
+                <span className="text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.2 rounded-full">
+                  {t('match.cancelled')}
+                </span>
+              ) : isScoreConfirmed &&
+                (resultType === 'team1_forfeit_win' || resultType === 'team2_forfeit_win') ? (
+                <span className="text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.2 rounded-full">
+                  {t('match.forfeitWin')}
+                </span>
+              ) : (
+                <span className="text-[10px] font-bold bg-gray-100 text-gray-600 px-2 py-0.2 rounded-full">
+                  {t('match.ended')}
+                </span>
+              )
             ) : (
               <span className="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-0.2 rounded-full">
-                {match.countdownText ? `시작까지 ${match.countdownText}` : '예정'}
+                {match.countdownText
+                  ? match.countdownText === t('match.startingSoon')
+                    ? match.countdownText
+                    : t('match.countdownPrefix', { time: match.countdownText })
+                  : t('match.scheduled')}
               </span>
             )}
           </div>
@@ -148,26 +179,46 @@ export const SportsGridCard: React.FC<SportsGridCardProps> = ({
           <div className="relative z-10 flex items-center justify-between">
             {/* Team 1 Logo */}
             <div className="flex items-center justify-start flex-1 min-w-0">
-              <img
-                src={team1School.logoUrl}
-                alt={match.team1}
-                loading="eager"
-                decoding="async"
-                className="h-6 w-auto max-w-[85px] object-contain shrink-0"
-              />
+              {hasTeam1School ? (
+                <img
+                  src={team1School.logoUrl}
+                  alt={match.team1}
+                  loading="eager"
+                  decoding="async"
+                  className="h-6 w-auto max-w-[85px] object-contain shrink-0"
+                />
+              ) : (
+                <span className="text-xs font-extrabold text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded truncate">
+                  {match.team1}
+                </span>
+              )}
             </div>
 
             {/* Center Score & Match Status */}
             <div className="flex flex-col items-center justify-center px-2 min-w-[76px]">
-              <div className="flex items-center gap-1.5 text-base font-bold tracking-tight leading-none">
-                <span style={isTeam1Winning ? { color: team1School.color } : { color: '#0f172a' }}>
-                  {match.score1}
-                </span>
-                <span className="text-gray-300 font-light">-</span>
-                <span style={isTeam2Winning ? { color: team2School.color } : { color: '#0f172a' }}>
-                  {match.score2}
-                </span>
-              </div>
+              {!isScoreConfirmed ? (
+                <div className="text-sm font-extrabold text-slate-400 tracking-wider leading-none py-0.5">
+                  {t('common.vs')}
+                </div>
+              ) : resultType === 'cancelled' ? (
+                <div className="text-[11px] font-extrabold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded leading-none">
+                  {t('match.cancelled')}
+                </div>
+              ) : resultType === 'team1_forfeit_win' || resultType === 'team2_forfeit_win' ? (
+                <div className="text-[11px] font-extrabold text-purple-700 bg-purple-50 border border-purple-200 px-1.5 py-0.5 rounded leading-none">
+                  {resultType === 'team1_forfeit_win' ? t('match.forfeitResult1') : t('match.forfeitResult2')}
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 text-base font-bold tracking-tight leading-none">
+                  <span style={isTeam1Winning ? { color: team1School.color } : { color: '#0f172a' }}>
+                    {match.score1}
+                  </span>
+                  <span className="text-gray-300 font-light">-</span>
+                  <span style={isTeam2Winning ? { color: team2School.color } : { color: '#0f172a' }}>
+                    {match.score2}
+                  </span>
+                </div>
+              )}
               <div className="text-[10px] font-bold text-gray-500 mt-0.5 leading-none">
                 {match.statusText}
               </div>
@@ -175,13 +226,19 @@ export const SportsGridCard: React.FC<SportsGridCardProps> = ({
 
             {/* Team 2 Logo */}
             <div className="flex items-center justify-end flex-1 min-w-0">
-              <img
-                src={team2School.logoUrl}
-                alt={match.team2}
-                loading="eager"
-                decoding="async"
-                className="h-6 w-auto max-w-[85px] object-contain shrink-0"
-              />
+              {hasTeam2School ? (
+                <img
+                  src={team2School.logoUrl}
+                  alt={match.team2}
+                  loading="eager"
+                  decoding="async"
+                  className="h-6 w-auto max-w-[85px] object-contain shrink-0"
+                />
+              ) : (
+                <span className="text-xs font-extrabold text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded truncate">
+                  {match.team2}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -217,24 +274,42 @@ export const SportsGridCard: React.FC<SportsGridCardProps> = ({
         </div>
 
         {match.isLive ? (
-          <a
-            href={getYoutubeLiveUrl(match.sportKey)}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            className="inline-flex items-center gap-0.5 text-[9px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-1.5 py-0.5 rounded-full active:scale-95 transition-all shadow-2xs cursor-pointer"
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
-            <span>LIVE</span>
-            <ChevronRight className="w-2.5 h-2.5 text-rose-500" />
-          </a>
+          isStreamable ? (
+            <a
+              href={getYoutubeLiveUrl(match.id, match.round, match.sportKey)}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-0.5 text-[9px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-1.5 py-0.5 rounded-full active:scale-95 transition-all shadow-2xs cursor-pointer"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+              <span>LIVE</span>
+              <ChevronRight className="w-2.5 h-2.5 text-rose-500" />
+            </a>
+          ) : (
+            <span className="inline-flex items-center gap-0.5 text-[9px] font-bold bg-rose-50 text-rose-600 border border-rose-200 px-1.5 py-0.5 rounded-full shadow-2xs">
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+              <span>LIVE</span>
+            </span>
+          )
         ) : isFinished ? (
-          <span className="text-[9px] font-bold bg-gray-100 text-gray-500 px-1.5 py-0.2 rounded">
-            종료
-          </span>
+          isScoreConfirmed && resultType === 'cancelled' ? (
+            <span className="text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.2 rounded">
+              {t('match.cancelled')}
+            </span>
+          ) : isScoreConfirmed &&
+            (resultType === 'team1_forfeit_win' || resultType === 'team2_forfeit_win') ? (
+            <span className="text-[9px] font-bold bg-purple-50 text-purple-700 border border-purple-200 px-1.5 py-0.2 rounded">
+              {t('match.forfeitWin')}
+            </span>
+          ) : (
+            <span className="text-[9px] font-bold bg-gray-100 text-gray-500 px-1.5 py-0.2 rounded">
+              {t('match.ended')}
+            </span>
+          )
         ) : (
           <span className="text-[9px] font-bold bg-blue-50 text-blue-600 px-1.5 py-0.2 rounded">
-            예정
+            {t('match.scheduled')}
           </span>
         )}
       </div>
@@ -302,35 +377,61 @@ export const SportsGridCard: React.FC<SportsGridCardProps> = ({
         <div className="relative z-10 flex items-center justify-between text-center">
           {/* Team 1 Logo */}
           <div className="flex items-center justify-center flex-1 min-w-0 h-8">
-            <img
-              src={team1School.logoUrl}
-              alt={match.team1}
-              loading="eager"
-              decoding="async"
-              className="h-7 w-auto max-w-[65px] object-contain shrink-0"
-            />
+            {hasTeam1School ? (
+              <img
+                src={team1School.logoUrl}
+                alt={match.team1}
+                loading="eager"
+                decoding="async"
+                className="h-7 w-auto max-w-[65px] object-contain shrink-0"
+              />
+            ) : (
+              <span className="text-[10px] font-extrabold text-slate-600 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded truncate max-w-[70px]">
+                {match.team1}
+              </span>
+            )}
           </div>
 
           {/* Score */}
           <div className="px-1 text-sm font-bold flex items-center gap-1">
-            <span style={isTeam1Winning ? { color: team1School.color } : { color: '#111827' }}>
-              {match.score1}
-            </span>
-            <span className="text-gray-300 font-normal">:</span>
-            <span style={isTeam2Winning ? { color: team2School.color } : { color: '#111827' }}>
-              {match.score2}
-            </span>
+            {!isScoreConfirmed ? (
+              <span className="text-xs font-extrabold text-slate-400 tracking-wider">{t('common.vs')}</span>
+            ) : resultType === 'cancelled' ? (
+              <span className="text-[10px] font-extrabold text-amber-700 bg-amber-50 border border-amber-200 px-1 py-0.2 rounded">
+                {t('match.cancelled')}
+              </span>
+            ) : resultType === 'team1_forfeit_win' || resultType === 'team2_forfeit_win' ? (
+              <span className="text-[10px] font-extrabold text-purple-700 bg-purple-50 border border-purple-200 px-1 py-0.2 rounded">
+                {t('match.forfeitWin')}
+              </span>
+            ) : (
+              <>
+                <span style={isTeam1Winning ? { color: team1School.color } : { color: '#111827' }}>
+                  {match.score1}
+                </span>
+                <span className="text-gray-300 font-normal">:</span>
+                <span style={isTeam2Winning ? { color: team2School.color } : { color: '#111827' }}>
+                  {match.score2}
+                </span>
+              </>
+            )}
           </div>
 
           {/* Team 2 Logo */}
           <div className="flex items-center justify-center flex-1 min-w-0 h-8">
-            <img
-              src={team2School.logoUrl}
-              alt={match.team2}
-              loading="eager"
-              decoding="async"
-              className="h-7 w-auto max-w-[65px] object-contain shrink-0"
-            />
+            {hasTeam2School ? (
+              <img
+                src={team2School.logoUrl}
+                alt={match.team2}
+                loading="eager"
+                decoding="async"
+                className="h-7 w-auto max-w-[65px] object-contain shrink-0"
+              />
+            ) : (
+              <span className="text-[10px] font-extrabold text-slate-600 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded truncate max-w-[70px]">
+                {match.team2}
+              </span>
+            )}
           </div>
         </div>
       </div>

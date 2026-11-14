@@ -1,24 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
+  MatchResultType,
   RawScheduledMatch,
   SportKey,
   SCHOOLS,
 } from '../../../types/stadium';
 import {
   TournamentTreeData,
-  TournamentNode,
-  TournamentLeafNode,
   TournamentGameNode,
   convertTreeToMatches,
   propagateTournamentTreeWinners,
+  isGameNodeConfirmed,
 } from '../../../types/tournamentTree';
 import { AdminTournamentBuilder } from '../../../components/AdminTournamentBuilder';
 import {
-  updateSupabaseMatch,
-  deleteSupabaseMatch,
+  syncSupabaseSportMatches,
   updateSupabaseTournamentTree,
 } from '../../../lib/supabase';
-import { Trophy, Clock, Plus, Save, Trash2, Radio } from 'lucide-react';
+import { getEventDate } from '../../../utils/matchEvaluator';
+import { calculateOverallStandings, SPORT_POINTS_TABLE } from '../../../utils/standingsCalculator';
+import { Trophy, Clock, Save, Trash2, CheckCircle2, Edit3, RotateCcw, Award } from 'lucide-react';
+import { useLanguage } from '../../../context/LanguageContext';
+import { TranslationKey } from '../../../locales/ko';
+import {
+  encodeBilingual,
+  getLocalizedValue,
+  localizeRoundName,
+  localizeTeamPlaceholder,
+  localizeVenueName,
+  parseBilingual,
+} from '../../../utils/bilingual';
+import { finalizeBilingualText } from '../../../utils/autoTranslate';
 
 interface MatchesTabProps {
   matches: RawScheduledMatch[];
@@ -30,15 +42,83 @@ interface MatchesTabProps {
   setSaveStatus: (msg: string | null) => void;
 }
 
-const SPORT_OPTIONS: { key: SportKey; name: string; icon: string }[] = [
-  { key: 'soccer', name: '축구', icon: '⚽' },
-  { key: 'baseball', name: '야구', icon: '⚾' },
-  { key: 'lol', name: 'LoL', icon: '🎮' },
-  { key: 'badminton_men', name: '배드민턴 (남복)', icon: '🏸' },
-  { key: 'badminton_women', name: '배드민턴 (여복)', icon: '🏸' },
-  { key: 'badminton_mixed', name: '배드민턴 (혼복)', icon: '🏸' },
-  { key: 'basketball', name: '농구', icon: '🏀' },
+const SPORT_OPTIONS: {
+  key: SportKey;
+  labelKey: TranslationKey;
+  koName: string;
+  enName: string;
+  icon: string;
+}[] = [
+  { key: 'soccer', labelKey: 'sports.soccer', koName: '축구', enName: 'Soccer', icon: '⚽' },
+  { key: 'baseball', labelKey: 'sports.baseball', koName: '야구', enName: 'Baseball', icon: '⚾' },
+  { key: 'lol', labelKey: 'sports.lol', koName: 'LoL', enName: 'LoL', icon: '🎮' },
+  {
+    key: 'badminton_men',
+    labelKey: 'sports.badmintonMen',
+    koName: '배드민턴 (남복)',
+    enName: 'Badminton (MD)',
+    icon: '🏸',
+  },
+  {
+    key: 'badminton_women',
+    labelKey: 'sports.badmintonWomen',
+    koName: '배드민턴 (여복)',
+    enName: 'Badminton (WD)',
+    icon: '🏸',
+  },
+  {
+    key: 'badminton_mixed',
+    labelKey: 'sports.badmintonMixed',
+    koName: '배드민턴 (혼복)',
+    enName: 'Badminton (XD)',
+    icon: '🏸',
+  },
+  {
+    key: 'basketball',
+    labelKey: 'sports.basketball',
+    koName: '농구',
+    enName: 'Basketball',
+    icon: '🏀',
+  },
 ];
+
+const MiniBilingualInput: React.FC<{
+  value: string;
+  onChange: (encoded: string) => void;
+  placeholderKo?: string;
+  placeholderEn?: string;
+  widthClass?: string;
+  bold?: boolean;
+}> = ({
+  value,
+  onChange,
+  placeholderKo = 'KOR',
+  placeholderEn = 'ENG (auto)',
+  widthClass = 'w-28',
+  bold = false,
+}) => {
+  const { ko, en } = parseBilingual(value);
+  return (
+    <div className={`space-y-0.5 ${widthClass}`} onClick={(e) => e.stopPropagation()}>
+      <input
+        type="text"
+        value={ko}
+        placeholder={placeholderKo}
+        onChange={(e) => onChange(encodeBilingual(e.target.value, en))}
+        className={`w-full bg-slate-50 border border-slate-300 rounded px-1.5 py-0.5 text-[11px] text-slate-900 ${
+          bold ? 'font-bold' : ''
+        }`}
+      />
+      <input
+        type="text"
+        value={en}
+        placeholder={placeholderEn}
+        onChange={(e) => onChange(encodeBilingual(ko, e.target.value))}
+        className="w-full bg-indigo-50/40 border border-indigo-200 rounded px-1.5 py-0.5 text-[10px] text-indigo-900"
+      />
+    </div>
+  );
+};
 
 export const MatchesTab: React.FC<MatchesTabProps> = ({
   matches,
@@ -49,14 +129,21 @@ export const MatchesTab: React.FC<MatchesTabProps> = ({
   setIsSaving,
   setSaveStatus,
 }) => {
+  const { language, t } = useLanguage();
   const [selectedSportKey, setSelectedSportKey] = useState<SportKey>('soccer');
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [editingGameIds, setEditingGameIds] = useState<Record<string, boolean>>({});
 
   const currentSportInfo =
     SPORT_OPTIONS.find((s) => s.key === selectedSportKey) || SPORT_OPTIONS[0];
+  const currentSportLabel = t(currentSportInfo.labelKey);
 
-  const currentTree: TournamentTreeData = React.useMemo(() => {
-    const raw = tournamentTrees[selectedSportKey] || { sportKey: selectedSportKey, nodes: {} };
+  const currentTree: TournamentTreeData = useMemo(() => {
+    const raw = tournamentTrees[selectedSportKey] || {
+      sportKey: selectedSportKey,
+      nodes: {},
+      manualRanks: {},
+    };
     return propagateTournamentTreeWinners(raw);
   }, [tournamentTrees, selectedSportKey]);
 
@@ -72,42 +159,111 @@ export const MatchesTab: React.FC<MatchesTabProps> = ({
     .filter((n) => n.type === 'game')
     .sort((a: any, b: any) => (a.level || 1) - (b.level || 1));
 
-  const handleSaveTournamentTree = async (sKey: SportKey) => {
-    setIsSaving(true);
-    const targetTree = tournamentTrees[sKey] || { sportKey: sKey, nodes: {} };
-    const ok = await updateSupabaseTournamentTree(sKey, targetTree);
+  const isPlaceholderTeam = (name: string) =>
+    name.includes('승자') ||
+    name.includes('패자') ||
+    name.includes('Winner') ||
+    name.includes('Loser');
 
-    const sInfo = SPORT_OPTIONS.find((s) => s.key === sKey) || {
-      key: sKey,
-      name: '스포츠',
-      icon: '🏆',
-    };
-    const updatedSportMatches = convertTreeToMatches(targetTree, sInfo.name, sInfo.icon);
+  // Auto-populate English fields in tree nodes before persisting
+  const finalizeTreeBilingualFields = async (
+    rawTree: TournamentTreeData
+  ): Promise<TournamentTreeData> => {
+    const nextNodes = { ...(rawTree.nodes || {}) };
+    await Promise.all(
+      Object.entries(nextNodes).map(async ([id, node]) => {
+        if (node.type !== 'game') return;
+        const koRound = parseBilingual(node.roundName).ko;
+        const roundFixed =
+          node.roundName && !node.roundName.includes(' ||| ')
+            ? encodeBilingual(koRound, localizeRoundName(koRound, 'en'))
+            : await finalizeBilingualText(node.roundName);
 
-    for (const m of updatedSportMatches) {
-      await updateSupabaseMatch(m);
-    }
+        const venueFixed =
+          node.venue && !node.venue.includes(' ||| ')
+            ? (() => {
+                const koV = parseBilingual(node.venue).ko;
+                const mapped = localizeVenueName(koV, 'en');
+                return mapped !== koV ? encodeBilingual(koV, mapped) : finalizeBilingualText(node.venue);
+              })()
+            : finalizeBilingualText(node.venue || '');
 
-    setMatches((prev) => [...prev.filter((m) => m.sportKey !== sKey), ...updatedSportMatches]);
-    setIsSaving(false);
-    if (ok) {
-      setSaveStatus(`[${sInfo.name}] 토너먼트 대진표가 성공적으로 저장되었습니다.`);
-    } else {
-      setSaveStatus('대진표 저장 실패');
-    }
-    setTimeout(() => setSaveStatus(null), 3500);
+        const finalizeTeam = async (team: string) => {
+          if (!team || SCHOOLS[team]) return team;
+          if (!team.includes(' ||| ') && isPlaceholderTeam(team)) {
+            const koT = parseBilingual(team).ko;
+            return encodeBilingual(koT, localizeTeamPlaceholder(koT, 'en'));
+          }
+          return finalizeBilingualText(team);
+        };
+
+        const [resolvedVenue, resolvedT1, resolvedT2] = await Promise.all([
+          Promise.resolve(venueFixed),
+          finalizeTeam(node.team1),
+          finalizeTeam(node.team2),
+        ]);
+
+        nextNodes[id] = {
+          ...node,
+          roundName: roundFixed,
+          venue: resolvedVenue,
+          team1: resolvedT1,
+          team2: resolvedT2,
+        };
+      })
+    );
+    return { ...rawTree, nodes: nextNodes };
   };
 
-  // Determine active status of a game node (prioritizing manual status, fallback to time / live)
+  // Persist a sport's tournament tree & synchronized matches in bulk
+  const saveSportTreeAndMatches = async (
+    sKey: SportKey,
+    rawTargetTree: TournamentTreeData,
+    customSuccessMsg?: string
+  ) => {
+    setIsSaving(true);
+    try {
+      const bilingualTree = await finalizeTreeBilingualFields(rawTargetTree);
+      const propagated = propagateTournamentTreeWinners(bilingualTree);
+      setTournamentTrees((prev) => ({ ...prev, [sKey]: propagated }));
+
+      const sInfo = SPORT_OPTIONS.find((s) => s.key === sKey) || SPORT_OPTIONS[0];
+      const sportNameEncoded = encodeBilingual(sInfo.koName, sInfo.enName);
+      const updatedSportMatches = convertTreeToMatches(propagated, sportNameEncoded, sInfo.icon);
+
+      const [treeOk, matchesOk] = await Promise.all([
+        updateSupabaseTournamentTree(sKey, propagated),
+        syncSupabaseSportMatches(sKey, updatedSportMatches),
+      ]);
+
+      setMatches((prev) => [...prev.filter((m) => m.sportKey !== sKey), ...updatedSportMatches]);
+
+      if (treeOk && matchesOk) {
+        setSaveStatus(
+          customSuccessMsg || t('admin.matches.treeSaved', { sport: t(sInfo.labelKey) })
+        );
+      } else {
+        setSaveStatus(t('admin.matches.treeSaveErr'));
+      }
+    } finally {
+      setIsSaving(false);
+      setTimeout(() => setSaveStatus(null), 3500);
+    }
+  };
+
+  const handleSaveTournamentTree = async (sKey: SportKey) => {
+    const targetTree = tournamentTrees[sKey] || { sportKey: sKey, nodes: {}, manualRanks: {} };
+    await saveSportTreeAndMatches(sKey, targetTree);
+  };
+
+  // Determine active status of a game node (using Nov 14 event date)
   const getGameNodeStatus = (game: TournamentGameNode): 'before' | 'live' | 'after' => {
-    if (game.status) return game.status;
-    if (game.isLive) return 'live';
+    if (isGameNodeConfirmed(game)) return 'after';
     const now = new Date();
-    const nowMs = now.getHours() * 60 + now.getMinutes();
-    const endMs = game.endHour * 60 + game.endMinute;
-    const startMs = game.startHour * 60 + game.startMinute;
-    if (nowMs > endMs) return 'after';
-    if (nowMs >= startMs && nowMs <= endMs) return 'live';
+    const start = getEventDate(now, game.startHour, game.startMinute);
+    const end = getEventDate(now, game.endHour, game.endMinute);
+    const nowMs = now.getTime();
+    if (nowMs >= start.getTime() && nowMs <= end.getTime()) return 'live';
     return 'before';
   };
 
@@ -115,18 +271,6 @@ export const MatchesTab: React.FC<MatchesTabProps> = ({
   const getChildGame = (childId: string): TournamentGameNode | null => {
     const node = nodes[childId];
     if (node && node.type === 'game') return node;
-    return null;
-  };
-
-  // Helper to compute winner name of a node
-  const getNodeWinnerName = (nodeId: string, currentNodes: Record<string, TournamentNode>): string | null => {
-    const node = currentNodes[nodeId];
-    if (!node) return null;
-    if (node.type === 'team') return node.teamName;
-    const st = node.status || (node.isLive ? 'live' : 'before');
-    if (st === 'after' && node.score1 !== node.score2) {
-      return node.score1 > node.score2 ? node.team1 : node.team2;
-    }
     return null;
   };
 
@@ -143,7 +287,7 @@ export const MatchesTab: React.FC<MatchesTabProps> = ({
     setTournamentTrees((prev) => ({ ...prev, [selectedSportKey]: newTree }));
   };
 
-  // Update a game node's field in treeData and sync matches state
+  // Update a game node's field in treeData
   const handleGameNodeChange = (
     nodeId: string,
     field: keyof TournamentGameNode,
@@ -152,55 +296,139 @@ export const MatchesTab: React.FC<MatchesTabProps> = ({
     const targetNode = nodes[nodeId];
     if (!targetNode || targetNode.type !== 'game') return;
 
-    let updatedNode = { ...targetNode, [field]: value };
-
-    // Synchronize isLive and status
-    if (field === 'status') {
-      if (value === 'live') {
-        updatedNode.isLive = true;
-      } else {
-        updatedNode.isLive = false;
-      }
-    } else if (field === 'isLive') {
-      updatedNode.status = value ? 'live' : 'before';
-    }
-
+    const updatedNode: TournamentGameNode = { ...targetNode, [field]: value };
     const rawNodes = { ...nodes, [nodeId]: updatedNode };
     const rawTree = { ...currentTree, nodes: rawNodes };
     const newTree = propagateTournamentTreeWinners(rawTree);
 
     setTournamentTrees((prev) => ({ ...prev, [selectedSportKey]: newTree }));
-
-    // Also update match in flat matches state if it exists
-    setMatches((prev) => {
-      const idx = prev.findIndex((m) => m.id === nodeId || m.round === targetNode.roundName);
-      if (idx !== -1) {
-        const next = [...prev];
-        const m = { ...next[idx] };
-        if (field === 'roundName') m.round = value;
-        if (field === 'team1') m.team1 = value;
-        if (field === 'team2') m.team2 = value;
-        if (field === 'score1') m.score1Final = value;
-        if (field === 'score2') m.score2Final = value;
-        if (field === 'startHour') m.startHour = value;
-        if (field === 'startMinute') m.startMinute = value;
-        if (field === 'endHour') m.endHour = value;
-        if (field === 'endMinute') m.endMinute = value;
-        if (field === 'venue') m.venue = value;
-        if (field === 'isLive') m.isLive = value;
-        if (field === 'status') {
-          m.isLive = value === 'live';
-        }
-        next[idx] = m;
-        return next;
-      }
-      return prev;
-    });
   };
+
+  // Confirm final score / result for a single game node
+  const handleConfirmGameScore = async (gNode: TournamentGameNode) => {
+    const rType: MatchResultType = gNode.resultType || 'normal';
+
+    if (
+      rType !== 'cancelled' &&
+      (isPlaceholderTeam(gNode.team1) || isPlaceholderTeam(gNode.team2))
+    ) {
+      alert(t('admin.matches.alertUnresolvedTeams'));
+      return;
+    }
+
+    if (rType === 'normal' && gNode.score1 === gNode.score2) {
+      alert(t('admin.matches.alertDrawNotAllowed'));
+      return;
+    }
+
+    const confirmedNode: TournamentGameNode = {
+      ...gNode,
+      isConfirmed: true,
+      status: 'after',
+      isLive: false,
+      resultType: rType,
+    };
+
+    const rawNodes = { ...nodes, [gNode.id]: confirmedNode };
+    const nextTree = propagateTournamentTreeWinners({
+      ...currentTree,
+      nodes: rawNodes,
+    });
+
+    setEditingGameIds((prev) => {
+      const next = { ...prev };
+      delete next[gNode.id];
+      return next;
+    });
+
+    const roundDisplay = getLocalizedValue(gNode.roundName, language, (ko) =>
+      localizeRoundName(ko, language)
+    );
+    await saveSportTreeAndMatches(
+      selectedSportKey,
+      nextTree,
+      t('admin.matches.confirmedToast', { sport: currentSportLabel, round: roundDisplay })
+    );
+  };
+
+  // Unlock a confirmed game node for editing
+  const handleStartEditGameScore = (gameId: string) => {
+    setEditingGameIds((prev) => ({ ...prev, [gameId]: true }));
+  };
+
+  // Revert a confirmed game node back to unconfirmed VS state
+  const handleResetGameUnconfirmed = async (gNode: TournamentGameNode) => {
+    const resetNode: TournamentGameNode = {
+      ...gNode,
+      score1: 0,
+      score2: 0,
+      isConfirmed: false,
+      status: 'before',
+      isLive: false,
+      resultType: 'normal',
+    };
+
+    const rawNodes = { ...nodes, [gNode.id]: resetNode };
+    const nextTree = propagateTournamentTreeWinners({
+      ...currentTree,
+      nodes: rawNodes,
+    });
+
+    setEditingGameIds((prev) => {
+      const next = { ...prev };
+      delete next[gNode.id];
+      return next;
+    });
+
+    const roundDisplay = getLocalizedValue(gNode.roundName, language, (ko) =>
+      localizeRoundName(ko, language)
+    );
+    await saveSportTreeAndMatches(
+      selectedSportKey,
+      nextTree,
+      t('admin.matches.unconfirmedToast', { sport: currentSportLabel, round: roundDisplay })
+    );
+  };
+
+  // Update manual rank for a school in the current sport
+  const handleManualRankChange = (schoolId: string, rankVal: number) => {
+    const currentManual = { ...(currentTree.manualRanks || {}) };
+    if (rankVal <= 0) {
+      delete currentManual[schoolId];
+    } else {
+      currentManual[schoolId] = rankVal;
+    }
+    const nextTree: TournamentTreeData = {
+      ...currentTree,
+      manualRanks: currentManual,
+    };
+    setTournamentTrees((prev) => ({ ...prev, [selectedSportKey]: nextTree }));
+  };
+
+  // Compute live preview of standings for the current sport
+  const currentStandingsPreview = useMemo(() => {
+    const allStandings = calculateOverallStandings(
+      matches,
+      new Date(),
+      {
+        ...tournamentTrees,
+        [selectedSportKey]: currentTree,
+      },
+      language
+    );
+    const map: Record<string, { rank: number; points: number; isTied?: boolean }> = {};
+    for (const st of allStandings) {
+      const sp = st.breakdown[selectedSportKey];
+      if (sp) {
+        map[st.schoolId] = { rank: sp.rank, points: sp.points, isTied: sp.isTied };
+      }
+    }
+    return map;
+  }, [matches, tournamentTrees, selectedSportKey, currentTree, language]);
 
   // Delete node
   const handleDeleteNode = (nodeId: string) => {
-    if (!confirm('정말 이 노드를 삭제하시겠습니까? 연결된 상위 게임도 함께 삭제됩니다.')) return;
+    if (!confirm(t('admin.matches.confirmDeleteNode'))) return;
     const updated = { ...nodes };
     delete updated[nodeId];
 
@@ -225,11 +453,9 @@ export const MatchesTab: React.FC<MatchesTabProps> = ({
         <div>
           <h2 className="font-extrabold text-base text-gray-900 flex items-center gap-2">
             <Trophy className="w-5 h-5 text-amber-500" />
-            <span>종목별 토너먼트 대진표 & 노드 목록 관리</span>
+            <span>{t('admin.matches.title')}</span>
           </h2>
-          <p className="text-xs text-gray-500 mt-0.5">
-            좌측 트리 캔버스 또는 우측 노드 목록에서 팀/경기를 클릭하여 학교 드롭다운 및 스코어/시간을 편집할 수 있습니다.
-          </p>
+          <p className="text-xs text-gray-500 mt-0.5">{t('admin.matches.subtitle')}</p>
         </div>
 
         {/* Sport Filter Tabs */}
@@ -241,19 +467,20 @@ export const MatchesTab: React.FC<MatchesTabProps> = ({
                 setSelectedSportKey(s.key);
                 setSelectedNodeId(null);
               }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition-all ${selectedSportKey === s.key
-                ? 'bg-postech text-white shadow-xs'
-                : 'text-slate-700 hover:text-slate-900 hover:bg-slate-200/60'
-                }`}
+              className={`px-3 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition-all ${
+                selectedSportKey === s.key
+                  ? 'bg-postech text-white shadow-xs'
+                  : 'text-slate-700 hover:text-slate-900 hover:bg-slate-200/60'
+              }`}
             >
               <span>{s.icon}</span>
-              <span>{s.name}</span>
+              <span>{t(s.labelKey)}</span>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Main Unified 2-Column Grid: Left Canvas (50%) + Right Node List Table (50%) */}
+      {/* Main Unified 2-Column Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Left Column: Visual Tournament Tree Canvas */}
         <div className="lg:col-span-6">
@@ -274,14 +501,18 @@ export const MatchesTab: React.FC<MatchesTabProps> = ({
           />
         </div>
 
-        {/* Right Column: Node List (노드 목록) */}
+        {/* Right Column: Node List */}
         <div className="lg:col-span-6 bg-slate-50 border border-slate-200 rounded-xl p-4 shadow-2xs space-y-3 flex flex-col justify-between">
           {/* Table Header & Controls */}
           <div className="flex items-center justify-between flex-wrap gap-2 border-b border-slate-200 pb-2.5">
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4 text-postech" />
               <h3 className="font-extrabold text-sm text-slate-800">
-                {currentSportInfo.icon} {currentSportInfo.name} 노드 목록 (총 {allNodeList.length}개 노드)
+                {t('admin.matches.nodeListHeader', {
+                  icon: currentSportInfo.icon,
+                  sport: currentSportLabel,
+                  count: allNodeList.length,
+                })}
               </h3>
             </div>
             <div className="flex items-center gap-1.5">
@@ -291,7 +522,7 @@ export const MatchesTab: React.FC<MatchesTabProps> = ({
                 className="px-3 py-1.5 bg-postech hover:bg-postech-dark text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow-2xs transition-colors"
               >
                 <Save className="w-3.5 h-3.5" />
-                <span>대진표 전체 저장</span>
+                <span>{t('admin.matches.saveTreeAll')}</span>
               </button>
             </div>
           </div>
@@ -300,19 +531,21 @@ export const MatchesTab: React.FC<MatchesTabProps> = ({
           <div className="overflow-x-auto overflow-y-auto max-h-[500px] no-scrollbar space-y-4 pr-1">
             {allNodeList.length === 0 ? (
               <div className="bg-white border border-slate-200 rounded-xl p-8 text-center text-slate-400 space-y-2">
-                <p className="font-bold text-xs">등록된 대진표 노드가 없습니다.</p>
-                <p className="text-[11px]">좌측 캔버스에서 프리셋을 선택하거나 [+ 팀 노드 추가] 버튼을 눌러주세요.</p>
+                <p className="font-bold text-xs">{t('admin.matches.noNodes')}</p>
+                <p className="text-[11px]">{t('admin.matches.noNodesHint')}</p>
               </div>
             ) : (
               <>
-                {/* 1. 1행 팀 노드 목록 (Team Nodes) */}
+                {/* 1. Team Nodes */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between px-1">
                     <span className="text-xs font-extrabold text-slate-700 flex items-center gap-1">
                       <span className="w-2 h-2 rounded-full bg-slate-500" />
-                      <span>1행 참가 팀 노드 ({teamNodes.length}팀)</span>
+                      <span>{t('admin.matches.teamNodesTitle', { count: teamNodes.length })}</span>
                     </span>
-                    <span className="text-[10px] text-slate-400 font-medium">* 클릭 시 학교 변경 가능</span>
+                    <span className="text-[10px] text-slate-400 font-medium">
+                      {t('admin.matches.teamNodeHint')}
+                    </span>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -324,10 +557,11 @@ export const MatchesTab: React.FC<MatchesTabProps> = ({
                         <div
                           key={tNode.id}
                           onClick={() => setSelectedNodeId(tNode.id)}
-                          className={`p-2.5 bg-white border rounded-xl shadow-2xs transition-all cursor-pointer flex items-center justify-between gap-2 ${isSelected
-                            ? 'ring-2 ring-postech border-postech bg-rose-50/50'
-                            : 'border-slate-200 hover:border-slate-300'
-                            }`}
+                          className={`p-2.5 bg-white border rounded-xl shadow-2xs transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                            isSelected
+                              ? 'ring-2 ring-postech border-postech bg-rose-50/50'
+                              : 'border-slate-200 hover:border-slate-300'
+                          }`}
                         >
                           <div className="flex items-center gap-2 min-w-0">
                             <span className="text-[10px] font-black text-slate-400 w-4 shrink-0">
@@ -340,7 +574,6 @@ export const MatchesTab: React.FC<MatchesTabProps> = ({
                                   className="w-2 h-4 rounded-xs shrink-0"
                                 />
                               )}
-                              {/* Team Dropdown */}
                               <select
                                 value={tNode.teamName}
                                 onChange={(e) => {
@@ -365,7 +598,7 @@ export const MatchesTab: React.FC<MatchesTabProps> = ({
                               handleDeleteNode(tNode.id);
                             }}
                             className="p-1 text-rose-500 hover:bg-rose-50 rounded"
-                            title="팀 노드 삭제"
+                            title={t('admin.matches.deleteTeamTitle')}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -375,60 +608,86 @@ export const MatchesTab: React.FC<MatchesTabProps> = ({
                   </div>
                 </div>
 
-                {/* 2. 상위 경기 노드 목록 (Game Nodes) */}
+                {/* 2. Game Nodes */}
                 <div className="space-y-1.5 pt-2">
                   <div className="flex items-center justify-between px-1">
                     <span className="text-xs font-extrabold text-slate-700 flex items-center gap-1">
                       <span className="w-2 h-2 rounded-full bg-amber-500" />
-                      <span>경기 노드 목록 ({gameNodes.length}경기)</span>
+                      <span>{t('admin.matches.gameNodesTitle', { count: gameNodes.length })}</span>
                     </span>
-                    <span className="text-[10px] text-slate-400 font-medium">* 스코어/시간/장소 편집</span>
+                    <span className="text-[10px] text-slate-500 font-bold">
+                      {t('admin.matches.gameNodeHint')}
+                    </span>
                   </div>
 
                   <div className="border border-slate-200 rounded-xl bg-white shadow-2xs overflow-x-auto w-full">
-                    <table className="w-full text-left text-xs min-w-[680px]">
+                    <table className="w-full text-left text-xs min-w-[820px]">
                       <thead className="bg-slate-100/90 text-slate-700 font-extrabold border-b border-slate-200 whitespace-nowrap">
                         <tr>
-                          <th className="p-2.5 whitespace-nowrap">라운드명</th>
-                          <th className="p-2.5 whitespace-nowrap">팀 1 vs 팀 2</th>
-                          <th className="p-2.5 whitespace-nowrap">스코어</th>
-                          <th className="p-2.5 whitespace-nowrap">시간</th>
-                          <th className="p-2.5 whitespace-nowrap">장소</th>
-                          <th className="p-2.5 whitespace-nowrap">진행 상태</th>
-                          <th className="p-2.5 text-right whitespace-nowrap">삭제</th>
+                          <th className="p-2.5 whitespace-nowrap">{t('admin.matches.colRound')}</th>
+                          <th className="p-2.5 whitespace-nowrap">
+                            {t('admin.matches.colMatchup')}
+                          </th>
+                          <th className="p-2.5 whitespace-nowrap">
+                            {t('admin.matches.colResult')}
+                          </th>
+                          <th className="p-2.5 whitespace-nowrap">
+                            {t('admin.matches.colConfirm')}
+                          </th>
+                          <th className="p-2.5 whitespace-nowrap">{t('admin.matches.colTime')}</th>
+                          <th className="p-2.5 whitespace-nowrap">{t('admin.matches.colVenue')}</th>
+                          <th className="p-2.5 text-right whitespace-nowrap">
+                            {t('admin.matches.colDelete')}
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 font-medium whitespace-nowrap">
-                        {gameNodes.map((gNode: any) => {
+                        {gameNodes.map((gNode: TournamentGameNode) => {
                           const isSelected = selectedNodeId === gNode.id;
                           const t1School = SCHOOLS[gNode.team1];
                           const t2School = SCHOOLS[gNode.team2];
                           const currentStatus = getGameNodeStatus(gNode);
+                          const isConfirmed = isGameNodeConfirmed(gNode);
+                          const isEditingScore = !isConfirmed || Boolean(editingGameIds[gNode.id]);
+                          const resultType: MatchResultType = gNode.resultType || 'normal';
+
                           const child1Game = getChildGame(gNode.child1Id);
                           const child2Game = getChildGame(gNode.child2Id);
-                          const isT1Locked = Boolean(child1Game);
-                          const isT2Locked = Boolean(child2Game);
-                          const isTie = gNode.score1 === gNode.score2;
+                          const isT1Locked = Boolean(
+                            child1Game && child1Game.resultType !== 'cancelled'
+                          );
+                          const isT2Locked = Boolean(
+                            child2Game && child2Game.resultType !== 'cancelled'
+                          );
+
+                          const team1Display = getLocalizedValue(gNode.team1, language, (ko) =>
+                            localizeTeamPlaceholder(ko, language)
+                          );
+                          const team2Display = getLocalizedValue(gNode.team2, language, (ko) =>
+                            localizeTeamPlaceholder(ko, language)
+                          );
 
                           return (
                             <tr
                               key={gNode.id}
                               onClick={() => setSelectedNodeId(gNode.id)}
-                              className={`transition-colors cursor-pointer ${isSelected
-                                ? 'bg-amber-50/80 ring-1 ring-amber-300'
-                                : 'hover:bg-slate-50'
-                                }`}
+                              className={`transition-colors cursor-pointer ${
+                                isSelected
+                                  ? 'bg-amber-50/80 ring-1 ring-amber-300'
+                                  : isConfirmed
+                                    ? 'bg-emerald-50/30 hover:bg-emerald-50/50'
+                                    : 'hover:bg-slate-50'
+                              }`}
                             >
-                              {/* Round Name */}
+                              {/* Round Name (KOR / ENG) */}
                               <td className="p-2">
-                                <input
-                                  type="text"
+                                <MiniBilingualInput
                                   value={gNode.roundName}
-                                  onChange={(e) =>
-                                    handleGameNodeChange(gNode.id, 'roundName', e.target.value)
+                                  onChange={(val) =>
+                                    handleGameNodeChange(gNode.id, 'roundName', val)
                                   }
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="w-24 bg-slate-50 border border-slate-300 rounded px-1.5 py-1 text-xs font-bold text-slate-900"
+                                  widthClass="w-28"
+                                  bold
                                 />
                               </td>
 
@@ -444,21 +703,28 @@ export const MatchesTab: React.FC<MatchesTabProps> = ({
                                     )}
                                     <input
                                       type="text"
-                                      value={gNode.team1}
+                                      value={isT1Locked ? team1Display : gNode.team1}
                                       disabled={isT1Locked}
                                       title={
-                                        isT1Locked
-                                          ? `하위 [${child1Game?.roundName}]의 승자가 자동으로 반영됩니다 (직접 수정 불가)`
+                                        isT1Locked && child1Game
+                                          ? t('admin.matches.lockedChildTip', {
+                                              round: getLocalizedValue(
+                                                child1Game.roundName,
+                                                language,
+                                                (ko) => localizeRoundName(ko, language)
+                                              ),
+                                            })
                                           : undefined
                                       }
                                       onChange={(e) =>
                                         handleGameNodeChange(gNode.id, 'team1', e.target.value)
                                       }
                                       onClick={(e) => e.stopPropagation()}
-                                      className={`w-20 rounded px-1.5 py-1 text-xs font-bold transition-colors ${isT1Locked
-                                        ? 'bg-slate-100/90 text-slate-500 border border-slate-200 cursor-not-allowed italic'
-                                        : 'bg-slate-50 border border-slate-300 text-slate-900'
-                                        }`}
+                                      className={`w-24 rounded px-1.5 py-1 text-xs font-bold transition-colors ${
+                                        isT1Locked
+                                          ? 'bg-slate-100/90 text-slate-500 border border-slate-200 cursor-not-allowed italic'
+                                          : 'bg-slate-50 border border-slate-300 text-slate-900'
+                                      }`}
                                     />
                                   </div>
                                   <span className="text-[10px] text-slate-400 font-bold">vs</span>
@@ -471,60 +737,172 @@ export const MatchesTab: React.FC<MatchesTabProps> = ({
                                     )}
                                     <input
                                       type="text"
-                                      value={gNode.team2}
+                                      value={isT2Locked ? team2Display : gNode.team2}
                                       disabled={isT2Locked}
                                       title={
-                                        isT2Locked
-                                          ? `하위 [${child2Game?.roundName}]의 승자가 자동으로 반영됩니다 (직접 수정 불가)`
+                                        isT2Locked && child2Game
+                                          ? t('admin.matches.lockedChildTip', {
+                                              round: getLocalizedValue(
+                                                child2Game.roundName,
+                                                language,
+                                                (ko) => localizeRoundName(ko, language)
+                                              ),
+                                            })
                                           : undefined
                                       }
                                       onChange={(e) =>
                                         handleGameNodeChange(gNode.id, 'team2', e.target.value)
                                       }
                                       onClick={(e) => e.stopPropagation()}
-                                      className={`w-20 rounded px-1.5 py-1 text-xs font-bold transition-colors ${isT2Locked
-                                        ? 'bg-slate-100/90 text-slate-500 border border-slate-200 cursor-not-allowed italic'
-                                        : 'bg-slate-50 border border-slate-300 text-slate-900'
-                                        }`}
+                                      className={`w-24 rounded px-1.5 py-1 text-xs font-bold transition-colors ${
+                                        isT2Locked
+                                          ? 'bg-slate-100/90 text-slate-500 border border-slate-200 cursor-not-allowed italic'
+                                          : 'bg-slate-50 border border-slate-300 text-slate-900'
+                                      }`}
                                     />
                                   </div>
                                 </div>
                               </td>
 
-                              {/* Scores */}
+                              {/* Result Type & Scores */}
                               <td className="p-2">
-                                <div className="flex items-center gap-1">
-                                  <input
-                                    type="number"
-                                    value={gNode.score1 ?? 0}
-                                    onChange={(e) =>
+                                <div className="flex items-center gap-1.5">
+                                  <select
+                                    value={resultType}
+                                    disabled={!isEditingScore}
+                                    onChange={(e) => {
+                                      e.stopPropagation();
                                       handleGameNodeChange(
                                         gNode.id,
-                                        'score1',
-                                        parseInt(e.target.value) || 0
-                                      )
-                                    }
+                                        'resultType',
+                                        e.target.value as MatchResultType
+                                      );
+                                    }}
                                     onClick={(e) => e.stopPropagation()}
-                                    className="w-10 bg-slate-50 border border-slate-300 rounded px-1 py-1 text-xs font-black text-center"
-                                  />
-                                  <span className="text-slate-400 font-bold">:</span>
-                                  <input
-                                    type="number"
-                                    value={gNode.score2 ?? 0}
-                                    onChange={(e) =>
-                                      handleGameNodeChange(
-                                        gNode.id,
-                                        'score2',
-                                        parseInt(e.target.value) || 0
-                                      )
-                                    }
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="w-10 bg-slate-50 border border-slate-300 rounded px-1 py-1 text-xs font-black text-center"
-                                  />
+                                    className={`rounded px-1.5 py-1 text-[11px] font-bold border ${
+                                      !isEditingScore
+                                        ? 'bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed'
+                                        : resultType === 'cancelled'
+                                          ? 'bg-amber-50 text-amber-800 border-amber-300'
+                                          : resultType !== 'normal'
+                                            ? 'bg-purple-50 text-purple-800 border-purple-300'
+                                            : 'bg-slate-50 text-slate-800 border-slate-300'
+                                    }`}
+                                  >
+                                    <option value="normal">{t('admin.matches.resNormal')}</option>
+                                    <option value="team1_forfeit_win">
+                                      {t('admin.matches.resForfeit', { team: team1Display })}
+                                    </option>
+                                    <option value="team2_forfeit_win">
+                                      {t('admin.matches.resForfeit', { team: team2Display })}
+                                    </option>
+                                    <option value="cancelled">
+                                      {t('admin.matches.resCancelled')}
+                                    </option>
+                                  </select>
+
+                                  {resultType === 'normal' && (
+                                    <div className="flex items-center gap-1">
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        disabled={!isEditingScore}
+                                        value={gNode.score1 ?? 0}
+                                        onChange={(e) =>
+                                          handleGameNodeChange(
+                                            gNode.id,
+                                            'score1',
+                                            Math.max(0, parseInt(e.target.value) || 0)
+                                          )
+                                        }
+                                        onClick={(e) => e.stopPropagation()}
+                                        className={`w-11 rounded px-1 py-1 text-xs font-black text-center border ${
+                                          !isEditingScore
+                                            ? 'bg-slate-100 text-slate-600 border-slate-200 cursor-not-allowed'
+                                            : 'bg-white border-slate-300 text-slate-900'
+                                        }`}
+                                      />
+                                      <span className="text-slate-400 font-bold">:</span>
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        disabled={!isEditingScore}
+                                        value={gNode.score2 ?? 0}
+                                        onChange={(e) =>
+                                          handleGameNodeChange(
+                                            gNode.id,
+                                            'score2',
+                                            Math.max(0, parseInt(e.target.value) || 0)
+                                          )
+                                        }
+                                        onClick={(e) => e.stopPropagation()}
+                                        className={`w-11 rounded px-1 py-1 text-xs font-black text-center border ${
+                                          !isEditingScore
+                                            ? 'bg-slate-100 text-slate-600 border-slate-200 cursor-not-allowed'
+                                            : 'bg-white border-slate-300 text-slate-900'
+                                        }`}
+                                      />
+                                    </div>
+                                  )}
                                 </div>
-                                {currentStatus === 'after' && isTie && (
-                                  <span className="text-[9px] text-rose-500 font-extrabold block mt-0.5">
-                                    ⚠️ 무승부 불가 (승자 필요)
+                              </td>
+
+                              {/* Two-Button Final Score Confirmation / Edit Action */}
+                              <td className="p-2">
+                                {isEditingScore ? (
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      type="button"
+                                      disabled={isSaving}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleConfirmGameScore(gNode);
+                                      }}
+                                      className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-extrabold flex items-center gap-1 shadow-2xs transition-colors cursor-pointer"
+                                    >
+                                      <CheckCircle2 className="w-3.5 h-3.5" />
+                                      <span>{t('admin.matches.confirmBtn')}</span>
+                                    </button>
+
+                                    {isConfirmed && (
+                                      <button
+                                        type="button"
+                                        disabled={isSaving}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleResetGameUnconfirmed(gNode);
+                                        }}
+                                        title={t('admin.matches.unconfirmTitle')}
+                                        className="px-2 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-[10px] font-bold flex items-center gap-0.5 transition-colors cursor-pointer"
+                                      >
+                                        <RotateCcw className="w-3 h-3" />
+                                        <span>{t('admin.matches.unconfirmBtn')}</span>
+                                      </button>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-md">
+                                      {t('admin.matches.confirmedBadge')}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleStartEditGameScore(gNode.id);
+                                      }}
+                                      className="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[11px] font-extrabold flex items-center gap-1 shadow-2xs transition-colors cursor-pointer"
+                                    >
+                                      <Edit3 className="w-3 h-3" />
+                                      <span>{t('admin.matches.editBtn')}</span>
+                                    </button>
+                                  </div>
+                                )}
+                                {!isConfirmed && (
+                                  <span className="block text-[9px] text-slate-400 font-bold mt-0.5">
+                                    {currentStatus === 'live'
+                                      ? t('admin.matches.liveVsHint')
+                                      : t('admin.matches.pendingVsHint')}
                                   </span>
                                 )}
                               </td>
@@ -590,40 +968,14 @@ export const MatchesTab: React.FC<MatchesTabProps> = ({
                                 </div>
                               </td>
 
-                              {/* Venue */}
+                              {/* Venue (KOR / ENG) */}
                               <td className="p-2">
-                                <input
-                                  type="text"
+                                <MiniBilingualInput
                                   value={gNode.venue || ''}
-                                  onChange={(e) =>
-                                    handleGameNodeChange(gNode.id, 'venue', e.target.value)
-                                  }
-                                  onClick={(e) => e.stopPropagation()}
-                                  placeholder="체육관"
-                                  className="w-20 bg-slate-50 border border-slate-300 rounded px-1.5 py-1 text-xs"
+                                  onChange={(val) => handleGameNodeChange(gNode.id, 'venue', val)}
+                                  placeholderKo={t('admin.matches.venuePh')}
+                                  widthClass="w-24"
                                 />
-                              </td>
-
-                              {/* 3-State Match Status Selector */}
-                              <td className="p-2">
-                                <select
-                                  value={currentStatus}
-                                  onChange={(e) => {
-                                    e.stopPropagation();
-                                    handleGameNodeChange(gNode.id, 'status', e.target.value);
-                                  }}
-                                  onClick={(e) => e.stopPropagation()}
-                                  className={`rounded-lg px-2 py-1 text-[11px] font-extrabold border transition-all ${currentStatus === 'live'
-                                    ? 'bg-rose-600 text-white border-rose-600 shadow-2xs'
-                                    : currentStatus === 'after'
-                                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300 font-bold'
-                                      : 'bg-slate-100 text-slate-700 border-slate-300'
-                                    }`}
-                                >
-                                  <option value="before">⏳ 경기 전</option>
-                                  <option value="live">🔴 경기 중</option>
-                                  <option value="after">🏁 경기 후 (종료)</option>
-                                </select>
                               </td>
 
                               {/* Delete Action */}
@@ -634,7 +986,7 @@ export const MatchesTab: React.FC<MatchesTabProps> = ({
                                     handleDeleteNode(gNode.id);
                                   }}
                                   className="p-1 text-rose-600 hover:bg-rose-50 rounded"
-                                  title="경기 노드 삭제"
+                                  title={t('admin.matches.deleteGameTitle')}
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
                                 </button>
@@ -646,12 +998,115 @@ export const MatchesTab: React.FC<MatchesTabProps> = ({
                     </table>
                   </div>
                 </div>
+
+                {/* 3. Final Rankings & 3rd Place Selection */}
+                <div className="space-y-2 pt-3 border-t border-slate-200">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <Award className="w-4 h-4 text-amber-500" />
+                      <span className="text-xs font-extrabold text-slate-800">
+                        {t('admin.matches.rankTitle', { sport: currentSportLabel })}
+                      </span>
+                      <span className="text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 px-1.5 py-0.5 rounded">
+                        {t('admin.matches.rankPointsBadge', {
+                          p1: SPORT_POINTS_TABLE[selectedSportKey]?.[1] || 0,
+                          p2: SPORT_POINTS_TABLE[selectedSportKey]?.[2] || 0,
+                          p3: SPORT_POINTS_TABLE[selectedSportKey]?.[3] || 0,
+                        })}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={isSaving}
+                      onClick={() =>
+                        saveSportTreeAndMatches(
+                          selectedSportKey,
+                          currentTree,
+                          t('admin.matches.rankSavedToast', { sport: currentSportLabel })
+                        )
+                      }
+                      className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-[11px] font-bold flex items-center gap-1 shadow-2xs cursor-pointer"
+                    >
+                      <Save className="w-3 h-3" />
+                      <span>{t('admin.matches.rankSaveBtn')}</span>
+                    </button>
+                  </div>
+
+                  <p className="text-[11px] text-slate-500 font-medium">
+                    {selectedSportKey === 'soccer'
+                      ? t('admin.matches.rankGuideSoccer')
+                      : selectedSportKey === 'lol'
+                        ? t('admin.matches.rankGuideLol')
+                        : t('admin.matches.rankGuideOther')}
+                  </p>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {SCHOOL_OPTIONS.map((sid) => {
+                      const sch = SCHOOLS[sid];
+                      const manualVal = currentTree.manualRanks?.[sid] || 0;
+                      const preview = currentStandingsPreview[sid] || { rank: 0, points: 0 };
+
+                      return (
+                        <div
+                          key={sid}
+                          className="bg-white border border-slate-200 rounded-xl p-2 flex flex-col gap-1.5 shadow-2xs"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                              <span
+                                style={{ backgroundColor: sch.color }}
+                                className="w-2 h-3.5 rounded-xs shrink-0"
+                              />
+                              <span className="text-xs font-extrabold text-slate-900">
+                                {sch.shortName}
+                              </span>
+                            </div>
+                            <span
+                              className={`text-[10px] font-extrabold px-1.5 py-0.2 rounded border ${
+                                preview.rank > 0
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  : 'bg-slate-50 text-slate-400 border-slate-200'
+                              }`}
+                            >
+                              {preview.rank > 0
+                                ? `${
+                                    preview.isTied
+                                      ? t('admin.matches.rankTied', { rank: preview.rank })
+                                      : t('admin.matches.rankNth', { rank: preview.rank })
+                                  } (+${preview.points}pt)`
+                                : t('admin.matches.rankUnset')}
+                            </span>
+                          </div>
+
+                          <select
+                            value={manualVal}
+                            onChange={(e) =>
+                              handleManualRankChange(sid, parseInt(e.target.value) || 0)
+                            }
+                            className={`w-full rounded-lg px-2 py-1 text-[11px] font-bold border ${
+                              manualVal > 0
+                                ? 'bg-amber-50 text-amber-900 border-amber-300'
+                                : 'bg-slate-50 text-slate-700 border-slate-200'
+                            }`}
+                          >
+                            <option value={0}>{t('admin.matches.rankOptAuto')}</option>
+                            <option value={1}>{t('admin.matches.rankOpt1')}</option>
+                            <option value={2}>{t('admin.matches.rankOpt2')}</option>
+                            <option value={3}>{t('admin.matches.rankOpt3')}</option>
+                            <option value={4}>{t('admin.matches.rankOpt4')}</option>
+                          </select>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </>
             )}
           </div>
 
           <div className="text-[11px] text-slate-500 font-medium border-t border-slate-200 pt-2">
-            💡 팀 노드는 드롭다운으로 학교를 변경할 수 있으며, 경기 노드는 라운드명/팀명/스코어/시간/장소를 자유롭게 편집할 수 있습니다.
+            {t('admin.matches.footerHint')}
           </div>
         </div>
       </div>
