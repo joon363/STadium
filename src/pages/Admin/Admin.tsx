@@ -95,7 +95,11 @@ export const Admin: React.FC = () => {
       const loadedTrees: Record<string, TournamentTreeData> = {};
       for (const sKey of sportsList) {
         const tree = allTrees?.[sKey];
-        if (tree && Object.keys(tree.nodes || {}).length > 0) {
+        if (
+          tree &&
+          (Object.keys(tree.nodes || {}).length > 0 ||
+            Object.keys(tree.manualRanks || {}).length > 0)
+        ) {
           loadedTrees[sKey] = tree;
         } else {
           loadedTrees[sKey] = { sportKey: sKey, nodes: {}, manualRanks: {} };

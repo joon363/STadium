@@ -242,8 +242,29 @@ export function calculateOverallStandings(
       }
     }
 
-    // Apply manual ranks from Admin (e.g. 3rd place selection for basketball, baseball, badminton, or any custom override)
+    // Apply manual ranks from Admin (1/2/3/4+).
+    // If a podium rank (1, 2, 3) is manually assigned to any school, demote auto-bracket
+    // schools holding that same rank (unless explicitly pinned in manualRanks) to avoid ghost ties.
     if (tree?.manualRanks) {
+      const overriddenPodiumRanks = new Set<number>();
+      for (const [sid, manualRank] of Object.entries(tree.manualRanks)) {
+        if (!isValidSchool(sid)) continue;
+        const parsedRank = Number(manualRank);
+        if (parsedRank >= 1 && parsedRank <= 3) {
+          overriddenPodiumRanks.add(parsedRank);
+        }
+      }
+
+      if (overriddenPodiumRanks.size > 0) {
+        for (const sid of schoolIds) {
+          if (tree.manualRanks[sid] !== undefined) continue;
+          const autoRank = sportRanks[sid];
+          if (autoRank && overriddenPodiumRanks.has(autoRank)) {
+            sportRanks[sid] = 4;
+          }
+        }
+      }
+
       for (const [sid, manualRank] of Object.entries(tree.manualRanks)) {
         if (!isValidSchool(sid)) continue;
         const parsedRank = Number(manualRank);

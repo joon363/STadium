@@ -29,10 +29,12 @@ export async function getSupabaseAllTournamentTrees(
 
     const result: Record<string, TournamentTreeData> = {};
     for (const row of data) {
-      if (row && row.sport_key && row.nodes && Object.keys(row.nodes).length > 0) {
+      const hasNodes = Boolean(row?.nodes && Object.keys(row.nodes).length > 0);
+      const hasManualRanks = Boolean(row?.manual_ranks && Object.keys(row.manual_ranks).length > 0);
+      if (row && row.sport_key && (hasNodes || hasManualRanks)) {
         const rawTree: TournamentTreeData = {
           sportKey: row.sport_key as SportKey,
-          nodes: row.nodes,
+          nodes: row.nodes || {},
           manualRanks: row.manual_ranks || {},
         };
         const tree = propagateTournamentTreeWinners(rawTree);
@@ -72,10 +74,12 @@ export async function getSupabaseTournamentTree(
       .eq('sport_key', sportKey)
       .maybeSingle();
 
-    if (!error && data && data.nodes && Object.keys(data.nodes).length > 0) {
+    const hasNodes = Boolean(data?.nodes && Object.keys(data.nodes).length > 0);
+    const hasManualRanks = Boolean(data?.manual_ranks && Object.keys(data.manual_ranks).length > 0);
+    if (!error && data && (hasNodes || hasManualRanks)) {
       const rawTree: TournamentTreeData = {
         sportKey: data.sport_key as SportKey,
-        nodes: data.nodes,
+        nodes: data.nodes || {},
         manualRanks: data.manual_ranks || {},
       };
       const tree = propagateTournamentTreeWinners(rawTree);

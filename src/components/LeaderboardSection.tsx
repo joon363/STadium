@@ -113,14 +113,14 @@ export const LeaderboardSection: React.FC<LeaderboardSectionProps> = ({ standing
               {isExpanded && (
                 <div className="grid grid-cols-4 sm:grid-cols-7 gap-1 pt-1 border-t border-black/10 text-[10px] font-bold text-gray-700">
                   {Object.values(item.breakdown).map((sp) => {
-                    const sportRankStr =
-                      sp.rank > 0
-                        ? sp.isTied
-                          ? t('common.tiedRank', { rank: sp.rank })
-                          : language === 'ko'
-                            ? `${sp.rank}${t('common.rank')}`
-                            : `#${sp.rank}`
-                        : '-';
+                    const isPodium = sp.rank >= 1 && sp.rank <= 3 && sp.points > 0;
+                    const sportRankStr = isPodium
+                      ? sp.isTied
+                        ? t('common.tiedRank', { rank: sp.rank })
+                        : language === 'ko'
+                          ? `${sp.rank}${t('common.rank')}`
+                          : `#${sp.rank}`
+                      : '-';
                     return (
                       <div
                         key={sp.sportKey}
@@ -130,7 +130,7 @@ export const LeaderboardSection: React.FC<LeaderboardSectionProps> = ({ standing
                           {sp.sportName}
                         </span>
                         <span className="text-gray-900 font-bold text-[10px] leading-tight">
-                          {sportRankStr} ({sp.points}p)
+                          {isPodium ? `${sportRankStr} (${sp.points}p)` : '-'}
                         </span>
                       </div>
                     );

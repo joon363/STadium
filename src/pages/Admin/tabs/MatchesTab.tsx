@@ -405,26 +405,58 @@ export const MatchesTab: React.FC<MatchesTabProps> = ({
     setTournamentTrees((prev) => ({ ...prev, [selectedSportKey]: nextTree }));
   };
 
-  // Compute live preview of standings for the current sport
+  // Force-assign a podium slot (1st / 2nd / 3rd) cleanly to a single school (or revert that rank to auto)
+  const handleQuickPodiumRank = (targetRank: 1 | 2 | 3, schoolId: string) => {
+    const currentManual = { ...(currentTree.manualRanks || {}) };
+    for (const [sid, val] of Object.entries(currentManual)) {
+      if (Number(val) === targetRank) {
+        delete currentManual[sid];
+      }
+    }
+    if (schoolId) {
+      currentManual[schoolId] = targetRank;
+    }
+    const nextTree: TournamentTreeData = {
+      ...currentTree,
+      manualRanks: currentManual,
+    };
+    setTournamentTrees((prev) => ({ ...prev, [selectedSportKey]: nextTree }));
+  };
+
+  // Clear all manual rank overrides for the current sport
+  const handleResetManualRanks = () => {
+    const nextTree: TournamentTreeData = {
+      ...currentTree,
+      manualRanks: {},
+    };
+    setTournamentTrees((prev) => ({ ...prev, [selectedSportKey]: nextTree }));
+  };
+
+  // Compute live preview of overall and current-sport standings
+  const overallStandingsPreview = useMemo(
+    () =>
+      calculateOverallStandings(
+        matches,
+        new Date(),
+        {
+          ...tournamentTrees,
+          [selectedSportKey]: currentTree,
+        },
+        language
+      ),
+    [matches, tournamentTrees, selectedSportKey, currentTree, language]
+  );
+
   const currentStandingsPreview = useMemo(() => {
-    const allStandings = calculateOverallStandings(
-      matches,
-      new Date(),
-      {
-        ...tournamentTrees,
-        [selectedSportKey]: currentTree,
-      },
-      language
-    );
     const map: Record<string, { rank: number; points: number; isTied?: boolean }> = {};
-    for (const st of allStandings) {
+    for (const st of overallStandingsPreview) {
       const sp = st.breakdown[selectedSportKey];
       if (sp) {
         map[st.schoolId] = { rank: sp.rank, points: sp.points, isTied: sp.isTied };
       }
     }
     return map;
-  }, [matches, tournamentTrees, selectedSportKey, currentTree, language]);
+  }, [overallStandingsPreview, selectedSportKey]);
 
   // Delete node
   const handleDeleteNode = (nodeId: string) => {
@@ -978,7 +1010,7 @@ export const MatchesTab: React.FC<MatchesTabProps> = ({
                                 />
                               </td>
 
-                              {/* Delete Action */}
+                                {/* Delete Action */}
                               <td className="p-2 text-right">
                                 <button
                                   onClick={(e) => {
@@ -998,115 +1030,210 @@ export const MatchesTab: React.FC<MatchesTabProps> = ({
                     </table>
                   </div>
                 </div>
-
-                {/* 3. Final Rankings & 3rd Place Selection */}
-                <div className="space-y-2 pt-3 border-t border-slate-200">
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <div className="flex items-center gap-1.5">
-                      <Award className="w-4 h-4 text-amber-500" />
-                      <span className="text-xs font-extrabold text-slate-800">
-                        {t('admin.matches.rankTitle', { sport: currentSportLabel })}
-                      </span>
-                      <span className="text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 px-1.5 py-0.5 rounded">
-                        {t('admin.matches.rankPointsBadge', {
-                          p1: SPORT_POINTS_TABLE[selectedSportKey]?.[1] || 0,
-                          p2: SPORT_POINTS_TABLE[selectedSportKey]?.[2] || 0,
-                          p3: SPORT_POINTS_TABLE[selectedSportKey]?.[3] || 0,
-                        })}
-                      </span>
-                    </div>
-
-                    <button
-                      type="button"
-                      disabled={isSaving}
-                      onClick={() =>
-                        saveSportTreeAndMatches(
-                          selectedSportKey,
-                          currentTree,
-                          t('admin.matches.rankSavedToast', { sport: currentSportLabel })
-                        )
-                      }
-                      className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-[11px] font-bold flex items-center gap-1 shadow-2xs cursor-pointer"
-                    >
-                      <Save className="w-3 h-3" />
-                      <span>{t('admin.matches.rankSaveBtn')}</span>
-                    </button>
-                  </div>
-
-                  <p className="text-[11px] text-slate-500 font-medium">
-                    {selectedSportKey === 'soccer'
-                      ? t('admin.matches.rankGuideSoccer')
-                      : selectedSportKey === 'lol'
-                        ? t('admin.matches.rankGuideLol')
-                        : t('admin.matches.rankGuideOther')}
-                  </p>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {SCHOOL_OPTIONS.map((sid) => {
-                      const sch = SCHOOLS[sid];
-                      const manualVal = currentTree.manualRanks?.[sid] || 0;
-                      const preview = currentStandingsPreview[sid] || { rank: 0, points: 0 };
-
-                      return (
-                        <div
-                          key={sid}
-                          className="bg-white border border-slate-200 rounded-xl p-2 flex flex-col gap-1.5 shadow-2xs"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1.5">
-                              <span
-                                style={{ backgroundColor: sch.color }}
-                                className="w-2 h-3.5 rounded-xs shrink-0"
-                              />
-                              <span className="text-xs font-extrabold text-slate-900">
-                                {sch.shortName}
-                              </span>
-                            </div>
-                            <span
-                              className={`text-[10px] font-extrabold px-1.5 py-0.2 rounded border ${
-                                preview.rank > 0
-                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                  : 'bg-slate-50 text-slate-400 border-slate-200'
-                              }`}
-                            >
-                              {preview.rank > 0
-                                ? `${
-                                    preview.isTied
-                                      ? t('admin.matches.rankTied', { rank: preview.rank })
-                                      : t('admin.matches.rankNth', { rank: preview.rank })
-                                  } (+${preview.points}pt)`
-                                : t('admin.matches.rankUnset')}
-                            </span>
-                          </div>
-
-                          <select
-                            value={manualVal}
-                            onChange={(e) =>
-                              handleManualRankChange(sid, parseInt(e.target.value) || 0)
-                            }
-                            className={`w-full rounded-lg px-2 py-1 text-[11px] font-bold border ${
-                              manualVal > 0
-                                ? 'bg-amber-50 text-amber-900 border-amber-300'
-                                : 'bg-slate-50 text-slate-700 border-slate-200'
-                            }`}
-                          >
-                            <option value={0}>{t('admin.matches.rankOptAuto')}</option>
-                            <option value={1}>{t('admin.matches.rankOpt1')}</option>
-                            <option value={2}>{t('admin.matches.rankOpt2')}</option>
-                            <option value={3}>{t('admin.matches.rankOpt3')}</option>
-                            <option value={4}>{t('admin.matches.rankOpt4')}</option>
-                          </select>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
               </>
             )}
           </div>
 
           <div className="text-[11px] text-slate-500 font-medium border-t border-slate-200 pt-2">
             {t('admin.matches.footerHint')}
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Final Rankings & Forced 1st/2nd/3rd Place Override Panel (Always Visible) */}
+      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 shadow-2xs space-y-3">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <Award className="w-4 h-4 text-amber-500" />
+            <span className="text-xs font-extrabold text-slate-800">
+              {t('admin.matches.rankTitle', { sport: currentSportLabel })}
+            </span>
+            <span className="text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 px-1.5 py-0.5 rounded">
+              {t('admin.matches.rankPointsBadge', {
+                p1: SPORT_POINTS_TABLE[selectedSportKey]?.[1] || 0,
+                p2: SPORT_POINTS_TABLE[selectedSportKey]?.[2] || 0,
+                p3: SPORT_POINTS_TABLE[selectedSportKey]?.[3] || 0,
+              })}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            {Object.keys(currentTree.manualRanks || {}).length > 0 && (
+              <button
+                type="button"
+                disabled={isSaving}
+                onClick={handleResetManualRanks}
+                className="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-[11px] font-bold flex items-center gap-1 shadow-2xs cursor-pointer"
+              >
+                <RotateCcw className="w-3 h-3" />
+                <span>{t('admin.matches.rankResetBtn')}</span>
+              </button>
+            )}
+            <button
+              type="button"
+              disabled={isSaving}
+              onClick={() =>
+                saveSportTreeAndMatches(
+                  selectedSportKey,
+                  currentTree,
+                  t('admin.matches.rankSavedToast', { sport: currentSportLabel })
+                )
+              }
+              className="px-3 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-[11px] font-bold flex items-center gap-1 shadow-2xs cursor-pointer"
+            >
+              <Save className="w-3 h-3" />
+              <span>{t('admin.matches.rankSaveBtn')}</span>
+            </button>
+          </div>
+        </div>
+
+        <p className="text-[11px] text-slate-500 font-medium">
+          {selectedSportKey === 'soccer'
+            ? t('admin.matches.rankGuideSoccer')
+            : selectedSportKey === 'lol'
+              ? t('admin.matches.rankGuideLol')
+              : t('admin.matches.rankGuideOther')}
+        </p>
+
+        {/* Quick Podium Pickers: Force 1st / 2nd / 3rd directly */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          {(
+            [
+              { rank: 1 as const, labelKey: 'admin.matches.rankQuick1' as const },
+              { rank: 2 as const, labelKey: 'admin.matches.rankQuick2' as const },
+              { rank: 3 as const, labelKey: 'admin.matches.rankQuick3' as const },
+            ]
+          ).map(({ rank, labelKey }) => {
+            const manualSchoolsForRank = SCHOOL_OPTIONS.filter(
+              (sid) => Number(currentTree.manualRanks?.[sid]) === rank
+            );
+            const selectedManualSchool =
+              manualSchoolsForRank.length === 1 ? manualSchoolsForRank[0] : '';
+            const effectiveSchoolsForRank = SCHOOL_OPTIONS.filter(
+              (sid) => currentStandingsPreview[sid]?.rank === rank
+            );
+            const autoLabel =
+              effectiveSchoolsForRank.length > 0
+                ? t('admin.matches.rankQuickAuto', {
+                    school: effectiveSchoolsForRank.join(', '),
+                  })
+                : t('admin.matches.rankQuickAutoNone');
+
+            return (
+              <div
+                key={rank}
+                className="bg-white border border-slate-200 rounded-xl p-2.5 flex flex-col gap-1 shadow-2xs"
+              >
+                <span className="text-[11px] font-extrabold text-slate-700">{t(labelKey)}</span>
+                <select
+                  value={selectedManualSchool}
+                  onChange={(e) => handleQuickPodiumRank(rank, e.target.value)}
+                  className={`w-full rounded-lg px-2 py-1.5 text-xs font-bold border ${
+                    selectedManualSchool
+                      ? 'bg-amber-50 text-amber-900 border-amber-300'
+                      : 'bg-slate-50 text-slate-700 border-slate-200'
+                  }`}
+                >
+                  <option value="">{autoLabel}</option>
+                  {SCHOOL_OPTIONS.map((sid) => (
+                    <option key={sid} value={sid}>
+                      {SCHOOLS[sid].shortName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Per-School Override Cards (supports ties or explicit 4th+ / '-') */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+          {SCHOOL_OPTIONS.map((sid) => {
+            const sch = SCHOOLS[sid];
+            const manualVal = currentTree.manualRanks?.[sid] || 0;
+            const preview = currentStandingsPreview[sid] || { rank: 0, points: 0 };
+            const isPodium = preview.rank >= 1 && preview.rank <= 3 && preview.points > 0;
+
+            return (
+              <div
+                key={sid}
+                className="bg-white border border-slate-200 rounded-xl p-2 flex flex-col gap-1.5 shadow-2xs"
+              >
+                <div className="flex items-center justify-between gap-1">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span
+                      style={{ backgroundColor: sch.color }}
+                      className="w-2 h-3.5 rounded-xs shrink-0"
+                    />
+                    <span className="text-xs font-extrabold text-slate-900 truncate">
+                      {sch.shortName}
+                    </span>
+                  </div>
+                  <span
+                    className={`text-[10px] font-extrabold px-1.5 py-0.2 rounded border shrink-0 ${
+                      isPodium
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        : 'bg-slate-50 text-slate-400 border-slate-200'
+                    }`}
+                  >
+                    {isPodium
+                      ? `${
+                          preview.isTied
+                            ? t('admin.matches.rankTied', { rank: preview.rank })
+                            : t('admin.matches.rankNth', { rank: preview.rank })
+                        } (+${preview.points}pt)`
+                      : t('admin.matches.rankUnset')}
+                  </span>
+                </div>
+
+                <select
+                  value={manualVal}
+                  onChange={(e) =>
+                    handleManualRankChange(sid, parseInt(e.target.value) || 0)
+                  }
+                  className={`w-full rounded-lg px-2 py-1 text-[11px] font-bold border ${
+                    manualVal > 0
+                      ? 'bg-amber-50 text-amber-900 border-amber-300'
+                      : 'bg-slate-50 text-slate-700 border-slate-200'
+                  }`}
+                >
+                  <option value={0}>{t('admin.matches.rankOptAuto')}</option>
+                  <option value={1}>{t('admin.matches.rankOpt1')}</option>
+                  <option value={2}>{t('admin.matches.rankOpt2')}</option>
+                  <option value={3}>{t('admin.matches.rankOpt3')}</option>
+                  <option value={4}>{t('admin.matches.rankOpt4')}</option>
+                </select>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Live Overall Standings Strip */}
+        <div className="bg-white border border-slate-200 rounded-xl px-3 py-2 flex items-center gap-2 flex-wrap">
+          <span className="text-[11px] font-extrabold text-slate-600 shrink-0">
+            {t('admin.matches.rankOverallPreview')}
+          </span>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {overallStandingsPreview.map((st) => (
+              <span
+                key={st.schoolId}
+                className="inline-flex items-center gap-1 text-[11px] font-bold bg-slate-50 border border-slate-200 rounded-lg px-2 py-0.5 text-slate-800"
+              >
+                <span className="text-slate-500">
+                  {st.totalPoints > 0
+                    ? st.isTied
+                      ? t('admin.matches.rankTied', { rank: st.rank })
+                      : t('admin.matches.rankNth', { rank: st.rank })
+                    : '-'}
+                </span>
+                <span
+                  style={{ backgroundColor: st.color }}
+                  className="w-1.5 h-3 rounded-xs shrink-0"
+                />
+                <span className="font-extrabold">{st.shortName}</span>
+                <span className="text-postech font-extrabold">{st.totalPoints}pt</span>
+              </span>
+            ))}
           </div>
         </div>
       </div>
