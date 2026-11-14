@@ -14,10 +14,10 @@ import {
   KeyRound,
   CheckCircle2,
   Phone,
-  Globe,
 } from 'lucide-react';
 import { AdminTab } from '../types';
 import { useLanguage } from '../../../context/LanguageContext';
+import { LanguageToggle } from '../../../components/LanguageToggle';
 
 interface AdminHeaderProps {
   activeTab: AdminTab;
@@ -35,7 +35,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
   saveStatus,
 }) => {
   const navigate = useNavigate();
-  const { language, toggleLanguage, t } = useLanguage();
+  const { t } = useLanguage();
 
   const tabs: Array<{ id: AdminTab; label: string; icon: React.ReactNode }> = [
     { id: 'matches', label: t('admin.tabMatches'), icon: <Trophy className="w-4 h-4" /> },
@@ -73,14 +73,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
               <span>{saveStatus}</span>
             </div>
           )}
-          <button
-            onClick={toggleLanguage}
-            className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-extrabold flex items-center gap-1 transition-colors"
-            title={language === 'ko' ? 'Switch to English' : '한국어로 전환'}
-          >
-            <Globe className="w-3.5 h-3.5 text-slate-400" />
-            <span>{t('header.langToggle')}</span>
-          </button>
+          <LanguageToggle variant="dark" />
           <button
             onClick={onRefresh}
             disabled={isLoading}

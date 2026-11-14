@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Lock, AlertCircle, ArrowLeft } from 'lucide-react';
 import { verifyAdminPassword } from '../../../services/settingsService';
 import { useLanguage } from '../../../context/LanguageContext';
+import { LanguageToggle } from '../../../components/LanguageToggle';
 
 interface AdminAuthGateProps {
   onSuccess: () => void;
@@ -31,7 +32,10 @@ export const AdminAuthGate: React.FC<AdminAuthGateProps> = ({ onSuccess }) => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 relative">
+      <div className="fixed top-4 right-4 z-10">
+        <LanguageToggle variant="dark" />
+      </div>
       <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-6">
         <div className="text-center space-y-2">
           <div className="w-12 h-12 rounded-xl bg-rose-600/20 text-rose-500 border border-rose-500/30 flex items-center justify-center mx-auto">

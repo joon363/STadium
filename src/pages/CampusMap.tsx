@@ -7,6 +7,7 @@ import {
   FoodTruckItem,
 } from '../lib/supabase';
 import { CampusMapView } from '../components/CampusMapView';
+import { LanguageToggle } from '../components/LanguageToggle';
 import { VenueNode, MapEdge, NavigationResult, findShortestPath } from '../config/stadiumConfig';
 import { useLanguage } from '../context/LanguageContext';
 import { getLocalizedValue, localizeVenueName } from '../utils/bilingual';
@@ -236,6 +237,8 @@ export const CampusMap: React.FC = () => {
             <Navigation className="w-3.5 h-3.5" />
             <span>{t('map.navigation')}</span>
           </button> */}
+
+          <LanguageToggle variant="glass" className="ml-auto" />
         </div>
 
         {/* Row 2: Layer Checkbox Chips (Top-left, rounded white chips, black text) */}

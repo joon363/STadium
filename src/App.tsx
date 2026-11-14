@@ -35,8 +35,6 @@ const HIDE_HEADER_ROUTES = [
   '/badminton',
   '/basketball',
   '/map',
-  '/sponsors',
-  '/contact',
 ];
 
 const LayoutWrapper: React.FC = () => {

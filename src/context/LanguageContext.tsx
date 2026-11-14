@@ -42,6 +42,12 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     }
   }, []);
 
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = language;
+    }
+  }, [language]);
+
   const toggleLanguage = useCallback(() => {
     setLanguage(language === 'ko' ? 'en' : 'ko');
   }, [language, setLanguage]);
