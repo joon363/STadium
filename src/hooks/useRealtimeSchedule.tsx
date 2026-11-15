@@ -35,7 +35,6 @@ export interface UseRealtimeScheduleResult {
   getYoutubeLiveUrl: (targetKey?: string, round?: string, fallbackSportKey?: string) => string;
   timeString: string;
   isSupabaseLoaded: boolean;
-  refreshFromSupabase: () => Promise<void>;
 }
 
 const RealtimeScheduleContext = createContext<UseRealtimeScheduleResult | null>(null);
@@ -156,10 +155,6 @@ export const RealtimeScheduleProvider: React.FC<{ children: React.ReactNode }> =
       getYoutubeLiveUrl,
       timeString,
       isSupabaseLoaded,
-      refreshFromSupabase: () => {
-        setNow(new Date());
-        return loadAllInitialData(true);
-      },
     }),
     [
       now,
@@ -174,7 +169,6 @@ export const RealtimeScheduleProvider: React.FC<{ children: React.ReactNode }> =
       getYoutubeLiveUrl,
       timeString,
       isSupabaseLoaded,
-      loadAllInitialData,
     ]
   );
 
@@ -203,7 +197,6 @@ export function useRealtimeSchedule(): UseRealtimeScheduleResult {
       getYoutubeLiveUrl: () => 'https://www.youtube.com/@stadium_official',
       timeString: now.toTimeString().split(' ')[0],
       isSupabaseLoaded: false,
-      refreshFromSupabase: async () => {},
     };
   }
   return context;

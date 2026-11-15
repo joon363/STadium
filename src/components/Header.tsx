@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Filter, Radio, RotateCw } from 'lucide-react';
+import { Filter, Radio } from 'lucide-react';
 import { useRealtimeSchedule } from '../hooks/useRealtimeSchedule';
 import { useSchool } from '../context/SchoolContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -9,10 +9,9 @@ import { LanguageToggle } from './LanguageToggle';
 
 export const Header: React.FC = () => {
   const navigate = useNavigate();
-  const { sportsConfig, refreshFromSupabase } = useRealtimeSchedule();
+  const { sportsConfig } = useRealtimeSchedule();
   const { selectedSchool, setSelectedSchool } = useSchool();
   const { t } = useLanguage();
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const activeSchoolObj = selectedSchool !== 'ALL' ? SCHOOLS[selectedSchool] : null;
 
@@ -20,16 +19,6 @@ export const Header: React.FC = () => {
   const liveMatchCount = Object.values(sportsConfig).filter(
     (s) => s.key !== 'badminton' && s.liveMatch.isLive
   ).length;
-
-  const handleManualRefresh = async () => {
-    if (isRefreshing) return;
-    setIsRefreshing(true);
-    try {
-      await refreshFromSupabase();
-    } finally {
-      setTimeout(() => setIsRefreshing(false), 500);
-    }
-  };
 
   return (
     <header
@@ -93,21 +82,6 @@ export const Header: React.FC = () => {
 
         {/* KOR / ENG Language Switch Button */}
         <LanguageToggle variant={activeSchoolObj ? 'school' : 'light'} />
-
-        <button
-          type="button"
-          onClick={handleManualRefresh}
-          disabled={isRefreshing}
-          title={t('common.refreshTooltip')}
-          aria-label={t('common.refresh')}
-          className={`p-1.5 rounded-full border transition-all shadow-2xs cursor-pointer shrink-0 ${
-            activeSchoolObj
-              ? 'bg-white/20 border-white/40 text-white hover:bg-white/30'
-              : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
-          }`}
-        >
-          <RotateCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-        </button>
       </div>
     </header>
   );

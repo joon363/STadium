@@ -29,17 +29,9 @@ export {
 } from '../services/matchesService';
 export {
   getSupabaseStagePerformances,
-  saveAllSupabaseStagePerformances,
 } from '../services/stageService';
 export {
-  getSupabaseMapVenues,
-  getSupabaseMapRoads,
   getSupabaseMapData,
-  upsertMapVenue,
-  deleteMapVenue,
-  upsertMapRoad,
-  deleteMapRoad,
-  resetMapToDefaults,
 } from '../services/mapService';
 export {
   getSupabaseBooths,
@@ -84,12 +76,20 @@ export {
   updateSupabaseStageDelay,
 } from '../services/settingsService';
 export {
-  getSupabaseContacts,
-  upsertSupabaseContact,
-  deleteSupabaseContact,
-  getSupabaseContactLinks,
-  upsertSupabaseContactLink,
   getSupabaseContactConfig,
 } from '../services/contactService';
 export { uploadImageToSupabase } from '../services/storageService';
 export { subscribeToRealtimeTables } from '../services/realtimeService';
+
+// Frozen no-op stubs for Admin tabs
+export const saveAllSupabaseStagePerformances = async (_items: any[]) => true;
+export const upsertMapVenue = async (_v: any): Promise<{ success: boolean; error?: string }> => ({ success: true });
+export const deleteMapVenue = async (_id: any): Promise<{ success: boolean; error?: string }> => ({ success: true });
+export const upsertMapRoad = async (_r: any): Promise<{ success: boolean; error?: string }> => ({ success: true });
+export const deleteMapRoad = async (_id: any): Promise<{ success: boolean; error?: string }> => ({ success: true });
+export const resetMapToDefaults = async (_v?: any, _r?: any): Promise<{ success: boolean; error?: string }> => ({ success: true });
+export const getSupabaseContacts = async (_forceRefresh = false) => [];
+export const upsertSupabaseContact = async (_c: any): Promise<{ success: boolean; error?: string }> => ({ success: true });
+export const deleteSupabaseContact = async (_id: any): Promise<{ success: boolean; error?: string }> => ({ success: true });
+export const getSupabaseContactLinks = async (_forceRefresh = false) => [];
+export const upsertSupabaseContactLink = async (_l: any): Promise<{ success: boolean; error?: string }> => ({ success: true });

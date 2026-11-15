@@ -177,7 +177,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({ setSaveStatus }) => {
         <div className="text-xs text-gray-600 space-y-1">
           <div className="flex items-center gap-2">
             <span className="font-bold">{t('admin.settings.dbStatusLabel')}</span>
-            {isSupabaseConfigured ? (
+            {isSupabaseConfigured() ? (
               <span className="text-emerald-600 font-bold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
                 {t('admin.settings.dbConnected')}
               </span>

@@ -7,17 +7,16 @@ import { TournamentBracket } from '../components/TournamentBracket';
 import { TournamentTreeData } from '../types/tournamentTree';
 import { getSupabaseTournamentTree } from '../lib/supabase';
 import { LanguageToggle } from '../components/LanguageToggle';
-import { ArrowLeft, Clock, MapPin, Radio, ChevronRight, Calendar, Trophy, RotateCw } from 'lucide-react';
+import { ArrowLeft, Clock, MapPin, Radio, ChevronRight, Calendar, Trophy } from 'lucide-react';
 
 export const SportDetail: React.FC = () => {
   const { sportKey } = useParams<{ sportKey: string }>();
   const navigate = useNavigate();
-  const { sportsConfig, tournamentTrees, getYoutubeLiveUrl, refreshFromSupabase } = useRealtimeSchedule();
+  const { sportsConfig, tournamentTrees, getYoutubeLiveUrl } = useRealtimeSchedule();
   const { t } = useLanguage();
 
   const [activeTab, setActiveTab] = useState<'timeline' | 'bracket'>('timeline');
   const [fallbackTreeData, setFallbackTreeData] = useState<TournamentTreeData | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const isBadminton = sportKey === 'badminton';
   const isStreamable = true;
@@ -51,16 +50,6 @@ export const SportDetail: React.FC = () => {
       isMounted = false;
     };
   }, [sportKey, isBadminton, tournamentTrees]);
-
-  const handleManualRefresh = async () => {
-    if (isRefreshing) return;
-    setIsRefreshing(true);
-    try {
-      await refreshFromSupabase();
-    } finally {
-      setTimeout(() => setIsRefreshing(false), 500);
-    }
-  };
 
   const config = sportKey ? sportsConfig[sportKey] : null;
 
@@ -223,16 +212,6 @@ export const SportDetail: React.FC = () => {
 
         <div className="flex items-center gap-1.5 z-10 shrink-0">
           <LanguageToggle variant="light" />
-          <button
-            type="button"
-            onClick={handleManualRefresh}
-            disabled={isRefreshing}
-            title={t('common.refreshTooltip')}
-            aria-label={t('common.refresh')}
-            className="p-2 -mr-2 rounded-xl text-gray-700 hover:bg-gray-100 active:bg-gray-200 transition-colors cursor-pointer"
-          >
-            <RotateCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          </button>
         </div>
       </div>
 

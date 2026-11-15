@@ -14,7 +14,7 @@ export function subscribeToRealtimeTables(
   const channelId = `rt-${tables.join('_')}-${Math.random().toString(36).substring(2, 9)}`;
   const channel = client
     .channel(channelId)
-    .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
+    .on('postgres_changes', { event: '*', schema: 'public' }, (payload: any) => {
       if (tables.includes(payload.table)) {
         invalidateAppCache(payload.table);
         onUpdate(payload.table, payload);
